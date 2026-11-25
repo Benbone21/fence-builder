@@ -27,20 +27,27 @@ STATIC = os.path.join(ROOT, "static")
 
 
 def data_dir():
-    """Where jobs, prices and settings live. Next to the code from source; in the user's own
-    app-data folder for the installed app, moving over a data/ folder left next to the exe."""
-    if not FROZEN:
+    """Where jobs, prices and settings live. The web server (python server.py) keeps them next to the
+    code. The desktop app (installed, or app.py) keeps its own copy in the user's app-data folder, so
+    it never shares anything with a web server. On its first run it brings the jobs over: it moves a
+    data/ folder left next to the installed exe, or copies the one next to the code."""
+    if not (FROZEN or os.environ.get("FENCE_APP")):
         return os.path.join(ROOT, "data")
     d = os.path.join(os.environ.get("LOCALAPPDATA") or os.path.expanduser("~"), "Fence Builder", "data")
     if not os.path.exists(os.path.join(d, "fence-data.json")):
-        for old in (os.path.join(os.path.dirname(sys.executable), "data"),):
+        olds = [(os.path.join(os.path.dirname(sys.executable), "data"), True)] if FROZEN else [(os.path.join(ROOT, "data"), False)]
+        for old, move in olds:
             if os.path.isfile(os.path.join(old, "fence-data.json")):
                 try:
                     os.makedirs(os.path.dirname(d), exist_ok=True)
                     if os.path.isdir(d) and not os.listdir(d):
                         os.rmdir(d)
                     if not os.path.exists(d):
-                        shutil.move(old, d)
+                        if move:
+                            shutil.move(old, d)
+                        else:
+                            os.makedirs(d)
+                            shutil.copy2(os.path.join(old, "fence-data.json"), os.path.join(d, "fence-data.json"))
                 except OSError:
                     pass
                 break

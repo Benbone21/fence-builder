@@ -64,8 +64,8 @@ Source: "..\dist\FenceBuilder\*"; DestDir: "{app}"; Flags: ignoreversion recurse
 Type: filesandordirs; Name: "{app}\_internal"
 
 [Icons]
-Name: "{autoprograms}\{#AppName}"; Filename: "{app}\{#AppExe}"; WorkingDir: "{app}"
-Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExe}"; WorkingDir: "{app}"; Tasks: desktopicon
+Name: "{autoprograms}\{#AppName}"; Filename: "{app}\{#AppExe}"; WorkingDir: "{app}"; AppUserModelID: "FenceBuilder.App"
+Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExe}"; WorkingDir: "{app}"; AppUserModelID: "FenceBuilder.App"; Tasks: desktopicon
 
 [Run]
 ; a normal install: offer to open it at the end

@@ -13,7 +13,10 @@ and fees. Runs as a Windows app or as a small web server for your whole network.
    "Windows protected your PC" the first time because the installer isn't signed: click
    **More info**, then **Run anyway**.
 
-Fence Builder opens in its own window and stops when you close the window. To remove it, use
+Fence Builder is a normal Windows app: its own window and taskbar button, and you can pin it to
+the taskbar or Start. It runs entirely on its own (nothing else needs to be running, and other
+computers can't reach it) and stops when you close the window. It needs Microsoft's WebView2,
+which comes with Windows 10 and 11. To remove it, use
 **Settings → Apps → Installed apps → Fence Builder → Uninstall**.
 
 Your jobs, prices and settings are kept in `%LOCALAPPDATA%\Fence Builder\data`, not in the
@@ -32,10 +35,13 @@ runs it quietly, and comes back on the new version in under a minute. You can al
 1. Install [Python 3](https://www.python.org/downloads/) (tick "Add python.exe to PATH").
 2. Download the newest release from **Releases** (Source code, zip) and unzip it where you want
    it to live.
-3. Double-click `app.py`, or make a shortcut to it with `pyw.exe app.py` and the icon
+3. Install the window library once: `py -m pip install pywebview`.
+4. Double-click `app.py`, or make a shortcut to it with `pyw.exe app.py` and the icon
    `fence.ico`.
 
-Run this way, your data is in `data/` next to the code, and **Update now** downloads the
+The app keeps its own data in `%LOCALAPPDATA%\Fence Builder\data` (the first time, it copies
+your jobs from `data/` next to the code). The web server (`python server.py`) keeps using
+`data/`, so the two are separate. From source, **Update now** downloads the
 release's source, replaces the app's own files (never `data/`; the replaced files are kept in
 `_previous/`) and restarts.
 

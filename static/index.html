@@ -274,6 +274,7 @@ tr.grp td{font-weight:600;background:var(--pan2);font-size:12px;color:var(--mut)
 .err{color:var(--red);font-size:12px}
 .okc{color:var(--ok)}
 .prof{background:var(--pan2);border-radius:4px;padding:8px;margin:10px 0}
+.sum.stale,.sum.stale+.prof{opacity:.6}
 .prof svg{display:block;width:100%;height:110px}
 .prof .pf{fill:light-dark(#1d5bb822,#7aa7ee22)}.prof .pl{fill:none;stroke:var(--acc);stroke-width:2;vector-effect:non-scaling-stroke}
 .pax{display:flex;justify-content:space-between;font-size:12px;color:var(--mut)}
@@ -499,16 +500,18 @@ async function load(){
   try{const r=await fetch('seed.json',{cache:'no-store'});if(r.ok){const j=await r.json();if(j&&Array.isArray(j.materials)&&j.materials.length)return {...defaults(),...j}}}catch(e){}
   return defaults();
 }
-let saveT;
-function save(){clearTimeout(saveT);setStatus('Saving…');saveT=setTimeout(()=>{saveT=null;pushSave()},700)}
+let saveT,elevOnly=false;
+// save(true) is for heights that just loaded: if another copy of the app saved first, nothing of yours is
+// lost (the heights load again), so that clash is taken quietly instead of warning about a lost change
+function save(auto){elevOnly=auto===true&&(elevOnly||!saveT);clearTimeout(saveT);setStatus('Saving…');saveT=setTimeout(()=>{saveT=null;pushSave()},700)}
 async function pushSave(){
   if(saving){saveAgain=true;return}
-  saving=true;const body=JSON.stringify(S);
+  saving=true;const body=JSON.stringify(S),quiet=elevOnly;elevOnly=false;
   try{localStorage.setItem('fence-est',body)}catch(e){}
   if(!serverOK){setStatus('Saved on this device');saving=false;return}
   try{
     const r=await fetch('api/data',{method:'PUT',headers:{'Content-Type':'application/json','X-Base-Rev':String(baseRev)},body});
-    if(r.status===409){saving=false;saveAgain=false;return takeLatest(true)}
+    if(r.status===409){saving=false;saveAgain=false;return takeLatest(!quiet)}
     if(!r.ok)throw 0;
     baseRev=+(await r.json()).rev||baseRev;setStatus('Saved');
   }catch(e){setStatus('Saved on this device only, server not reachable')}
@@ -605,6 +608,14 @@ const matName=id=>(S.materials.find(m=>m.id===id)||{}).name||'(missing material)
 const ll=p=>L.latLng(p.lat,p.lng);
 const key=p=>p.lat.toFixed(6)+','+p.lng.toFixed(6);
 const geomKey=l=>l.pts.map(key).join('|');
+// stored ground heights for a line: evOf only when they match the line as it is now (used for pricing),
+// evAny also returns the last good ones from before the line was moved (shown while new ones load)
+// EV is the newest way of working the numbers out. Older (v2) numbers still count, so a copy of the app
+// still running the old version on another computer doesn't make the two keep redoing each other's work;
+// this copy just redoes them once (see ensureElev).
+const EV=3;
+const evOf=l=>l.elev&&l.elev.v>=2&&l.elev.key===geomKey(l)?l.elev:null;
+const evAny=l=>l.elev&&Array.isArray(l.elev.prof)&&isFinite(l.elev.surface)?l.elev:null;
 const rad=d=>d*Math.PI/180;
 function bearing(a,b){const f1=rad(a.lat),f2=rad(b.lat),dl=rad(b.lng-a.lng);return Math.atan2(Math.sin(dl)*Math.cos(f2),Math.cos(f1)*Math.sin(f2)-Math.sin(f1)*Math.cos(f2)*Math.cos(dl))*180/Math.PI}
 function deflect(a,b,c){let d=Math.abs(bearing(b,c)-bearing(a,b))%360;return d>180?360-d:d}
@@ -690,7 +701,7 @@ function analyze(proj){
   }
   for(const l of plines){
     const t=typeOf(l.type);if(!t)continue;
-    const flat=flatLen(l.pts), ev=(l.elev&&l.elev.key===geomKey(l)&&l.elev.v===2)?l.elev:null;
+    const flat=flatLen(l.pts), ev=evOf(l);
     const scale=st.useSurface&&ev&&ev.flat>0?ev.surface/ev.flat:1;
     const secs=[],keys=[];let cur=0,gateW=0,from=0;
     for(let i=0;i<l.pts.length;i++){
@@ -755,7 +766,9 @@ function analyze(proj){
   // ---- labor: each fence type's feet x its labor $ per foot; headache and fees are set on this job's Final bill ----
   const lab={site:+proj.site||0,byType:[]};
   for(const T of Object.values(types)){const rate=+T.t.labor||0;if(T.L>0)lab.byType.push({t:T.t,ft:T.L,rate,cost:T.L*rate})}
-  lab.base=lab.byType.reduce((a,x)=>a+x.cost,0);lab.siteHead=lab.base*lab.site/100;lab.figured=lab.base+lab.siteHead;
+  // each brace's labor charge, times how many of that brace the job has
+  lab.byBrace=Object.entries(kits).map(([id,n])=>({b:kitById[id],n,rate:+kitById[id]?.labor||0})).filter(x=>x.b&&x.n>0).map(x=>({...x,cost:x.n*x.rate}));
+  lab.base=lab.byType.reduce((a,x)=>a+x.cost,0)+lab.byBrace.reduce((a,x)=>a+x.cost,0);lab.siteHead=lab.base*lab.site/100;lab.figured=lab.base+lab.siteHead;
   lab.override=proj.laborTotal!=null&&proj.laborTotal!==''?Math.max(0,+proj.laborTotal||0):null;
   lab.cost=lab.override??lab.figured;
   // headache charges on fussy materials, set per material on this job
@@ -1307,22 +1320,62 @@ $('#search').onsubmit=async e=>{
 
 /* ---------- elevation (USGS 3DEP LiDAR first, Open-Meteo outside the US) ---------- */
 const USGS='https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer';
-const elevBusy=new Set(),elevFail=new Set();let elevT;
+// elevFail: line id + shape -> {n: failed tries, next: when to try again}. After 3 tries it waits for "Try again".
+// elevRedo: lines whose older (v2) numbers this copy has already redone once
+const elevBusy=new Set(),elevFail=new Map(),elevRedo=new Set(),ELEV_WAIT=[0,5000,20000];let elevT,elevDownT;
 function scheduleElev(){clearTimeout(elevT);elevT=setTimeout(ensureElev,900)}
-function ensureElev(){for(const l of P().lines){if(l.pts.length<2)continue;const k=geomKey(l);if((l.elev&&l.elev.key===k&&l.elev.v===2)||elevBusy.has(l.id)||elevFail.has(l.id+k))continue;elevBusy.add(l.id);fetchElev(l,k).finally(()=>elevBusy.delete(l.id))}}
+function ensureElev(){
+  const now=Date.now();
+  for(const l of P().lines){
+    if(l.manual||l.pts.length<2)continue;
+    const k=geomKey(l),id=l.id+k,f=elevFail.get(id),ev=evOf(l);
+    if(elevBusy.has(l.id)||(f&&(f.n>=3||now<f.next)))continue;
+    // done, unless they are older numbers, or Open-Meteo stood in because USGS was down (then ask USGS
+    // again a minute later, once)
+    if(ev&&(elevRedo.has(id)||(ev.v>=EV&&!ev.down)))continue;
+    if(ev&&ev.down&&now-(ev.at||0)<60000){clearTimeout(elevDownT);elevDownT=setTimeout(ensureElev,61000-(now-(ev.at||0)));continue}
+    if(ev)elevRedo.add(id);
+    elevBusy.add(l.id);
+    fetchElev(l,k).then(()=>elevFail.delete(id),e=>{
+      console.warn('elevation',e);const n=(f?.n||0)+1;elevFail.set(id,{n,next:Date.now()+(ELEV_WAIT[n]||0)});
+      if(n<3)setTimeout(ensureElev,ELEV_WAIT[n]+50);renderPanel()})
+    .finally(()=>{elevBusy.delete(l.id);if(geomKey(l)!==k)scheduleElev()});   // the line moved while loading: load the new shape
+  }
+}
+// what the elevation for a line is doing right now: 'busy' (loading or about to), 'retry' (failed, trying again soon), 'fail'
+function elevState(l){if(elevBusy.has(l.id))return 'busy';const f=elevFail.get(l.id+geomKey(l));return !f?'busy':f.n>=3?'fail':'retry'}
+function fetchT(url,opt={},ms=25000){const c=new AbortController(),t=setTimeout(()=>c.abort(),ms);return fetch(url,{...opt,signal:c.signal}).finally(()=>clearTimeout(t))}
+// a believable height in meters (USGS sends -9999 or huge numbers for "no data")
+const okZ=v=>v!=null&&v!==''&&isFinite(v)&&+v>-500&&+v<9000;
+// moving average of v over +-h meters of distance D (both sorted by D); nulls are skipped
+function movAvg(D,v,h){
+  const n=v.length,out=new Array(n);let a=0,b=0,s=0,c=0;
+  for(let i=0;i<n;i++){
+    while(b<n&&D[b]-D[i]<=h){if(v[b]!=null){s+=v[b];c++}b++}
+    while(D[i]-D[a]>h){if(v[a]!=null){s-=v[a];c--}a++}
+    out[i]=c?s/c:v[i];
+  }
+  return out;
+}
+// straight-line in-between of (X,Y) at each x in xs (X sorted)
+function interp(X,Y,xs){let j=0;return xs.map(x=>{while(j<X.length-2&&X[j+1]<x)j++;const x0=X[j],x1=X[Math.min(j+1,X.length-1)];if(x1===x0)return Y[j];const t=Math.max(0,Math.min(1,(x-x0)/(x1-x0)));return Y[j]+(Y[Math.min(j+1,Y.length-1)]-Y[j])*t})}
 async function usgsSamples(pts){
-  const z=[],res=[],srcs={};
+  const z=new Array(pts.length).fill(null),res=new Array(pts.length).fill(null),srcs={};let ok=0;
   for(let i=0;i<pts.length;i+=1000){
     const ch=pts.slice(i,i+1000);
-    const body=new URLSearchParams({geometry:JSON.stringify({points:ch.map(p=>[+p.lng.toFixed(7),+p.lat.toFixed(7)]),spatialReference:{wkid:4326}}),
+    const body=()=>new URLSearchParams({geometry:JSON.stringify({points:ch.map(p=>[+p.lng.toFixed(7),+p.lat.toFixed(7)]),spatialReference:{wkid:4326}}),
       geometryType:'esriGeometryMultipoint',returnFirstValueOnly:'true',interpolation:'RSP_BilinearInterpolation',outFields:'Name,AcquisitionDate',f:'json'});
-    const r=await fetch(USGS+'/getSamples',{method:'POST',body});const j=await r.json();
-    if(!j.samples)throw Error('usgs');
-    const byId=new Array(ch.length).fill(null),rb=new Array(ch.length).fill(null);
-    for(const sm of j.samples){const v=parseFloat(sm.value);if(isFinite(v)&&v>-1000){byId[sm.locationId]=v;rb[sm.locationId]=sm.resolution;
-      const n=sm.attributes?.Name;if(n&&!srcs[n])srcs[n]={res:sm.resolution,year:sm.attributes.AcquisitionDate?new Date(sm.attributes.AcquisitionDate).getUTCFullYear():null}}}
-    z.push(...byId);res.push(...rb);
+    let j=null;
+    for(let t=0;t<2&&!j;t++){try{const r=await fetchT(USGS+'/getSamples',{method:'POST',body:body()});const x=await r.json();if(Array.isArray(x.samples))j=x}catch(e){}}
+    if(!j)continue;   // this batch failed twice: its points stay empty and are filled in below
+    ok++;
+    for(const sm of j.samples){
+      const id=sm.locationId,v=parseFloat(sm.value);   // USGS 3DEP heights are in meters
+      if(!(id>=0&&id<ch.length)||!okZ(v))continue;
+      z[i+id]=v;res[i+id]=sm.resolution;
+      const n=sm.attributes?.Name;if(n&&!srcs[n])srcs[n]={res:sm.resolution,year:sm.attributes.AcquisitionDate?new Date(sm.attributes.AcquisitionDate).getUTCFullYear():null}}
   }
+  if(!ok)throw Error('usgs not answering');
   return {z,res,srcs};
 }
 async function meteoSamples(pts){
@@ -1330,25 +1383,72 @@ async function meteoSamples(pts){
   for(let i=0;i<pts.length;i+=100){
     const ch=pts.slice(i,i+100),qs='latitude='+ch.map(s=>s.lat.toFixed(6)).join(',')+'&longitude='+ch.map(s=>s.lng.toFixed(6)).join(',');
     let j;
-    try{const r=await fetch('https://api.open-meteo.com/v1/elevation?'+qs);if(!r.ok)throw 0;j=await r.json()}
-    catch(e){const r=await fetch('api/elevation?'+qs);j=await r.json()}
+    try{const r=await fetchT('https://api.open-meteo.com/v1/elevation?'+qs,{},15000);if(!r.ok)throw 0;j=await r.json()}
+    catch(e){const r=await fetchT('api/elevation?'+qs,{},20000);j=await r.json()}
     if(!j||!Array.isArray(j.elevation)||j.elevation.length!==ch.length)throw Error('no elevation');
     out.push(...j.elevation);
   }
   return out;
 }
-function resLabel(r){return r==null?'':r<=1.5?'1 m LiDAR':r<=5?'3 m (1/9 arc-second)':r<=15?'10 m':'30 m'}
-async function getElevations(samples){
-  let u=null;try{u=await usgsSamples(samples)}catch(e){}
-  if(u&&u.z.every(v=>v!=null)){
-    const best=Math.min(...u.res),worst=Math.max(...u.res);
-    const names=Object.entries(u.srcs).map(([n,o])=>n+(o.year?' ('+o.year+')':'')).slice(0,3).join(', ');
-    return {z:u.z,lidar:worst<=3,src:'USGS 3DEP '+(best===worst?resLabel(best):resLabel(best)+' to '+resLabel(worst))+(names?', survey '+names:'')};
-  }
-  const m=await meteoSamples(samples);
-  if(u&&u.z.some(v=>v!=null))return {z:u.z.map((v,i)=>v??m[i]),lidar:false,src:'USGS 3DEP where it has data, Open-Meteo 90 m for the rest'};
-  return {z:m,lidar:false,src:'Open-Meteo 90 m (no USGS data here)'};
+// Open-Meteo is a 90 m grid rounded to whole meters, so asking every 2 m gives flat stretches with
+// 1 m steps between them. Ask about every 30 m, smooth over the 90 m it really knows, and draw a
+// smooth line through that back at every sample.
+async function meteoProfile(samples){
+  const n=samples.length,tot=samples[n-1].d,sp=Math.max(30,tot/400),idx=[0];
+  for(let i=1;i<n;i++)if(i===n-1||samples[i].d-samples[idx[idx.length-1]].d>=sp)idx.push(i);
+  const raw=(await meteoSamples(idx.map(i=>samples[i]))).map(v=>okZ(v)?+v:null);
+  const D=idx.map(i=>samples[i].d),good=raw.map((v,i)=>v!=null?i:-1).filter(i=>i>=0);
+  if(!good.length)throw Error('no elevation');
+  const filled=interp(good.map(i=>D[i]),good.map(i=>raw[i]),D);
+  return interp(D,movAvg(D,filled,45),samples.map(s=>s.d));
 }
+// throw out single odd readings (a tile seam, a bridge, a bad pixel): anything far off the middle of its neighbours
+function despike(z){
+  const n=z.length,bad=[];
+  for(let i=0;i<n;i++){
+    if(z[i]==null)continue;const w=[];
+    for(let j=Math.max(0,i-5);j<=Math.min(n-1,i+5);j++)if(z[j]!=null)w.push(z[j]);
+    if(w.length<5)continue;w.sort((a,b)=>a-b);const m=w[w.length>>1],dev=w.map(x=>Math.abs(x-m)).sort((a,b)=>a-b)[w.length>>1];
+    if(Math.abs(z[i]-m)>Math.max(3,4.5*dev))bad.push(i);
+  }
+  for(const i of bad)z[i]=null;
+  return bad.length;
+}
+async function getElevations(samples){
+  const n=samples.length,D=samples.map(s=>s.d);let z=new Array(n).fill(null),res=[],srcs={};
+  let down=false;try{const u=await usgsSamples(samples);z=u.z;res=u.res;srcs=u.srcs}catch(e){down=true}
+  // a 0 in the middle of high ground is "no data", not sea level
+  const vals=z.filter(v=>v!=null).sort((a,b)=>a-b),mid=vals[vals.length>>1];
+  if(vals.length&&Math.abs(mid)>50)z=z.map(v=>v===0?null:v);
+  despike(z);
+  const have=z.filter(v=>v!=null).length;
+  if(!have){const m=await meteoProfile(samples);return {z:m,res:90,lidar:false,down,src:'Open-Meteo 90 m, smoothed ('+(down?'USGS is not answering right now':'USGS has no data here')+')'}}
+  // fill the holes: short ones straight across from the heights on each side, long ones from Open-Meteo
+  // shifted to meet the USGS heights at both ends, so there is no step where the two sources meet
+  let met,nMet=0,nLin=0;
+  for(let a=0;a<n;a++){
+    if(z[a]!=null)continue;let b=a;while(b+1<n&&z[b+1]==null)b++;
+    const L=a>0?a-1:-1,R=b<n-1?b+1:-1,span=(R>=0?D[R]:D[b])-(L>=0?D[L]:D[a]);
+    if(span>40&&met===undefined){try{met=await meteoProfile(samples)}catch(e){met=null}}
+    for(let i=a;i<=b;i++){
+      if(span>40&&met){
+        const oL=L>=0?z[L]-met[L]:null,oR=R>=0?z[R]-met[R]:null,t=L>=0&&R>=0?(D[i]-D[L])/(D[R]-D[L]):0;
+        z[i]=met[i]+(oL!=null&&oR!=null?oL+(oR-oL)*t:(oL??oR));nMet++;
+      }else{
+        z[i]=L>=0&&R>=0?z[L]+(z[R]-z[L])*(D[i]-D[L])/(D[R]-D[L]):L>=0?z[L]:z[R];nLin++;
+      }
+    }
+    a=b;
+  }
+  const rs=res.filter((r,i)=>r!=null),best=rs.length?Math.min(...rs):null,worst=rs.length?Math.max(...rs):null;
+  const names=Object.entries(srcs).map(([nm,o])=>nm+(o.year?' ('+o.year+')':'')).slice(0,3).join(', ');
+  let src='USGS 3DEP '+(best===worst?resLabel(best):resLabel(best)+' to '+resLabel(worst))+(names?', survey '+names:'');
+  const pct=x=>Math.max(1,Math.round(100*x/n));
+  if(nMet)src+=`, with Open-Meteo 90 m for ${pct(nMet)}% of the line where USGS had no data`;
+  else if(nLin>n*0.02)src+=`, ${pct(nLin)}% of points filled in from their neighbours`;
+  return {z,res:worst??1,lidar:worst!=null&&worst<=3&&nMet<n*0.1,src};
+}
+function resLabel(r){return r==null?'':r<=1.5?'1 m LiDAR':r<=5?'3 m (1/9 arc-second)':r<=15?'10 m':'30 m'}
 async function fetchElev(l,k){
   const pts=l.pts.map(p=>({lat:p.lat,lng:p.lng}));let total=0;
   for(let i=1;i<pts.length;i++)total+=ll(pts[i-1]).distanceTo(ll(pts[i]));
@@ -1358,38 +1458,83 @@ async function fetchElev(l,k){
     for(let j=i===1?0:1;j<=n;j++){const t=j/n;samples.push({lat:a.lat+(b.lat-a.lat)*t,lng:a.lng+(b.lng-a.lng)*t,d:acc+d*t})}
     acc+=d;
   }
-  try{
-    const E=await getElevations(samples),z=E.z;
-    // smoothed copy for climb and grade, so tiny bumps in the LiDAR don't count as hills
-    const w=Math.max(1,Math.round(4/step)),zs=z.map((_,i)=>{let s=0,c=0;for(let j=Math.max(0,i-w);j<=Math.min(z.length-1,i+w);j++){s+=z[j];c++}return s/c});
-    let surf=0,climb=0,drop=0,grade=0,mn=Infinity,mx=-Infinity;
-    for(let i=0;i<samples.length;i++){mn=Math.min(mn,z[i]);mx=Math.max(mx,z[i]);if(!i)continue;
-      const dx=samples[i].d-samples[i-1].d;surf+=Math.hypot(dx,zs[i]-zs[i-1]);const dz=zs[i]-zs[i-1];if(dz>0)climb+=dz;else drop-=dz}
-    for(let i=0,j=0;i<samples.length;i++){while(j<samples.length&&samples[j].d-samples[i].d<10)j++;if(j>=samples.length)break;grade=Math.max(grade,Math.abs(zs[j]-zs[i])/(samples[j].d-samples[i].d))}
-    if(geomKey(l)!==k)return;
-    const every=Math.max(1,Math.ceil(samples.length/600)),prof=[];
-    for(let i=0;i<samples.length;i+=every)prof.push([+(samples[i].d*FT).toFixed(1),+(z[i]*FT).toFixed(1)]);
-    l.elev={v:2,key:k,src:E.src,lidar:E.lidar,flat:acc*FT,surface:surf*FT,min:mn*FT,max:mx*FT,climb:climb*FT,drop:drop*FT,grade:grade*100,prof};
-    if(snapCur===S.cur)snapNow=snapState();save();renderAll();
-  }catch(e){elevFail.add(l.id+k);renderPanel()}
+  const E=await getElevations(samples),n=samples.length,D=samples.map(s=>s.d);
+  if(geomKey(l)!==k)return;   // moved while loading: ensureElev loads the new shape
+  const had=evOf(l);if(E.down&&had&&/^USGS/.test(had.src||''))return;   // USGS down: keep the USGS heights already here
+  // smooth over a few meters (more for coarser data) so a bump or a noisy reading in the ground model
+  // doesn't count as a hill, then measure every 5 m: the length along the ground is what the fence is
+  // priced on, and measuring every 2 m would add the noise to it
+  const hw=Math.max(3,Math.min(15,E.res||1)),zs=movAvg(D,E.z,hw);
+  const g=[0];for(let i=1;i<n;i++)if(i===n-1||D[i]-D[g[g.length-1]]>=5)g.push(i);
+  let surf=0,climb=0,drop=0,grade=0,mn=Infinity,mx=-Infinity;
+  for(const v of zs){mn=Math.min(mn,v);mx=Math.max(mx,v)}
+  for(let q=1;q<g.length;q++){const i=g[q],h=g[q-1],dz=zs[i]-zs[h];surf+=Math.hypot(D[i]-D[h],dz);if(dz>0)climb+=dz;else drop-=dz}
+  // steepest grade over at least 10 m of fence (more on coarse data)
+  const gw=Math.min(Math.max(10,2*hw),D[n-1]||1);
+  for(let i=0,j=0;i<n;i++){while(j<n-1&&D[j]-D[i]<gw)j++;if(D[j]-D[i]<gw-0.01)break;grade=Math.max(grade,Math.abs(zs[j]-zs[i])/(D[j]-D[i]))}
+  const every=Math.max(1,Math.ceil(n/600)),prof=[];
+  for(let i=0;i<n;i+=every)prof.push([+(D[i]*FT).toFixed(1),+(zs[i]*FT).toFixed(1)]);
+  if((n-1)%every)prof.push([+(D[n-1]*FT).toFixed(1),+(zs[n-1]*FT).toFixed(1)]);
+  l.elev={v:EV,key:k,at:Date.now(),down:!!E.down,src:E.src,lidar:E.lidar,flat:acc*FT,surface:Math.max(surf,acc)*FT,min:mn*FT,max:mx*FT,climb:climb*FT,drop:drop*FT,grade:grade*100,prof};
+  if(snapCur===S.cur)snapNow=snapState();save(true);renderAll();
 }
 function profileSvg(ev){
   const pr=ev.prof;if(!pr||pr.length<2)return'';
   const W=400,H=110,pd=4,d0=pr[pr.length-1][0]||1;let a=Infinity,b=-Infinity;for(const[,z]of pr){a=Math.min(a,z);b=Math.max(b,z)}
-  const zr=Math.max(b-a,15),x=d=>(pd+(W-2*pd)*d/d0).toFixed(1),y=z=>(H-pd-(H-2*pd)*(z-a)/zr).toFixed(1);
+  // keep the chart from stretching a foot or two of rise into a cliff: at least 15 ft tall, and at most
+  // about 30 times taller than true scale for the length of the line
+  const zr=Math.max(b-a,15,d0/30),lo=a-(zr-(b-a))/2,x=d=>(pd+(W-2*pd)*d/d0).toFixed(1),y=z=>(H-pd-(H-2*pd)*(z-lo)/zr).toFixed(1);
   const pts=pr.map(([d,z])=>x(d)+','+y(z)).join(' ');
   return `<div class="prof"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-label="Elevation along the fence"><polygon class="pf" points="${x(0)},${H} ${pts} ${x(d0)},${H}"/><polyline class="pl" points="${pts}"/></svg><div class="pax"><span>Start</span><span>Elevation along the line, ${fmtFt(b-a)} of rise and fall</span><span>End</span></div></div>`;
 }
+// the elevation block for the selected line: the last good heights stay up while new ones load
+function elevView(l){
+  const ev=evOf(l),old=ev?null:evAny(l),st=ev?'':elevState(l),e=ev||old;
+  const again=`<button class="btn sm" data-act="retryElev" data-id="${l.id}">Try again</button>`;
+  const note=ev?'':st==='fail'?`<p class="err">Heights could not load for the line's new shape (the elevation service is not answering). The numbers above are from before the last change, and the price uses the flat map distance for now. ${again}</p>`
+    :st==='retry'?`<p class="small mut">The elevation service did not answer, trying again in a moment… These numbers are from before the last change.</p>`
+    :`<p class="small mut">Updating heights for the new shape… These numbers are from before the last change.</p>`;
+  if(!e)return st==='fail'?`<p class="err">Elevation could not load: USGS and Open-Meteo are not answering right now. ${again}</p>`
+    :st==='retry'?`<p class="small mut">The elevation service did not answer, trying again in a moment…</p>`:`<p class="small mut">Getting LiDAR elevation…</p>`;
+  return `<div class="sum${old?' stale':''}" style="margin-top:12px"><div><span>Along the ground</span><b>${fmtFt(e.surface)}</b></div><div><span>Flat map distance</span><b>${fmtFt(e.flat)}</b></div>
+    <div><span>Total climb</span><b>${fmtFt(e.climb)}</b></div><div><span>Steepest grade</span><b>${(+e.grade||0).toFixed(0)}%</b></div></div>${profileSvg(e)}${note}<p class="small ${e.lidar?'okc':'mut'}">Heights from ${esc(e.src)}</p>`;
+}
 
 /* ---------- 3D view ---------- */
+// The 3D ground is one 400 x 400 grid, so it covers an area up to about 8.5 km (5.3 miles) square,
+// the same limit as before. That fits fence that spreads up to about 6.6 km (4 miles) with room around it.
+const MAX3D=6640;
+const mi=m=>(m/1609.34).toFixed(m<16093?1:0)+' miles';
+// the area to show for some fence points: their bounds plus room around them
+function area3D(pts){
+  if(!pts.length)return null;
+  const b=L.latLngBounds(pts.map(ll)),c=b.getCenter();
+  const w=L.latLng(c.lat,b.getWest()).distanceTo(L.latLng(c.lat,b.getEast())),h=L.latLng(b.getSouth(),c.lng).distanceTo(L.latLng(b.getNorth(),c.lng));
+  const size=Math.max(w,h);
+  return {size,bounds:c.toBounds(Math.max(300,size*1.25+200))};   // toBounds takes the full width of the square
+}
 async function open3D(lineId){
   if(mode!=='idle')cancelDraw();
-  let pts=lineId?getLine(lineId).pts:P().lines.flatMap(l=>l.pts),b;
-  if(pts.length){b=L.latLngBounds(pts.map(ll));const c=b.getCenter(),r=Math.max(150,b.getNorthEast().distanceTo(b.getSouthWest())*0.65);b=c.toBounds(r*2)}
-  else b=map.getBounds();
-  const span=b.getNorthWest().distanceTo(b.getSouthEast());
-  if(span>12000){toast('Zoom in closer first, the 3D view covers up to a few miles');return}
-  try{const m=await import('./view3d.js');m.open3D({layoutOf:id=>A.lines.find(r=>r.l.id===id)?.stretches,postRule,bounds:b,lines:P().lines,types:S.fenceTypes,nodes:A.nodes,key,focus:lineId,braces:S.braces.map(b=>({...b,shape:braceShape(b)})),materials:S.materials})}
+  const drawn=P().lines.filter(l=>!l.manual&&l.pts.length),one=lineId?getLine(lineId):null;
+  const view=map.getBounds(),inView=pts=>pts.filter(p=>view.contains(ll(p)));
+  let a,msg='';
+  if(one&&one.pts.length){
+    a=area3D(one.pts);
+    if(a.size>MAX3D){const v=area3D(inView(one.pts));
+      if(v&&v.size<=MAX3D){a=v;msg=`This line runs ${mi(a.size)} across, so the 3D view shows the part in the map view`}
+      else return toast(`This line spreads ${mi(area3D(one.pts).size)} across and the 3D view covers fence up to about 4 miles across. Zoom the map in on the part you want to see, then open 3D again.`)}
+  }else if(drawn.length){
+    a=area3D(drawn.flatMap(l=>l.pts));
+    if(a.size>MAX3D){const all=a.size,v=area3D(inView(drawn.flatMap(l=>l.pts)));
+      if(v&&v.size<=MAX3D){a=v;msg=`The fence in this job spreads ${mi(all)} across, so the 3D view shows the fence in the map view`}
+      else return toast(`The fence in this job spreads ${mi(all)} across and the 3D view covers fence up to about 4 miles across. Click one line, or zoom the map in on one part, then open 3D again.`)}
+  }else{
+    const s=Math.max(view.getNorthWest().distanceTo(view.getNorthEast()),view.getNorthWest().distanceTo(view.getSouthWest()));
+    if(s>MAX3D*1.3)return toast(`There is no fence in this job yet, and the map shows ${mi(s)} across. Zoom in to under about 5 miles across, then open 3D again.`);
+    a={bounds:view};
+  }
+  if(msg)toast(msg);
+  try{const m=await import('./view3d.js');m.open3D({layoutOf:id=>A.lines.find(r=>r.l.id===id)?.stretches,postRule,bounds:a.bounds,lines:P().lines,types:S.fenceTypes,nodes:A.nodes,key,focus:lineId,braces:S.braces.map(b=>({...b,shape:braceShape(b)})),materials:S.materials})}
   catch(e){console.error(e);toast('3D view could not load')}
 }
 $('#b3d').onclick=()=>open3D(selLine);$('#b3dMap').onclick=()=>open3D(selLine);
@@ -1438,6 +1583,7 @@ function laborView(){
   <div class="box scroll"><table class="bill"><tbody>
     <tr class="grp"><td colspan="2">Labor (each fence type's $ per foot, set on Fence types)</td></tr>
     ${rows||'<tr><td colspan="2" class="mut">No fence yet.</td></tr>'}
+    ${L.byBrace?.length?`<tr class="grp"><td colspan="2">Braces (each brace's labor $, set on the Braces page)</td></tr>${L.byBrace.map(x=>`<tr><td>${esc(x.b.name)}: ${fmtQ(x.n)} × ${money(x.rate)} each${x.rate?'':' <span class="small mut">(no charge set)</span>'}</td><td class="num">${money(x.cost)}</td></tr>`).join('')}`:''}
     ${L.siteHead?`<tr><td>Headache: site difficulty, ${L.site}%</td><td class="num">${money(L.siteHead)}</td></tr>`:''}
     <tr class="tot"><td>Labor</td><td class="num">${money(L.figured)}</td></tr></tbody></table></div>
   <div class="box${L.override!=null?' warnbox':''}" style="margin-top:8px;padding:10px 12px">
@@ -1510,11 +1656,7 @@ function estView(){
 }
 function lineView(){
   const l=getLine(selLine),r=A.lines.find(x=>x.l===l);if(!r)return estView();
-  const k=geomKey(l),ev=l.elev&&l.elev.key===k&&l.elev.v===2?l.elev:null;
-  const evh=ev?`<div class="sum" style="margin-top:12px"><div><span>Along the ground</span><b>${fmtFt(ev.surface)}</b></div><div><span>Flat map distance</span><b>${fmtFt(ev.flat)}</b></div>
-    <div><span>Total climb</span><b>${fmtFt(ev.climb)}</b></div><div><span>Steepest grade</span><b>${ev.grade.toFixed(0)}%</b></div></div>${profileSvg(ev)}<p class="small ${ev.lidar?'okc':'mut'}">Heights from ${esc(ev.src)}</p>`
-    :elevFail.has(l.id+k)?`<p class="err">Elevation could not load. <button class="btn sm" data-act="retryElev" data-id="${l.id}">Try again</button></p>`
-    :`<p class="small mut">Getting LiDAR elevation…</p>`;
+  const evh=elevView(l);
   const nodes=l.pts.map((p,i)=>{const o=A.nodes.get(key(p));const on=selNode&&selNode.l===l.id&&selNode.i===i;
     const autoLbl='Auto ('+kitName(o.auto)+')',cur=p.brace??'';
     const sel=`<select data-f="node.brace" data-id="${l.id}" data-i="${i}" aria-label="Brace at point ${i+1}">${opt('',autoLbl,cur)}${S.braces.map(b=>opt(b.id,b.name,cur)).join('')}${opt('none','No brace (line post)',cur)}${opt('gate','Gate opening',cur)}</select>`;
@@ -1801,17 +1943,18 @@ const BRACE_HRS={single:0.5,a:1.5,aa:2.5,n:2,h:2};
 function braceHours(b){if(!b)return 0;if(b.hours!=null&&b.hours!=='')return +b.hours||0;const sh=braceShape(b);return sh.style==='h'&&+sh.bays>1?3.5:BRACE_HRS[sh.style]??2}
 function braceSvg(b){
   const sh=braceShape(b),st=sh.style,span=Math.max(1,+sh.span||8),isA=st==='a'||st==='aa';
-  const main=(x,lab)=>({x,h:+sh.h1||0,bury:+sh.bury1||0,lab}),short=(x,lab)=>({x,h:+sh.h2||0,bury:+sh.bury2||0,lab});
+  // drawn from the ground up: what's in the ground isn't shown
+  const main=(x,lab)=>({x,h:+sh.h1||0,bury:0,lab}),short=(x,lab)=>({x,h:+sh.h2||0,bury:0,lab});
   let posts,pairs;   // pairs: [post the rail starts high on, post it runs to]
   if(st==='single'){posts=[main(0,'L')];pairs=[]}
   else if(st==='aa'){posts=[short(0,'L'),main(span,'T'),short(2*span,'R')];pairs=[[1,0],[1,2]]}
   else if(st==='a'){posts=[main(0,'L'),short(span,'R')];pairs=[[0,1]]}
   else{const bays=Math.max(1,Math.round(+sh.bays||1));posts=[main(0,'L')];pairs=[];for(let i=1;i<=bays;i++){posts.push(main(i*span,null));pairs.push([i-1,i])}}
   const maxH=Math.max(...posts.map(q=>q.h)),maxB=Math.max(...posts.map(q=>q.bury)),maxX=Math.max(...posts.map(q=>q.x));
-  const padL=5,padR=5,wft=maxX+padL+padR,hft=maxH+maxB+1.9,W=440,sc=Math.min(W/wft,230/hft),H=hft*sc,gy=(maxH+1.2)*sc,X=x=>(padL+x)*sc;
+  const padL=5,padR=5,wft=maxX+padL+padR,hft=maxH+maxB+2.6,W=440,sc=Math.min(W/wft,230/hft),H=hft*sc,gy=(maxH+1.2)*sc,X=x=>(padL+x)*sc;
   const pw=Math.max(2,(+sh.dia||4)/12*sc),rw=Math.max(2,(+sh.rail||3)/12*sc),col=sh.steel?'#9aa3ab':'#a37b52';
   let o=`<rect x="0" y="${gy}" width="${wft*sc}" height="${H-gy}" class="gr"/><line x1="0" x2="${wft*sc}" y1="${gy}" y2="${gy}" class="gl"/>`;
-  for(const [ia,ic] of pairs){const a=posts[ia],c=posts[ic],[ya,yc]=railEnds(sh,a.h,c.h),x1=Math.min(X(a.x),X(c.x)),x2=Math.max(X(a.x),X(c.x)),dy=gy+maxB*sc*0.45;
+  for(const [ia,ic] of pairs){const a=posts[ia],c=posts[ic],[ya,yc]=railEnds(sh,a.h,c.h),x1=Math.min(X(a.x),X(c.x)),x2=Math.max(X(a.x),X(c.x)),dy=gy+Math.max(maxB*sc*0.45,16);
     o+=`<line x1="${X(a.x)}" y1="${gy-ya*sc}" x2="${X(c.x)}" y2="${gy-yc*sc}" stroke="${col}" stroke-width="${rw}" stroke-linecap="round"/>`;
     if(st==='h'&&sh.wire)o+=`<line x1="${X(a.x)}" y1="${gy-0.3*sc}" x2="${X(c.x)}" y2="${gy-ya*sc}" class="bw"/>`;
     o+=`<line x1="${x1+pw}" x2="${x2-pw}" y1="${dy}" y2="${dy}" class="dm"/><text x="${(x1+x2)/2}" y="${dy-5}" text-anchor="middle">${fmtQ(span)} ft</text>`}
@@ -1828,14 +1971,16 @@ function shapeEditor(b){
   return `<h3>What it looks like <span class="small mut" style="font-weight:400">drawn to scale, used in the 3D view</span></h3>
   <div class="bshape"><div>${braceSvg(b)}</div><div>
     <label class="f">Style</label><select data-f="kits.style" ${d}>${BSTYLES.map(([k,l])=>opt(k,l,st)).join('')}</select>
-    <div class="g2">${num('h1','Main post above ground ft')}${num('bury1','Main post in ground ft')}
-      ${st==='a'||st==='aa'?num('h2','Short post above ground ft')+num('bury2','Short post in ground ft'):''}
-      ${st!=='single'?num('span','Distance between posts ft'):''}${st==='h'||st==='n'?num('bays','Bays (2 for a double)','1'):''}
-      ${num('dia','Post thickness in')}${st!=='single'?num('rail','Rail thickness in'):''}</div>
+    <div class="g2">${num('h1',st==='single'?'Sticks out of the ground ft':'Tall post sticks out of the ground ft')}
+      ${st==='a'||st==='aa'?num('h2','Short post sticks out ft'):''}
+      ${st!=='single'?num('span','Distance between posts ft'):''}${st==='h'||st==='n'?num('bays','Bays (2 for a double)','1'):''}</div>
     <div class="row" style="margin-top:8px"><label class="row"><input type="checkbox" ${sh.steel?'checked':''} data-f="kits.steel" ${d}> Steel pipe</label>
       ${st==='h'?`<label class="row"><input type="checkbox" ${sh.wire?'checked':''} data-f="kits.wire" ${d}> Brace wire</label>`:''}</div>
+    <details style="margin-top:8px"><summary class="small mut">More measurements (not needed)</summary>
+      <div class="g2" style="margin-top:6px">${num('bury1','Tall post in the ground ft')}${st==='a'||st==='aa'?num('bury2','Short post in the ground ft'):''}
+        ${num('dia','Post thickness in')}${st!=='single'?num('rail','Rail thickness in'):''}</div></details>
   </div></div>
-  <p class="small mut" style="margin:6px 0 0">This only changes the drawing and the 3D view. What you buy for it is the list above.</p>`;
+  <p class="small mut" style="margin:6px 0 0">This only changes the drawing and the 3D view, plus where the line posts start (the distance between posts). What you pay for it is the list above.</p>`;
 }
 function bracesView(){
   const usedBy=id=>S.fenceTypes.filter(t=>['braceEnd','braceCorner','bracePull','braceGate'].some(k=>t[k]===id)).map(t=>t.name);
@@ -1849,6 +1994,8 @@ function bracesView(){
       <td><button class="btn x" data-act="delKiti" data-id="${b.id}" data-i="${i}" aria-label="Remove item" title="Remove">×</button></td></tr>`).join('')||'<tr><td colspan="6" class="mut">Nothing in it yet.</td></tr>'}
     </tbody><tfoot><tr><td colspan="4"><button class="btn sm" data-act="addKiti" data-id="${b.id}">Add item</button></td><td class="num"><b>${money(cost)}</b></td><td></td></tr></tfoot></table>
     <p class="small mut" style="margin:4px 0 0">${money(cost)} for one of these, before tax.</p>
+    <div class="row" style="margin-top:10px"><label class="lbl">Labor $ per brace <input type="number" min="0" step="any" value="${+b.labor||0}" data-f="kit.labor" data-id="${b.id}" style="width:100px" aria-label="Labor charge for each brace"></label>
+      <span class="small mut">Charged on the Final bill for every one of these in a job${n?` (${fmtQ(n)} in this job: ${money(n*(+b.labor||0))})`:''}.</span></div>
     ${shapeEditor(b)}</div>`}).join('');
   return `<div class="phead"><div><h1>Braces</h1><p>Build each brace from whatever goes into it: pick a product (or make a new one), how many, and what it costs. Each fence type picks which brace goes where.</p></div><button class="btn pri" data-act="addKit">New brace</button></div>
   <div class="cards wide">${kits}</div>`;
@@ -1891,12 +2038,19 @@ function gapText(r){
   const range=b-a<0.05?f(a):f(a)+' to '+f(b);
   return nc?`${nc} stretch${nc>1?'es have':' has'} posts you placed by hand. Gaps run ${range} ft.`:`Posts are evened out between braces: ${range} ft apart (you set ${set} ft).`;
 }
+// one line of ground info for the list of lines: climb, steepest grade and the length along the ground
+function elevShort(l){
+  if(l.manual||l.pts.length<2)return '';
+  const e=evOf(l)||evAny(l);
+  if(!e)return elevState(l)==='fail'?' · heights did not load':' · getting heights…';
+  return ` · climbs ${fmtFt(e.climb)}, steepest ${(+e.grade||0).toFixed(0)}%, ${fmtFt(e.surface)} along the ground${evOf(l)?'':' (updating…)'}`;
+}
 function sideView(){
   const sel=selLine&&getLine(selLine)&&A.lines.find(x=>x.l.id===selLine);
   const head=`<div class="sum two"><div><span>Wire run</span><b>${fmtFt(A.totalFt)}</b></div><div class="tot"><span>Materials</span><b>${money(A.sub+A.tax)}</b></div></div>
     <div class="row" style="margin-top:8px;flex-wrap:nowrap"><button class="btn pri grow" data-act="billDlg">Materials</button><button class="btn grow" data-act="tab" data-tab="est">Final bill</button><button class="btn grow" data-act="view3d" data-id="">3D view</button></div>`;
   const drawn=A.lines.filter(r=>!r.manual);
-  const list=drawn.length?`<div class="row" style="justify-content:space-between;margin:18px 0 8px"><h2 style="margin:0">Lines in this job</h2><button class="btn sm del" data-act="clearLines">Clear map</button></div><div class="box">${drawn.map(r=>`<button class="tli${r.l.id===selLine?' on':''}" data-act="sel" data-id="${r.l.id}"><span class="dot" style="background:${esc(r.t.color)}"></span><span class="grow"><b>${esc(r.l.name)}</b><span class="small mut">${esc(r.t.name)}</span></span><span class="num">${fmtFt(r.len)}</span></button>`).join('')}</div>`:'';
+  const list=drawn.length?`<div class="row" style="justify-content:space-between;margin:18px 0 8px"><h2 style="margin:0">Lines in this job</h2><button class="btn sm del" data-act="clearLines">Clear map</button></div><div class="box">${drawn.map(r=>`<button class="tli${r.l.id===selLine?' on':''}" data-act="sel" data-id="${r.l.id}"><span class="dot" style="background:${esc(r.t.color)}"></span><span class="grow"><b>${esc(r.l.name)}</b><span class="small mut">${esc(r.t.name)}${elevShort(r.l)}</span></span><span class="num">${fmtFt(r.len)}</span></button>`).join('')}</div>`:'';
   return head+(sel?lineView():setupView())+list;
 }
 function setupView(){
@@ -2122,7 +2276,7 @@ async function act(a,d){
   case 'showMap':setMap(true);break;
   case 'delLine':if(getLine(id).manual||await ask('Delete this fence line?')){P().lines=P().lines.filter(l=>l.id!==id);selLine=null;selNode=null;changed()}break;
   case 'delPt':{const l=getLine(id);if(l.pts.length<=2){if(await ask('That leaves less than two points. Delete the whole line?')){P().lines=P().lines.filter(x=>x.id!==id);selLine=null}}else l.pts.splice(i,1);selNode=null;changed();break}
-  case 'retryElev':{const l=getLine(id);elevFail.delete(l.id+geomKey(l));ensureElev();renderPanel();break}
+  case 'retryElev':{const l=getLine(id);if(!l)break;elevFail.delete(l.id+geomKey(l));ensureElev();renderPanel();break}
   case 'copyBill':copyBill();break;
   case 'print':window.print();break;
   case 'addMat':openMatDlg(null);break;
