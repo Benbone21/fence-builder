@@ -643,6 +643,11 @@ function analyze(proj){
   }
   const types={},lines=[];
   const TT=t=>types[t.id]||(types[t.id]={t,L:0,posts:0,wood:0,tposts:0,sections:0,pulls:0,lines:0,kits:0,gates:0,kitBy:{},parts:[],other:(t.posts||[]).map(()=>0)});
+  // how far a brace reaches into the fence from its main post: its outer post is where the line posts start counting
+  const reachOf=id=>{const b=kitById[id];if(!b)return 0;const sh=braceShape(b);if(sh.style==='single')return 0;const bays=sh.style==='a'||sh.style==='aa'?1:Math.max(1,Math.round(+sh.bays||1));return Math.max(1,+sh.span||8)*bays};
+  const endKit=(k,t)=>{const b=nodes.get(k)?.brace;return b==='gate'?t.braceGate:b&&b!=='none'?b:null};
+  // how many line posts fit in a gap: closest to the spacing, never wider than it, or never closer than it
+  const postsIn=(len,sp,fit)=>Math.max(0,(fit==='tight'?Math.ceil(len/sp-1e-9):fit==='wide'?Math.floor(len/sp+1e-9):Math.round(len/sp))-1);
   function tally(l,t,secs,o,keys){
     const sp=Math.max(1,+t.spacing||12),pe=pullLimit(t),slack=(t.pullSlack==null?15:Math.max(0,+t.pullSlack||0))/100,other=(t.posts||[]).map(()=>0);
     let posts=0,wood=0,pulls=0;
@@ -651,6 +656,9 @@ function analyze(proj){
       // items: every post and pull brace in the stretch, as a fraction of the way along it.
       // k is -1 for a normal line post, 0+ for one of the added posts, 'p' for a pull brace.
       const kk=keys?.[si],cust=kk&&l.cust?.[kk];let items;
+      // the braces at each end of this stretch take up some of it; line posts are spaced between their outer posts
+      const [ka,kb]=(kk||'>').split('>'),rp=reachOf(t.bracePull);
+      let ra=reachOf(endKit(ka,t)),rb=reachOf(endKit(kb,t));if(ra+rb>s*0.9){const k=s*0.9/(ra+rb||1);ra*=k;rb*=k}
       if(Array.isArray(cust))items=cust.map(x=>({f:Math.min(1,Math.max(0,+x.f||0)),k:x.k==='p'?'p':(+x.k>=0&&t.posts?.[+x.k]?+x.k:-1)}));
       else{
         // automatic: a run longer than the stretch limit (plus the allowed run-over) gets pull braces,
@@ -661,13 +669,17 @@ function analyze(proj){
           else{const parts=Math.ceil(s/(pe*(1+slack)));for(let i=1;i<parts;i++)cuts.push(i/parts)}
         }
         const bs=[0,...cuts,1];
-        for(let q=0;q<bs.length-1;q++){const Lq=s*(bs[q+1]-bs[q]),n=Math.max(0,Math.ceil(Lq/sp-1e-9)-1),gap=Lq/(n+1);
-          if(q)items.push({f:bs[q],k:'p'});for(let j=1;j<=n;j++)items.push({f:bs[q]+(bs[q+1]-bs[q])*j/(n+1),k:postRule(t,j,gap,n)})}
+        for(let q=0;q<bs.length-1;q++){
+          // from the outer post of the brace at one end to the outer post of the brace at the other
+          const a=s*bs[q]+(q===0?ra:Math.min(rp,s*(bs[q+1]-bs[q])*0.45)),b=s*bs[q+1]-(q===bs.length-2?rb:Math.min(rp,s*(bs[q+1]-bs[q])*0.45));
+          const Lq=Math.max(0,b-a),n=postsIn(Lq,sp,t.postFit),gap=Lq/(n+1);
+          if(q)items.push({f:bs[q],k:'p'});for(let j=1;j<=n;j++)items.push({f:(a+gap*j)/s,k:postRule(t,j,gap,n)})}
       }
-      let last=0,gmin=Infinity,gmax=0,np=0;
-      for(const it of items){const g=(it.f-last)*s;last=it.f;gmin=Math.min(gmin,g);gmax=Math.max(gmax,g);
-        if(it.k==='p')pulls++;else{posts++;np++;if(it.k>=0){other[it.k]++;wood++}}}
-      if(items.length){const g=(1-last)*s;gmin=Math.min(gmin,g);gmax=Math.max(gmax,g)}
+      // gaps between posts, counted from each brace's outer post (and around pull braces the same way)
+      let last=ra/s,gmin=Infinity,gmax=0,np=0;
+      for(const it of items){if(it.k==='p'){const g=(it.f-last)*s-rp;gmin=Math.min(gmin,g);gmax=Math.max(gmax,g);last=it.f+rp/s;pulls++;continue}
+        const g=(it.f-last)*s;last=it.f;gmin=Math.min(gmin,g);gmax=Math.max(gmax,g);posts++;np++;if(it.k>=0){other[it.k]++;wood++}}
+      if(items.length){const g=(1-rb/s-last)*s;gmin=Math.min(gmin,g);gmax=Math.max(gmax,g)}
       stretches.push({len:s,key:kk,items,custom:Array.isArray(cust),n:np,gmin,gmax});
     });
     const len=secs.reduce((a,b)=>a+b,0);
@@ -1697,6 +1709,8 @@ function postsEditor(t){
   return `<div class="po head small mut"><span>Post</span><span></span><span>How often</span><span></span><span>$ each</span><span></span></div>
     <div class="po"><select data-f="ft.postM" ${d} aria-label="Normal line post">${matOpts(t.postM,true,'None')}</select><span class="mut small">every</span>
       <input type="number" min="1" step="any" value="${n(t.spacing)}" data-f="ft.spacing" ${d} aria-label="Post spacing in feet"><span class="small">ft</span><span class="mini"><span>$</span>${priceIn(t.postM)}</span><span></span></div>
+    <label class="small" style="display:flex;gap:8px;align-items:center;margin:2px 0 8px">When a stretch doesn't divide evenly
+      <select data-f="ft.postFit" ${d} style="width:auto">${opt('closest','Space them closest to '+n(t.spacing)+' ft',t.postFit||'closest')}${opt('wide','Never closer than '+n(t.spacing)+' ft (a bit wider)',t.postFit||'closest')}${opt('tight','Never wider than '+n(t.spacing)+' ft (a bit closer)',t.postFit||'closest')}</select></label>
     ${rows}
     <button class="btn sm" data-act="addFto" ${d}>Add another post</button>
     <p class="small mut" style="margin:6px 0 0">The first row is your normal line post and its spacing. Each post you add takes the place of a normal one: "every 5 posts" or "every 100 ft". They are centered in each stretch, with the leftover split evenly at both ends, so the fence is mirrored.</p>`;
