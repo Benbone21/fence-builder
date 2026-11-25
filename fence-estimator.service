@@ -1,0 +1,16 @@
+# Copy to /etc/systemd/system/, fix the paths, then:
+#   sudo systemctl daemon-reload && sudo systemctl enable --now fence-estimator
+[Unit]
+Description=Fence Estimator
+After=network-online.target
+
+[Service]
+WorkingDirectory=/opt/fence-estimator
+ExecStart=/usr/bin/python3 /opt/fence-estimator/server.py
+Environment=PORT=8787
+Environment=FENCE_PASS=change-me
+Restart=on-failure
+User=www-data
+
+[Install]
+WantedBy=multi-user.target

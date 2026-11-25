@@ -1,0 +1,9 @@
+# your own data never goes to GitHub
+data/
+_previous/
+# made on each computer
+__pycache__/
+*.pyc
+*.tmp
+*.new
+Fence Estimator.lnk

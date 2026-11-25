@@ -1,0 +1,11 @@
+services:
+  fence:
+    build: .
+    container_name: fence-estimator
+    restart: unless-stopped
+    ports:
+      - "8787:8787"
+    volumes:
+      - ./data:/data
+    environment:
+      - FENCE_PASS=change-me   # login password (user name is "fence"); delete this line for no login

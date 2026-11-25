@@ -1,0 +1,587 @@
+{
+ "materials": [
+  {
+   "id": "m_hi1vtkn",
+   "name": "KIWI Woven 13-Line 48\" Height, 2\"x4\" Spacing, Class III 12½ Ga, 100-ft",
+   "unit": "roll",
+   "price": 205.75,
+   "url": "https://kencove.com/products/kiwi-woven-13-line-48-height-2x4-spacing-class-iii-12-ga?variant=49208509333604",
+   "checked": "2026-11-25T04:02:41.593Z",
+   "updated": "2026-11-25T04:00:26.832Z",
+   "src": "kencove.com · WS13-48-2-100-BB",
+   "kind": "wire",
+   "roll": 100,
+   "gauge": "12.5",
+   "image": "https://cdn.shopify.com/s/files/1/0783/8731/4788/files/WS13-48-2-100-BB_graphic_2026.jpg?v=1795557095"
+  },
+  {
+   "id": "m_ucsseww",
+   "name": "KIWI Woven 13-Line 48\" Height, 2\"x4\" Spacing, Class III 12½ Ga, 200-ft",
+   "unit": "roll",
+   "price": 432.75,
+   "url": "https://kencove.com/products/kiwi-woven-13-line-48-height-2x4-spacing-class-iii-12-ga?variant=49208509366372",
+   "checked": "2026-11-25T04:02:42.113Z",
+   "updated": "2026-11-25T04:00:18.340Z",
+   "src": "kencove.com · WS13-48-2-200-BB",
+   "kind": "wire",
+   "roll": 200,
+   "gauge": "12.5",
+   "image": "https://cdn.shopify.com/s/files/1/0783/8731/4788/files/WS13-48-2-100-BB_WS13-48-2-200-BB_graphic_2026_copy.jpg?v=1795557995"
+  },
+  {
+   "id": "m_31cm4rn",
+   "name": "Parma Post & Pole CAC Treated Wood Post, Sharp, 7' x 4-5\"",
+   "unit": "each",
+   "price": 16.49,
+   "url": "https://www.dbsupply.com/cac-treated-wood-post-sharp-7-x-3-6.html",
+   "checked": "2026-11-25T04:02:43.604Z",
+   "updated": "2026-11-25T03:59:03.164Z",
+   "src": "dbsupply.com · 3390",
+   "kind": "post",
+   "len": 7,
+   "image": "https://www.dbsupply.com/media/catalog/product/p/a/parmapost_3390_2023.jpg?quality=80&fit=bounds&height=&width="
+  },
+  {
+   "id": "m_tv674n3",
+   "name": "brace wire",
+   "unit": "each",
+   "price": 5,
+   "url": "",
+   "checked": null,
+   "src": "",
+   "kind": "wire",
+   "updated": "2026-11-25T03:57:20.011Z"
+  },
+  {
+   "id": "m_2cjvnms",
+   "name": "Brace Pin 5\", 1",
+   "unit": "each",
+   "price": 0.59,
+   "url": "https://kencove.com/products/brace-pin-5?variant=49208435376228",
+   "checked": "2026-11-25T04:02:44.138Z",
+   "updated": "2026-11-25T03:56:21.398Z",
+   "src": "kencove.com · H5PE",
+   "image": "https://cdn.shopify.com/s/files/1/0783/8731/4788/files/h5pe_measurements_2020-96473.jpg?v=1788992683"
+  },
+  {
+   "id": "m_b37njs4",
+   "name": "Brace Pin 10\", 1",
+   "unit": "each",
+   "price": 1.09,
+   "url": "https://kencove.com/products/brace-pin-10?variant=49208426627172",
+   "checked": "2026-11-25T04:02:44.677Z",
+   "updated": "2026-11-25T03:56:20.148Z",
+   "src": "kencove.com · H1PE",
+   "image": "https://cdn.shopify.com/s/files/1/0783/8731/4788/files/image_8e98eeef.jpg?v=1790622283"
+  },
+  {
+   "id": "m_mehxya8",
+   "name": "brace post",
+   "unit": "each",
+   "price": 28,
+   "url": "",
+   "checked": null,
+   "src": "",
+   "kind": "post",
+   "len": 8,
+   "dia": 6,
+   "made": "wood",
+   "updated": "2026-11-25T03:54:50.534Z"
+  },
+  {
+   "id": "m_5gobhmr",
+   "name": "Parma Post & Pole CAC Treated Wood Post, Sharp, 7' x 4-5\"",
+   "unit": "each",
+   "price": 16.49,
+   "url": "https://www.dbsupply.com/cac-treated-wood-post-sharp-7-x-3-6.html",
+   "checked": "2026-11-25T04:02:46.124Z",
+   "updated": "2026-11-25T03:51:16.862Z",
+   "src": "dbsupply.com · 3390",
+   "kind": "post",
+   "len": 7,
+   "image": "https://www.dbsupply.com/media/catalog/product/p/a/parmapost_3390_2023.jpg?quality=80&fit=bounds&height=&width="
+  },
+  {
+   "id": "m_b7hwr9t",
+   "name": "Parma Post & Pole CAC Treated Wood Post, Blunt, 10' x 4-1/2\"",
+   "unit": "each",
+   "price": 24.99,
+   "url": "https://www.dbsupply.com/acq-blunt-wood-post-7-x-4-1-3.html",
+   "checked": "2026-11-25T04:02:47.720Z",
+   "updated": "2026-11-25T03:42:41.001Z",
+   "src": "dbsupply.com · 987139",
+   "kind": "post",
+   "len": 10,
+   "image": "https://www.dbsupply.com/media/catalog/product/p/a/parmapost_987139_2023.jpg?quality=80&fit=bounds&height=&width="
+  },
+  {
+   "id": "m_7n3fc5f",
+   "name": "XT1 Strainer",
+   "unit": "each",
+   "price": 4.5,
+   "url": "",
+   "checked": null,
+   "src": "",
+   "kind": "hw",
+   "updated": "2026-11-25T03:35:16.239Z"
+  },
+  {
+   "id": "m_boigwb5",
+   "name": "CMC Steel 1.33 T-Post, 6'",
+   "unit": "each",
+   "price": 6.59,
+   "url": "https://www.dbsupply.com/133-6ft-t-post-943746.html",
+   "checked": "2026-11-25T04:02:49.315Z",
+   "updated": "2026-11-25T03:05:06.675Z",
+   "src": "dbsupply.com · 943746",
+   "kind": "post",
+   "len": 6,
+   "image": "https://www.dbsupply.com/media/catalog/product/C/M/CMCSteelSouthernPost_1.33_2021_2.jpg?quality=80&fit=bounds&height=&width="
+  },
+  {
+   "id": "m_1vr9ujz",
+   "name": "180 KSI High-Tensile Smooth Electric Fence Wire, 12½ Gauge, 2000-ft",
+   "unit": "roll",
+   "price": 91.75,
+   "url": "https://kencove.com/products/180-ksi-high-tensile-smooth-electric-fence-wire-12-gauge?variant=49208055136356",
+   "checked": "2026-11-25T04:02:49.853Z",
+   "updated": "2026-11-25T02:55:03.640Z",
+   "src": "kencove.com · WSA2D",
+   "kind": "wire",
+   "roll": 2000,
+   "gauge": "12.5",
+   "image": "https://cdn.shopify.com/s/files/1/0783/8731/4788/files/wsa2d-95078.jpg?v=1788992059"
+  },
+  {
+   "id": "m_5rg0b8l",
+   "name": "2 7/8 oil pipe 9ft",
+   "unit": "each",
+   "price": 24,
+   "url": "",
+   "checked": null,
+   "src": "",
+   "kind": "post",
+   "updated": "2026-11-25T02:07:57.929Z",
+   "len": 9,
+   "made": "pipe",
+   "roll": 330
+  },
+  {
+   "id": "m_fk",
+   "name": "High Tensil Fixed knot woven wire 49\" (660 ft roll)",
+   "unit": "roll",
+   "price": 431.75,
+   "url": "https://kencove.com/products/fixed-knot-woven-wire-9-49-12-12-ga?_pos=2&_sid=a39a15bd4&_ss=r&variant=49208485838948",
+   "checked": "2026-11-25T04:02:50.378Z",
+   "src": "kencove.com · WF9-49-12-660-DC",
+   "roll": 200,
+   "gauge": "12.5",
+   "height": 49,
+   "look": "mesh",
+   "updated": "2026-11-25T02:06:29.037Z",
+   "kind": "wire",
+   "image": "https://cdn.shopify.com/s/files/1/0783/8731/4788/files/WF9-49-12-330-DC_nolabel.jpg?v=1795543583"
+  },
+  {
+   "id": "m_cuxh32i",
+   "name": "2 7/8 oil pipe 5ft",
+   "unit": "each",
+   "price": 15,
+   "url": "",
+   "checked": null,
+   "src": "",
+   "updated": "2026-11-25T02:11:22.809Z"
+  },
+  {
+   "id": "m_hupksc9",
+   "name": "clamp",
+   "unit": "each",
+   "price": 3,
+   "url": "",
+   "checked": null,
+   "src": "",
+   "updated": "2026-11-25T02:08:52.977Z"
+  }
+ ],
+ "fenceTypes": [
+  {
+   "color": "#f5c518",
+   "height": 0,
+   "waste": 3,
+   "laborHrs100": 0,
+   "gateHrs": 0,
+   "headache": 0,
+   "laborMode": "hours",
+   "laborPost": 0,
+   "laborBrace": 0,
+   "laborGate": 0,
+   "laborJob": 0,
+   "wires": [
+    {
+     "m": "m_fk",
+     "strands": 1,
+     "roll": 660
+    }
+   ],
+   "postM": "m_boigwb5",
+   "spacing": 16,
+   "posts": [],
+   "clipM": "",
+   "clipsPer": 6.5,
+   "pullEvery": 660,
+   "pullBy": "auto",
+   "pullSlack": 15,
+   "pullMode": "even",
+   "braceEnd": "b_h",
+   "braceCorner": "b_dh",
+   "bracePull": "b_h",
+   "braceGate": "b_h",
+   "gateM": "m_gate16",
+   "gateW": 16,
+   "gateHw": "m_ghw",
+   "labor": 0,
+   "extras": [],
+   "items": [],
+   "id": "ft_fk",
+   "name": "Fixed knot"
+  },
+  {
+   "color": "#ff6a3d",
+   "height": 4.5,
+   "waste": 3,
+   "laborHrs100": 2.5,
+   "gateHrs": 1.5,
+   "headache": 0,
+   "laborMode": "hours",
+   "laborPost": 0,
+   "laborBrace": 0,
+   "laborGate": 0,
+   "laborJob": 0,
+   "wires": [
+    {
+     "m": "m_1vr9ujz",
+     "strands": 4,
+     "roll": 1320,
+     "look": "smooth"
+    }
+   ],
+   "postM": "m_boigwb5",
+   "spacing": 12,
+   "posts": [],
+   "clipM": "m_clip",
+   "clipsPer": 4,
+   "pullEvery": 660,
+   "pullBy": "auto",
+   "pullSlack": 15,
+   "pullMode": "even",
+   "braceEnd": "b_n",
+   "braceCorner": "b_n",
+   "bracePull": "b_n",
+   "braceGate": "b_n",
+   "gateM": "m_gate16",
+   "gateW": 16,
+   "gateHw": "m_ghw",
+   "labor": 0,
+   "extras": [],
+   "items": [],
+   "id": "ft_barb",
+   "name": "4-strand high tensil"
+  },
+  {
+   "color": "#3ad1c2",
+   "height": 4,
+   "waste": 3,
+   "laborHrs100": 2.5,
+   "gateHrs": 1.5,
+   "headache": 0,
+   "laborMode": "hours",
+   "laborPost": 0,
+   "laborBrace": 0,
+   "laborGate": 0,
+   "laborJob": 0,
+   "wires": [
+    {
+     "m": "m_field",
+     "strands": 1,
+     "roll": 660
+    }
+   ],
+   "postM": "m_boigwb5",
+   "spacing": 15,
+   "posts": [
+    {
+     "m": "m_zx1iat5",
+     "by": "ft",
+     "n": 100
+    }
+   ],
+   "clipM": "m_clip",
+   "clipsPer": 7,
+   "pullEvery": 660,
+   "pullBy": "auto",
+   "pullSlack": 15,
+   "pullMode": "even",
+   "braceEnd": "b_h",
+   "braceCorner": "b_n",
+   "bracePull": "b_oqejau9",
+   "braceGate": "b_n",
+   "gateM": "m_gate16",
+   "gateW": 16,
+   "gateHw": "m_ghw",
+   "labor": 0,
+   "extras": [],
+   "items": [],
+   "id": "ft_field",
+   "name": "Field fence + 2 barbed"
+  },
+  {
+   "color": "#c38bff",
+   "height": 4.5,
+   "waste": 2,
+   "laborHrs100": 2.5,
+   "gateHrs": 1.5,
+   "headache": 0,
+   "laborMode": "hours",
+   "laborPost": 0,
+   "laborBrace": 0,
+   "laborGate": 0,
+   "laborJob": 0,
+   "wires": [
+    {
+     "m": "m_ht",
+     "strands": 5,
+     "roll": 4000
+    }
+   ],
+   "postM": "m_boigwb5",
+   "spacing": 25,
+   "posts": [],
+   "clipM": "m_ins",
+   "clipsPer": 5,
+   "pullEvery": 2640,
+   "pullBy": "auto",
+   "pullSlack": 15,
+   "pullMode": "even",
+   "braceEnd": "b_h",
+   "braceCorner": "b_dh",
+   "bracePull": "b_h",
+   "braceGate": "b_h",
+   "gateM": "m_gate16",
+   "gateW": 16,
+   "gateHw": "m_ghw",
+   "labor": 0,
+   "extras": [
+    {
+     "m": "m_strain",
+     "per": "stretch",
+     "q": 5
+    },
+    {
+     "m": "m_energ",
+     "per": "job",
+     "q": 1
+    }
+   ],
+   "items": [],
+   "id": "ft_ht",
+   "name": "5-wire hi-tensile electric"
+  },
+  {
+   "color": "#d71ed7",
+   "height": 4.5,
+   "waste": 3,
+   "laborHrs100": 2.5,
+   "gateHrs": 1.5,
+   "headache": 0,
+   "laborMode": "hours",
+   "laborPost": 0,
+   "laborBrace": 0,
+   "laborGate": 0,
+   "laborJob": 0,
+   "wires": [
+    {
+     "m": "m_ucsseww",
+     "strands": 1,
+     "roll": 1320
+    }
+   ],
+   "postM": "m_31cm4rn",
+   "spacing": 10,
+   "posts": [],
+   "clipM": "",
+   "clipsPer": 0,
+   "pullEvery": 400,
+   "pullBy": "auto",
+   "pullSlack": 15,
+   "pullMode": "even",
+   "braceEnd": "b_h",
+   "braceCorner": "b_dh",
+   "bracePull": "b_h",
+   "braceGate": "b_h",
+   "gateM": "m_gate16",
+   "gateW": 16,
+   "gateHw": "m_ghw",
+   "labor": 0,
+   "extras": [],
+   "items": [],
+   "id": "ft_bfm1b0g",
+   "name": "Horse fence wood"
+  }
+ ],
+ "braces": [
+  {
+   "id": "b_h",
+   "name": "H-brace",
+   "items": [
+    {
+     "m": "m_b7hwr9t",
+     "q": 1
+    },
+    {
+     "m": "m_mehxya8",
+     "q": 2
+    },
+    {
+     "m": "m_7n3fc5f",
+     "q": 1
+    },
+    {
+     "m": "m_b37njs4",
+     "q": 1
+    },
+    {
+     "m": "m_2cjvnms",
+     "q": 1
+    },
+    {
+     "m": "m_tv674n3",
+     "q": 1
+    }
+   ]
+  },
+  {
+   "id": "b_dh",
+   "name": "Double H-brace",
+   "items": [
+    {
+     "m": "m_post",
+     "q": 3
+    },
+    {
+     "m": "m_rail",
+     "q": 2
+    },
+    {
+     "m": "m_pin",
+     "q": 4
+    },
+    {
+     "m": "m_bwire",
+     "q": 50
+    },
+    {
+     "m": "m_7n3fc5f",
+     "q": 2
+    }
+   ]
+  },
+  {
+   "id": "b_n",
+   "name": "Rance brace",
+   "items": [
+    {
+     "m": "m_zx1iat5",
+     "q": 2
+    },
+    {
+     "m": "m_cuxh32i",
+     "q": 1
+    },
+    {
+     "m": "m_8hpytvi",
+     "q": 2
+    },
+    {
+     "m": "m_hupksc9",
+     "q": 2
+    }
+   ],
+   "shape": {
+    "span": 8,
+    "h1": 4,
+    "bury1": 3.5,
+    "h2": 1,
+    "bury2": 3.5,
+    "dia": 2.875,
+    "rail": 2.375,
+    "bays": 1,
+    "wire": false,
+    "steel": true,
+    "style": "a"
+   }
+  },
+  {
+   "id": "b_single",
+   "name": "Single post, no brace",
+   "items": [
+    {
+     "m": "m_post",
+     "q": 1
+    }
+   ]
+  },
+  {
+   "id": "b_oqejau9",
+   "name": "Double Rance Brace",
+   "items": [
+    {
+     "m": "m_zx1iat5",
+     "q": 3
+    },
+    {
+     "m": "m_cuxh32i",
+     "q": 2
+    },
+    {
+     "m": "m_8hpytvi",
+     "q": 4
+    },
+    {
+     "m": "m_5rg0b8l",
+     "q": 1
+    },
+    {
+     "m": "m_hupksc9",
+     "q": 1
+    }
+   ],
+   "shape": {
+    "span": 8,
+    "h1": 4.75,
+    "bury1": 3.5,
+    "h2": 1,
+    "bury2": 3.5,
+    "dia": 2.875,
+    "rail": 2.375,
+    "bays": 2,
+    "wire": true,
+    "steel": true,
+    "style": "aa"
+   }
+  }
+ ],
+ "settings": {
+  "tax": 6,
+  "labor": 0,
+  "cornerAngle": 25,
+  "useSurface": true,
+  "endBrace": "b_h",
+  "cornerBrace": "b_dh",
+  "pullBrace": "b_h",
+  "gateBrace": "b_h",
+  "gateHw": "m_ghw",
+  "gateMat": "m_gate16",
+  "gateWidth": 16
+ },
+ "drawType": "ft_fk"
+}
