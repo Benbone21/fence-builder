@@ -492,9 +492,9 @@ let S, serverOK=false, selLine=null, selNode=null, mode='idle', draft=null;
 const busy={}, errs={};
 // Every save carries the version this window loaded. The server refuses a save made on top of an
 // older version, so two open windows can't wipe out each other's work; the stale one loads the latest.
-let baseRev=0,saving=false,saveAgain=false;
+let baseRev=0,saving=false,saveAgain=false,baseJSON=null;
 async function load(){
-  try{const r=await fetch('api/data',{cache:'no-store'});if(r.ok){serverOK=true;const j=await r.json();baseRev=+j?.rev||0;if(j&&j.materials)return j}}catch(e){}
+  try{const r=await fetch('api/data',{cache:'no-store'});if(r.ok){serverOK=true;const j=await r.json();baseRev=+j?.rev||0;if(j&&j.materials){baseJSON=JSON.stringify(j);return j}}}catch(e){}
   try{const j=JSON.parse(localStorage.getItem('fence-est'));if(j&&j.materials)return j}catch(e){}
   // nothing saved yet: start from the setup that ships with the app (your fence types, braces and materials)
   try{const r=await fetch('seed.json',{cache:'no-store'});if(r.ok){const j=await r.json();if(j&&Array.isArray(j.materials)&&j.materials.length)return {...defaults(),...j}}}catch(e){}
@@ -511,26 +511,73 @@ async function pushSave(){
   if(!serverOK){setStatus('Saved on this device');saving=false;return}
   try{
     const r=await fetch('api/data',{method:'PUT',headers:{'Content-Type':'application/json','X-Base-Rev':String(baseRev)},body});
-    if(r.status===409){saving=false;saveAgain=false;return takeLatest(!quiet)}
+    if(r.status===409){saving=false;saveAgain=false;return mergeLatest(quiet)}
     if(!r.ok)throw 0;
-    baseRev=+(await r.json()).rev||baseRev;setStatus('Saved');
+    baseRev=+(await r.json()).rev||baseRev;baseJSON=body;setStatus('Saved');
   }catch(e){setStatus('Saved on this device only, server not reachable')}
   saving=false;if(saveAgain){saveAgain=false;pushSave()}
 }
 function flush(){
   if(!saveT||!S)return;clearTimeout(saveT);saveT=null;const body=JSON.stringify(S);
   try{localStorage.setItem('fence-est',body)}catch(e){}
-  if(serverOK)try{fetch('api/data',{method:'PUT',headers:{'Content-Type':'application/json','X-Base-Rev':String(baseRev)},body,keepalive:body.length<60000}).then(r=>r.ok?r.json():null).then(j=>{if(j?.rev)baseRev=+j.rev}).catch(()=>{})}catch(e){}
+  if(serverOK)try{fetch('api/data',{method:'PUT',headers:{'Content-Type':'application/json','X-Base-Rev':String(baseRev)},body,keepalive:body.length<60000}).then(r=>r.ok?r.json():null).then(j=>{if(j?.rev){baseRev=+j.rev;baseJSON=body}}).catch(()=>{})}catch(e){}
 }
 addEventListener('pagehide',flush);document.addEventListener('visibilitychange',()=>{if(document.hidden)flush()});
+// ---------- two copies saving at once: keep both sets of changes ----------
+// baseJSON is what this window last had in common with the server. When the server has moved on, each thing
+// (material, fence type, brace, job, line, setting...) is taken from whichever side changed it; if both did, yours.
+const sameJ=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
+const isIdList=v=>Array.isArray(v)&&v.length>0&&v.every(x=>x&&typeof x==='object'&&typeof x.id==='string');
+function merge3(b,l,t){
+  if(sameJ(b,l))return t;          // not changed here: theirs
+  if(sameJ(b,t))return l;          // not changed there: yours
+  if((isIdList(l)||isIdList(t))&&(Array.isArray(l)&&Array.isArray(t))){
+    const B=new Map((Array.isArray(b)?b:[]).map(x=>[x.id,x])),Lm=new Map(l.map(x=>[x.id,x])),out=[];
+    for(const x of t){
+      if(Lm.has(x.id))out.push(merge3(B.get(x.id),Lm.get(x.id),x));
+      else if(!B.has(x.id)||!sameJ(B.get(x.id),x))out.push(x);   // new there, or you deleted it but they changed it: keep theirs
+    }
+    const tIds=new Set(t.map(x=>x.id));
+    l.forEach((x,i)=>{if(tIds.has(x.id))return;if(B.has(x.id)&&sameJ(B.get(x.id),x))return;   // they deleted it and you didn't touch it
+      out.splice(Math.min(i,out.length),0,x)});                                                    // new here (or changed here): keep yours
+    return out;
+  }
+  if(l&&t&&typeof l==='object'&&typeof t==='object'&&!Array.isArray(l)&&!Array.isArray(t)){
+    const bo=b&&typeof b==='object'?b:{},out={};
+    for(const k of new Set([...Object.keys(t),...Object.keys(l)])){
+      if(!(k in l)&&k in bo&&sameJ(bo[k],t[k]))continue;   // removed here
+      if(!(k in t)&&k in bo&&sameJ(bo[k],l[k]))continue;   // removed there
+      out[k]=k in l?(k in t?merge3(bo[k],l[k],t[k]):l[k]):t[k];
+    }
+    return out;
+  }
+  return l;                        // both changed the same value: yours
+}
+async function mergeLatest(quiet){
+  if(!baseJSON)return takeLatest(!quiet);
+  try{
+    const r=await fetch('api/data',{cache:'no-store'});if(!r.ok)return;const t=await r.json();if(!t||!t.materials)return;
+    const theirs=JSON.stringify(t),b=JSON.parse(baseJSON),l=JSON.parse(JSON.stringify(S));
+    const m=merge3(b,l,t);
+    for(const k of ['tab','cur','drawType'])if(k in l)m[k]=l[k];   // this window stays where it is
+    const dlgOpen=$('#matDlg').open;
+    adopt(m);baseRev=+t.rev||0;baseJSON=theirs;
+    if(selLine&&!getLine(selLine))selLine=null;if(selNode&&!getLine(selNode.l))selNode=null;
+    if(!dlgOpen)renderAll();scheduleElev();
+    if(!quiet)toast('Another window saved at the same time. Both sets of changes were kept.');
+    save(quiet);   // send the combined version
+  }catch(e){takeLatest(!quiet)}
+}
 // load what another window saved, keeping this window on the same page and job
+// a dialog open (new material, job details, a question) means you're in the middle of something
+const busyEditing=()=>!!document.querySelector('dialog[open]');
 async function takeLatest(lost){
   try{
     const r=await fetch('api/data',{cache:'no-store'});if(!r.ok)return;const j=await r.json();if(!j||!j.materials)return;
     const keep={tab:S.tab,cur:S.cur,drawType:S.drawType};
     clearTimeout(saveT);saveT=null;
     if(mode!=='idle')cancelDraw();map.closePopup();if($('#jobDlg').open)$('#jobDlg').close();if($('#matDlg').open)$('#matDlg').close();
-    adopt(j);baseRev=+j.rev||0;
+    baseJSON=JSON.stringify(j);adopt(j);baseRev=+j.rev||0;
     S.tab=keep.tab;if(S.projects.some(p=>p.id===keep.cur))S.cur=keep.cur;if(S.fenceTypes.some(t=>t.id===keep.drawType))S.drawType=keep.drawType;
     selNode=null;if(selLine&&!getLine(selLine))selLine=null;
     hist.u=[];hist.r=[];snapNow=null;snapCur=null;
@@ -572,12 +619,12 @@ async function checkLatest(){
     // the app itself was updated since this window loaded it: say so, with a one-click refresh
     if(j.app){if(appVer==null)appVer=j.app;else if(j.app!==appVer)$('#stale').hidden=false}
     if(saveT||saving||mode!=='idle')return;
-    if(+j.rev!==baseRev&&!saveT&&!saving)takeLatest(false);
+    if(+j.rev!==baseRev&&!saveT&&!saving&&!busyEditing())takeLatest(false);   // wait while a dialog or an unsaved edit is open
   }catch(e){}
 }
 async function refreshNow(){
   if(mode!=='idle')cancelDraw();
-  try{if(serverOK&&!saveT&&!saving){const r=await fetch('api/rev',{cache:'no-store'});if(r.ok){const j=await r.json();if(+j.rev!==baseRev)await takeLatest(false)}}}catch(e){}
+  try{if(serverOK&&!saveT&&!saving&&!busyEditing()){const r=await fetch('api/rev',{cache:'no-store'});if(r.ok){const j=await r.json();if(+j.rev!==baseRev)await takeLatest(false)}}}catch(e){}
   renderAll();toast('Up to date with your latest prices, materials and fence types.');
 }
 addEventListener('focus',checkLatest);document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkLatest()});
