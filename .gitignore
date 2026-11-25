@@ -7,3 +7,6 @@ __pycache__/
 *.tmp
 *.new
 *.lnk
+# build output
+build/
+dist/

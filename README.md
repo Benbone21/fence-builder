@@ -6,19 +6,38 @@ and fees. Runs as a Windows app or as a small web server for your whole network.
 
 ## Install on Windows
 
-1. Install [Python 3](https://www.python.org/downloads/) (tick "Add python.exe to PATH").
-2. Download the newest release from the **Releases** page of this repository
-   (Source code, zip) and unzip it where you want it to live.
-3. Double-click `app.py`, or make a shortcut to it with `pyw.exe app.py` and the icon
-   `fence.ico`. It opens in its own window and stops when you close the window.
+1. Go to the **[Releases](https://github.com/Benbone21/fence-builder/releases/latest)** page and
+   download **FenceBuilder-Setup-<version>.exe**.
+2. Run it. It installs for your Windows user only (no administrator needed), adds
+   **Fence Builder** to the Start menu and the desktop, and opens it. Windows may say
+   "Windows protected your PC" the first time because the installer isn't signed: click
+   **More info**, then **Run anyway**.
+
+Fence Builder opens in its own window and stops when you close the window. To remove it, use
+**Settings → Apps → Installed apps → Fence Builder → Uninstall**.
+
+Your jobs, prices and settings are kept in `%LOCALAPPDATA%\Fence Builder\data`, not in the
+app's folder, so updating, uninstalling or reinstalling never touches them. To move jobs over
+from a copy that ran from source, close Fence Builder and copy that copy's `data` folder there.
 
 ### Updates
 
 The app checks this repository when it opens and every few hours. When a newer release is
-out, a green bar says so, with **Update now**. Updating downloads the release, replaces the
-app's own files and restarts. Your jobs, prices and settings in `data/` are never touched,
-and the files it replaced are kept in `_previous/`. You can also check from
+out, a green bar says so, with **Update now**. The installed app downloads the new installer,
+runs it quietly, and comes back on the new version in under a minute. You can also check from
 **Settings → Version and updates**.
+
+### Advanced: run it from the Python source
+
+1. Install [Python 3](https://www.python.org/downloads/) (tick "Add python.exe to PATH").
+2. Download the newest release from **Releases** (Source code, zip) and unzip it where you want
+   it to live.
+3. Double-click `app.py`, or make a shortcut to it with `pyw.exe app.py` and the icon
+   `fence.ico`.
+
+Run this way, your data is in `data/` next to the code, and **Update now** downloads the
+release's source, replaces the app's own files (never `data/`; the replaced files are kept in
+`_previous/`) and restarts.
 
 ## Run it as a server for your network
 
@@ -67,3 +86,22 @@ Set `FENCE_PASS` to require a login (user name `fence`) before opening it to oth
 - Layers: satellite, streets, LiDAR bare earth, topo, contour lines, slope.
 - 3D view shows the terrain with the satellite photo, every post, wire, brace and gate at
   real size, and nearby buildings. Move with W A S D or the arrow keys.
+
+## Making a release
+
+1. Put the new version number in `VERSION` (for example `1.1.0`) and commit it.
+2. Tag that commit and push the tag:
+
+       git tag v1.1.0
+       git push origin v1.1.0
+
+   The **Release installer** workflow (`.github/workflows/release.yml`) builds
+   `FenceBuilder.exe` with PyInstaller (`installer/fence-builder.spec`), wraps it with
+   Inno Setup (`installer/fence-builder.iss`), and creates the GitHub release with
+   `FenceBuilder-Setup-1.1.0.exe` attached. Installed apps offer the update once the
+   installer is attached. The tag must match `VERSION` or the build stops.
+
+To build it on your own computer: `pip install pyinstaller`, then
+`python -m PyInstaller installer/fence-builder.spec` (makes `dist/FenceBuilder/`), then with
+[Inno Setup 6](https://jrsoftware.org/isdl.php): `iscc /DAppVersion=1.1.0 installer/fence-builder.iss`
+(makes `dist/installer/`).

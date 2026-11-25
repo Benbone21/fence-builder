@@ -10,17 +10,48 @@ Env settings:
   HOST=0.0.0.0         address to bind
   FENCE_DATA=./data/fence-data.json
   FENCE_PASS=secret    turn on a login (user name from FENCE_USER, default "fence")
+
+Run from source, the data lives in data/ next to this file. The installed Windows app
+(FenceBuilder.exe, built with PyInstaller) keeps it in %LOCALAPPDATA%\\Fence Builder\\data
+instead, so installing an update or uninstalling never touches it.
 """
-import base64, glob, gzip, hmac, io, ipaddress, json, os, re, shutil, socket, sys, threading, time, zipfile, zlib
+import base64, glob, gzip, hashlib, hmac, io, ipaddress, json, os, re, shutil, socket, subprocess, sys, tempfile, threading, time, zipfile, zlib
 import urllib.error, urllib.parse, urllib.request
 from html import unescape
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-ROOT = os.path.dirname(os.path.abspath(__file__))
+FROZEN = bool(getattr(sys, "frozen", False))  # running as the installed FenceBuilder.exe
+# the app's own files (static/, VERSION, update.json); PyInstaller unpacks them into sys._MEIPASS
+ROOT = getattr(sys, "_MEIPASS", None) or os.path.dirname(os.path.abspath(__file__))
 STATIC = os.path.join(ROOT, "static")
-DATA = os.environ.get("FENCE_DATA", os.path.join(ROOT, "data", "fence-data.json"))
+
+
+def data_dir():
+    """Where jobs, prices and settings live. Next to the code from source; in the user's own
+    app-data folder for the installed app, moving over a data/ folder left next to the exe."""
+    if not FROZEN:
+        return os.path.join(ROOT, "data")
+    d = os.path.join(os.environ.get("LOCALAPPDATA") or os.path.expanduser("~"), "Fence Builder", "data")
+    if not os.path.exists(os.path.join(d, "fence-data.json")):
+        for old in (os.path.join(os.path.dirname(sys.executable), "data"),):
+            if os.path.isfile(os.path.join(old, "fence-data.json")):
+                try:
+                    os.makedirs(os.path.dirname(d), exist_ok=True)
+                    if os.path.isdir(d) and not os.listdir(d):
+                        os.rmdir(d)
+                    if not os.path.exists(d):
+                        shutil.move(old, d)
+                except OSError:
+                    pass
+                break
+    return d
+
+
+DATA = os.environ.get("FENCE_DATA") or os.path.join(data_dir(), "fence-data.json")
 PORT = int(os.environ.get("PORT", "8787"))
-HOST = os.environ.get("HOST", "0.0.0.0")
+# the installed desktop app only needs to be reached from this computer (and so never trips the
+# Windows firewall prompt); set HOST=0.0.0.0 to open it to phones on the network
+HOST = os.environ.get("HOST", "127.0.0.1" if FROZEN else "0.0.0.0")
 USER = os.environ.get("FENCE_USER", "fence")
 PASS = os.environ.get("FENCE_PASS", "")
 UA = ("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) "
@@ -305,20 +336,39 @@ def check_update(force=False):
     if not repo:
         return {"version": cur, "available": False, "reason": "No GitHub repository is set in update.json"}
     if not force and _upd["info"] and time.time() - _upd["at"] < 3600:
-        return dict(_upd["info"], version=cur, available=vtuple(_upd["info"]["latest"]) > vtuple(cur))
+        return with_status(_upd["info"], cur)
     rel = json.loads(fetch("https://api.github.com/repos/%s/releases/latest" % repo,
                            accept="application/vnd.github+json", ua="FenceEstimator-updater"))
     tag = rel.get("tag_name") or ""
     info = {"repo": repo, "tag": tag, "latest": tag.lstrip("vV"), "notes": (rel.get("body") or "")[:3000],
-            "url": rel.get("html_url") or "https://github.com/%s/releases" % repo}
+            "url": rel.get("html_url") or "https://github.com/%s/releases" % repo,
+            "mode": "installer" if FROZEN else "files"}
+    if FROZEN:
+        # the installed app updates by running the release's installer, attached by the release workflow
+        setup = [a for a in rel.get("assets") or []
+                 if re.fullmatch(r"FenceBuilder-Setup-[\w.-]+\.exe", a.get("name") or "", re.I)]
+        if setup:
+            a = setup[0]
+            info["setup"] = {"name": a["name"], "url": a.get("browser_download_url") or "",
+                             "size": int(a.get("size") or 0), "digest": a.get("digest") or ""}
     _upd.update(at=time.time(), info=info)
-    return dict(info, version=cur, available=vtuple(info["latest"]) > vtuple(cur))
+    return with_status(info, cur)
+
+
+def with_status(info, cur):
+    out = dict(info, version=cur, available=vtuple(info["latest"]) > vtuple(cur))
+    if FROZEN and out["available"] and not info.get("setup"):
+        # the release is out but its installer is still being built (or failed to build)
+        out.update(available=False, reason="%s is out, but its installer is not ready yet" % info["latest"])
+    return out
 
 
 def install_update():
     info = check_update(force=True)
     if not info.get("available"):
-        raise ValueError("You already have the newest version (%s)" % info["version"])
+        raise ValueError(info.get("reason") or "You already have the newest version (%s)" % info["version"])
+    if FROZEN:
+        return download_setup(info)
     url = "https://codeload.github.com/%s/zip/refs/tags/%s" % (info["repo"], urllib.parse.quote(info["tag"]))
     check_url(url)
     req = urllib.request.Request(url, headers={"User-Agent": "FenceEstimator-updater"})
@@ -359,10 +409,62 @@ def install_update():
     return app_version()
 
 
-def restart_soon():
+SETUP_DIR = os.path.join(tempfile.gettempdir(), "FenceBuilder-update")
+_setup = {"path": None}
+
+
+def download_setup(info):
+    """Installed app: download the new release's installer. restart_soon() runs it."""
+    s = info["setup"]
+    if not s["url"].startswith("https://github.com/"):
+        raise ValueError("The installer is not on GitHub")
+    req = urllib.request.Request(s["url"], headers={"User-Agent": "FenceEstimator-updater",
+                                                    "Accept": "application/octet-stream"})
+    os.makedirs(SETUP_DIR, exist_ok=True)
+    path = os.path.join(SETUP_DIR, os.path.basename(s["name"]))
+    h, n = hashlib.sha256(), 0
+    with OPENER.open(req, timeout=60) as r, open(path + ".part", "wb") as f:
+        while True:
+            chunk = r.read(1 << 20)
+            if not chunk:
+                break
+            n += len(chunk)
+            if n > 400_000_000:
+                raise ValueError("The installer is far too big")
+            h.update(chunk)
+            f.write(chunk)
+    if s["size"] and n != s["size"]:
+        raise ValueError("The download was cut short, try again")
+    if s["digest"].startswith("sha256:") and not hmac.compare_digest(s["digest"][7:].lower(), h.hexdigest()):
+        raise ValueError("The download does not match the release, try again")
+    os.replace(path + ".part", path)
+    _setup["path"] = path
+    _upd.update(at=0, info=None)
+    return info["latest"]
+
+
+def run_setup(port):
+    """Run the downloaded installer silently once this app has quit, then start the new version
+    (the installer starts it, on the same port, so the open window finds it again)."""
+    path = _setup["path"]
+    log = os.path.join(SETUP_DIR, "install.log")
+    # the short wait lets this app exit first so the installer can replace its files
+    cmd = ('cmd.exe /d /s /c "ping -n 4 127.0.0.1 >nul & "%s" /VERYSILENT /SUPPRESSMSGBOXES /NORESTART '
+           '/CLOSEAPPLICATIONS /LOG="%s" /RELAUNCH=1 /PORT=%d"' % (path, log, int(port)))
+    flags = 0x00000008 | 0x00000200 | 0x08000000  # DETACHED_PROCESS, NEW_PROCESS_GROUP, NO_WINDOW
+    try:
+        subprocess.Popen(cmd, creationflags=flags | 0x01000000, close_fds=True)  # + BREAKAWAY_FROM_JOB
+    except OSError:
+        subprocess.Popen(cmd, creationflags=flags, close_fds=True)
+
+
+def restart_soon(port=None):
     def go():
         time.sleep(1.0)
-        if RESTART:
+        if FROZEN and _setup["path"]:
+            run_setup(port or PORT)
+            os._exit(0)
+        elif RESTART:
             RESTART()
         else:
             os.execv(sys.executable, [sys.executable] + sys.argv)
@@ -472,8 +574,8 @@ class Handler(BaseHTTPRequestHandler):
             v = install_update()
         except Exception as e:
             return self.send(500, {"error": "The update did not install: %s" % e})
-        restart_soon()
-        return self.send(200, {"ok": True, "version": v})
+        restart_soon(self.server.server_address[1])
+        return self.send(200, {"ok": True, "version": v, "mode": "installer" if FROZEN else "files"})
 
     def do_PUT(self):
         if not self.authed():

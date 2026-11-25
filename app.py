@@ -7,11 +7,15 @@ the app stops. It reads and writes the same data file as the website, so both sh
 jobs, fence types and prices.
 
 Run it with:  pyw app.py     (or double-click the "Fence Builder" shortcut)
+
+The Windows installer packs this file into FenceBuilder.exe with PyInstaller. After an
+in-app update the installer starts it again with --updated --port=N, so the window that is
+still open reconnects to the new version instead of a second window opening.
 """
 import importlib, json, os, shutil, socket, subprocess, sys, threading, time, urllib.request, webbrowser
 from http.server import ThreadingHTTPServer
 
-ROOT = os.path.dirname(os.path.abspath(__file__))
+ROOT = getattr(sys, "_MEIPASS", None) or os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, ROOT)
 os.chdir(ROOT)
 if sys.stderr is None:  # pythonw has no console; the server logs to stderr
@@ -54,8 +58,19 @@ def find_browser():
     return shutil.which("msedge") or shutil.which("chrome")
 
 
+def arg(name):
+    """--name=value from the command line ("" if not given, "1" for a bare --name)."""
+    for a in sys.argv[1:]:
+        if a == "--" + name:
+            return "1"
+        if a.startswith("--%s=" % name):
+            return a.split("=", 1)[1]
+    return ""
+
+
 def main():
-    port = server.PORT
+    port = int(arg("port")) if arg("port").isdigit() else server.PORT
+    updated = arg("updated") == "1"  # started by the installer after an in-app update
     srv = None
     if already_running(port):
         pass  # the website's server is up: just open a window onto it
@@ -91,12 +106,13 @@ def main():
     # its own profile folder makes the window a separate program we can wait on
     profile = os.path.join(os.environ.get("LOCALAPPDATA") or ROOT, "FenceEstimator", "window")
     os.makedirs(profile, exist_ok=True)
-    win = subprocess.Popen([browser, "--app=" + url, "--user-data-dir=" + profile, "--no-first-run",
-                            "--no-default-browser-check", "--window-size=1600,1000"])
-    win.wait()
+    lock = os.path.join(profile, "lockfile")
+    if not (updated and os.path.exists(lock)):  # after an update the old window is still open: reuse it
+        win = subprocess.Popen([browser, "--app=" + url, "--user-data-dir=" + profile, "--no-first-run",
+                                "--no-default-browser-check", "--window-size=1600,1000"])
+        win.wait()
     # Edge and Chrome often hand the window to another process and return at once, so wait on the
     # profile's lock file instead: it exists for exactly as long as the window is open.
-    lock = os.path.join(profile, "lockfile")
     t0 = time.time()
     while not os.path.exists(lock) and time.time() - t0 < 20:
         time.sleep(0.5)

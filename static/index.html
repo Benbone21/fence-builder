@@ -544,9 +544,9 @@ async function installUpdate(){
   flush();bar.innerHTML='<span>Downloading and installing the update…</span>';
   try{
     const r=await fetch('api/update',{method:'POST'});const j=await r.json();if(!r.ok)throw Error(j.error||'The update did not install');
-    bar.innerHTML=`<span>Updated to ${esc(j.version)}. Restarting…</span>`;
-    // wait for the server to come back, then load the new version
-    for(let i=0;i<60;i++){await new Promise(res=>setTimeout(res,1000));try{const v=await (await fetch('api/version',{cache:'no-store'})).json();if(v.version===j.version)return location.reload()}catch(e){}}
+    bar.innerHTML=j.mode==='installer'?`<span>Installing ${esc(j.version)}. Fence Builder will be back in a minute…</span>`:`<span>Updated to ${esc(j.version)}. Restarting…</span>`;
+    // wait for the server to come back, then load the new version (the installer takes longer)
+    for(let i=0;i<(j.mode==='installer'?240:60);i++){await new Promise(res=>setTimeout(res,1000));try{const v=await (await fetch('api/version',{cache:'no-store'})).json();if(v.version===j.version)return location.reload()}catch(e){}}
     location.reload();
   }catch(e){bar.innerHTML=`<span>${esc(e.message||String(e))}</span><button class="btn sm" onclick="this.parentNode.hidden=true">OK</button>`}
 }
