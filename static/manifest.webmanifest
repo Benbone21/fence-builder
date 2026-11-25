@@ -1,6 +1,6 @@
 {
-  "name": "Fence Estimator",
-  "short_name": "Fence Estimator",
+  "name": "Fence Builder",
+  "short_name": "Fence Builder",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#141619",

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fence Estimator server.
+"""Fence Builder server.
 
 Serves the web app, saves your data to a JSON file, and does the three jobs a
 browser can't do by itself: read a price off a store page, look up elevation,
@@ -329,7 +329,7 @@ def install_update():
     top = names[0].split("/")[0] + "/" if names else ""
     rels = {n[len(top):]: n for n in names if n.startswith(top)}
     if "server.py" not in rels or "static/index.html" not in rels:
-        raise ValueError("That release does not look like Fence Estimator")
+        raise ValueError("That release does not look like Fence Builder")
     # keep the current app files, in case the new version needs to be undone by hand
     back = os.path.join(ROOT, "_previous", "%s-%s" % (app_version(), time.strftime("%Y%m%d-%H%M%S")))
     for dirpath, dirs, files in os.walk(ROOT):
@@ -388,7 +388,7 @@ class Handler(BaseHTTPRequestHandler):
             if hmac.compare_digest(u, USER) and hmac.compare_digest(p, PASS):
                 return True
         self.send_response(401)
-        self.send_header("WWW-Authenticate", 'Basic realm="Fence Estimator"')
+        self.send_header("WWW-Authenticate", 'Basic realm="Fence Builder"')
         self.send_header("Content-Length", "0")
         self.end_headers()
         return False
@@ -543,7 +543,7 @@ class Handler(BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
     srv = ThreadingHTTPServer((HOST, PORT), Handler)
-    print("Fence Estimator on http://%s:%d  (data: %s%s)" % (HOST, PORT, DATA, ", login on" if PASS else ""))
+    print("Fence Builder on http://%s:%d  (data: %s%s)" % (HOST, PORT, DATA, ", login on" if PASS else ""))
     try:
         srv.serve_forever()
     except KeyboardInterrupt:

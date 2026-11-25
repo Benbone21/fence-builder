@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Fence Estimator</title>
+<title>Fence Builder</title>
 <link rel="icon" href="icon-256.png" type="image/png">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#1b1e22">
@@ -298,7 +298,7 @@ details summary{cursor:pointer;font-weight:500}
 </head>
 <body>
 <header>
-  <h1>Fence Estimator</h1>
+  <h1>Fence Builder</h1>
   <nav class="tabs" id="tabs" aria-label="Pages"></nav>
   <div class="hright">
     <span id="status"></span>
@@ -531,7 +531,7 @@ async function checkUpdate(force){
   try{const r=await fetch('api/version'+(force?'?force=1':''),{cache:'no-store'});upd=await r.json()}catch(e){return}
   const bar=$('#updbar');
   if(upd.available&&sessionStorage.getItem('fence-later')!==upd.latest){
-    bar.innerHTML=`<span>Fence Estimator ${esc(upd.latest)} is out. You have ${esc(upd.version)}.</span><a href="${esc(upd.url)}" target="_blank" rel="noopener">What's new</a><button class="btn sm" id="updGo">Update now</button><button class="btn sm" id="updLater">Later</button>`;
+    bar.innerHTML=`<span>Fence Builder ${esc(upd.latest)} is out. You have ${esc(upd.version)}.</span><a href="${esc(upd.url)}" target="_blank" rel="noopener">What's new</a><button class="btn sm" id="updGo">Update now</button><button class="btn sm" id="updLater">Later</button>`;
     bar.hidden=false;
     $('#updLater').onclick=()=>{sessionStorage.setItem('fence-later',upd.latest);bar.hidden=true};
     $('#updGo').onclick=installUpdate;
@@ -540,7 +540,7 @@ async function checkUpdate(force){
 }
 async function installUpdate(){
   const bar=$('#updbar');
-  if(!await ask(`Update Fence Estimator to ${upd.latest}? Your jobs, prices and settings are kept. The app restarts when it is done.`))return;
+  if(!await ask(`Update Fence Builder to ${upd.latest}? Your jobs, prices and settings are kept. The app restarts when it is done.`))return;
   flush();bar.innerHTML='<span>Downloading and installing the update…</span>';
   try{
     const r=await fetch('api/update',{method:'POST'});const j=await r.json();if(!r.ok)throw Error(j.error||'The update did not install');
@@ -1471,7 +1471,7 @@ function pricesView(){
     <div class="row"><input type="search" id="matQ" placeholder="Find a material" aria-label="Find a material" style="width:220px"><button class="btn" data-act="fetchAll"${autoBusy?' disabled':''}>${autoBusy?'Checking prices…':'Update linked prices now'}</button><button class="btn" data-act="addFromLink">Add from a link</button><button class="btn" data-act="shop">Find at Kencove or D&amp;B</button><button class="btn pri" data-act="addMat">Add material</button></div></div>
   <details class="note grab"><summary><b>Add from Premier 1 or any store page</b> <span class="small mut">with a bookmark</span></summary>
     <p class="small" style="margin:8px 0">Some stores, like Premier 1 Supplies, only let people see their pages, so the app cannot read them on its own. This bookmark reads the page you have open instead: name, price, SKU and the specifications table, and sends it here.</p>
-    <ol class="small" style="margin:0 0 8px;padding-left:18px"><li>Drag this button to your bookmarks bar: <a class="btn sm pri" href="${grabHref()}" onclick="event.preventDefault();toast('Drag it to your bookmarks bar, then click it on a store page.')">Add to Fence Estimator</a></li>
+    <ol class="small" style="margin:0 0 8px;padding-left:18px"><li>Drag this button to your bookmarks bar: <a class="btn sm pri" href="${grabHref()}" onclick="event.preventDefault();toast('Drag it to your bookmarks bar, then click it on a store page.')">Add to Fence Builder</a></li>
       <li>Open a product on the store, pick the size you want, and click the bookmark.</li>
       <li>This app opens with the product filled in. Check it and press Save. If you already have that product, its new price is filled in for you to save.</li></ol>
     <p class="small mut" style="margin:0">Use it again on the same page any time to update that price.</p></details>
@@ -1678,7 +1678,7 @@ function settingsView(){
   <div class="card"><h3 style="margin-top:0">Costs</h3><label class="f">Sales tax % (on materials)</label><input type="number" step="0.01" value="${+s.tax}" data-f="set.tax">
   <p class="small mut">Labor is a $ per foot on each fence type. Headache charges and fees are added on each job's Final bill.</p></div>
   <div class="card"><h3 style="margin-top:0">Version and updates</h3>
-  <p style="margin:0 0 6px">You have <b>Fence Estimator ${esc(upd?.version||'…')}</b>.${upd?.available?` <b>${esc(upd.latest)}</b> is out.`:upd&&!upd.reason?' It is the newest version.':''}</p>
+  <p style="margin:0 0 6px">You have <b>Fence Builder ${esc(upd?.version||'…')}</b>.${upd?.available?` <b>${esc(upd.latest)}</b> is out.`:upd&&!upd.reason?' It is the newest version.':''}</p>
   ${upd?.reason?`<p class="small mut">${esc(upd.reason)}</p>`:''}
   <div class="row"><button class="btn" data-act="checkUpd">Check for updates</button>${upd?.available?'<button class="btn pri" data-act="installUpd">Update now</button>':''}${upd?.url?`<a class="btn" href="${esc(upd.url)}" target="_blank" rel="noopener">Release notes</a>`:''}</div>
   <p class="small mut">The app checks GitHub when it opens and every few hours. Updates never touch your jobs, prices or settings.</p></div>
@@ -1904,7 +1904,7 @@ async function act(a,d){
   case 'editFt':typeSel=id;gotoTab('types');break;
   case 'openJob':S.cur=id;selLine=null;selNode=null;if(mode!=='idle')cancelDraw();S.tab='build';changed();setTimeout(fitProject,50);break;
   case 'jobInfo':openJobDlg(id);break;
-  case 'saveSeed':{if(!serverOK)return toast('This needs the Fence Estimator server running');
+  case 'saveSeed':{if(!serverOK)return toast('This needs the Fence Builder server running');
     try{const r=await fetch('api/seed',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({materials:S.materials,fenceTypes:S.fenceTypes,braces:S.braces,settings:S.settings,drawType:S.drawType})});const j=await r.json();if(!r.ok)throw 0;
       toast(`Saved as the starting setup: ${j.fenceTypes} fence types, ${j.braces} braces, ${j.materials} materials`)}catch(e){toast('Could not save the starting setup')}break}
   case 'billDlg':openBillDlg();break;
@@ -1999,7 +1999,7 @@ function shopParse(title,vt){
 }
 /* ---------- find products in a store's catalog and add them as materials ---------- */
 // Kencove is a Shopify store: its public product list is read in this browser.
-// D&B Supply is an Adobe Commerce store: its public product search is asked through the Fence Estimator server.
+// D&B Supply is an Adobe Commerce store: its public product search is asked through the Fence Builder server.
 const STORES=[{host:'kencove.com',name:'Kencove',kind:'shopify'},{host:'www.dbsupply.com',name:'D&B Supply (fencing only)',kind:'magento',catPath:'shop/farm-ranch'}];
 const storeList=()=>{const own=String(S.settings.shop||'').trim().replace(/^https?:\/\//,'').replace(/\/.*$/,'').toLowerCase();
   return own&&!STORES.some(x=>x.host.replace(/^www\./,'')===own.replace(/^www\./,''))?[...STORES,{host:own,name:own,kind:'shopify'}]:STORES};
@@ -2012,7 +2012,7 @@ const magSlim=it=>({title:it.name,handle:it.sku,url:it.url,image:it.image||'',va
 async function shopGet(path){const r=await fetch('https://'+shopHost()+path);if(!r.ok)throw Error('The store answered with error '+r.status);return r.json()}
 async function storeApi(op,params){
   const r=await fetch('api/store?'+new URLSearchParams({host:shopHost(),op,path:curStore().catPath||'',...params}));
-  let j={};try{j=await r.json()}catch(e){throw Error('This store needs the Fence Estimator server running')}
+  let j={};try{j=await r.json()}catch(e){throw Error('This store needs the Fence Builder server running')}
   if(!r.ok)throw Error(j.error||'The store did not answer');return j;
 }
 const FENCEY=/wire|fenc|post|gate|brace|insul|clip|staple|energ|strain|tension|ground|netting|panel/i;
@@ -2126,14 +2126,14 @@ function takeGrab(){
 }
 addEventListener('hashchange',takeGrab);
 async function lookupLink(url){
-  try{if(PEOPLE_ONLY.test(new URL(url).hostname))throw Error('PEOPLE_ONLY')}catch(e){if(e.message==='PEOPLE_ONLY')throw Error('This store only lets people see its pages, so the app cannot read it. Open the page and click your "Add to Fence Estimator" bookmark instead.')}
+  try{if(PEOPLE_ONLY.test(new URL(url).hostname))throw Error('PEOPLE_ONLY')}catch(e){if(e.message==='PEOPLE_ONLY')throw Error('This store only lets people see its pages, so the app cannot read it. Open the page and click your "Add to Fence Builder" bookmark instead.')}
   // a product page on D&B Supply (or another Adobe Commerce store in the list): ask the store for that one product
   try{const u=new URL(url),st=STORES.find(x=>x.kind==='magento'&&x.host.replace(/^www\./,'')===u.hostname.replace(/^www\./,'')),key=u.pathname.split('/').filter(Boolean).pop()?.replace(/\.html?$/,'');
     if(st&&key){const r=await fetch('api/store?'+new URLSearchParams({host:st.host,op:'key',uid:key}));const j=await r.json();const it=j.items?.[0];
       if(r.ok&&it&&it.price)return {price:+it.price,name:it.name,sku:it.sku,image:it.image||'',source:st.host.replace(/^www\./,''),...shopParse(it.name,'')}}}catch(e){}
   const sh=await shopLookup(url);if(sh)return sh;
   const r=await fetch('api/price?url='+encodeURIComponent(url));
-  let j={};try{j=await r.json()}catch(e){throw Error('Price links need the Fence Estimator server running')}
+  let j={};try{j=await r.json()}catch(e){throw Error('Price links need the Fence Builder server running')}
   if(!r.ok||!j.price)throw Error(j.error||'No price found on that page');
   return {price:j.price,name:(j.title||'').split(/\s[|–-]\s/)[0].trim(),source:j.source};
 }
@@ -2223,7 +2223,7 @@ function copyBill(){
 }
 $('#importFile').onchange=async e=>{
   const f=e.target.files[0];if(!f)return;
-  try{const j=JSON.parse(await f.text());if(!j.materials||!j.projects)throw 0;S=j;S.fenceTypes=(S.fenceTypes||[]).map(t=>migrateType(t,S.settings||{}));selLine=null;selNode=null;changed();fitProject();toast('Backup loaded')}catch(err){toast('That file is not a Fence Estimator backup')}
+  try{const j=JSON.parse(await f.text());if(!j.materials||!j.projects)throw 0;S=j;S.fenceTypes=(S.fenceTypes||[]).map(t=>migrateType(t,S.settings||{}));selLine=null;selNode=null;changed();fitProject();toast('Backup loaded')}catch(err){toast('That file is not a Fence Builder backup')}
   e.target.value='';
 };
 $('#proj').onchange=e=>{S.cur=e.target.value;selLine=null;selNode=null;cancelDraw();changed();fitProject()};

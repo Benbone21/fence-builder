@@ -1,4 +1,4 @@
-# Fence Estimator
+# Fence Builder
 
 Draw fence lines on a satellite map and get the footage (following the ground slope),
 every post, brace and roll of wire you need, what it costs, and a final bill with labor
@@ -45,13 +45,15 @@ Set `FENCE_PASS` to require a login (user name `fence`) before opening it to oth
 - **Fence types**, **Braces** and **Materials** are your own library. Changes there wait
   for **Save**. Materials can be found in Kencove or D&B Supply from inside the app, and
   prices from store links update on their own once a day. For stores that only let people
-  see their pages (like Premier 1 Supplies), use the **Add to Fence Estimator** bookmark
+  see their pages (like Premier 1 Supplies), use the **Add to Fence Builder** bookmark
   on the Materials page.
 
 ## How the counts work
 
 - Wire is counted per fence type from strands, roll length and extra for sag and splices.
-  All lines of the same type are added up before rounding.
+  All lines of the same type are added up before rounding. If you list the other roll sizes a
+  wire comes in, each stretch gets the cheapest mix of rolls instead, so short stretches use
+  short rolls. Wires are listed bottom to top, with their height and spacing in inches.
 - Posts are counted per stretch between braces: `ceil(stretch / spacing) - 1`, spaced
   evenly. Added posts (for example every 5th post, or one every 100 ft) are centred in
   each stretch so both ends match.

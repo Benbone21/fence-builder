@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Fence Estimator as a Windows app.
+"""Fence Builder as a Windows app.
 
 Starts the same server the website uses and opens it in its own window (Microsoft Edge or
 Chrome in "app" mode: no address bar, no tabs, its own taskbar icon). Close the window and
 the app stops. It reads and writes the same data file as the website, so both show the same
 jobs, fence types and prices.
 
-Run it with:  pyw app.py     (or double-click the "Fence Estimator" shortcut)
+Run it with:  pyw app.py     (or double-click the "Fence Builder" shortcut)
 """
 import importlib, json, os, shutil, socket, subprocess, sys, threading, time, urllib.request, webbrowser
 from http.server import ThreadingHTTPServer
@@ -22,7 +22,7 @@ import server  # noqa: E402
 
 
 def already_running(port):
-    """True if a Fence Estimator server is already answering on this port (for example the website)."""
+    """True if a Fence Builder server is already answering on this port (for example the website)."""
     try:
         with urllib.request.urlopen("http://127.0.0.1:%d/api/rev" % port, timeout=1.5) as r:
             return "rev" in json.loads(r.read())

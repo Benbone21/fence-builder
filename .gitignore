@@ -6,4 +6,4 @@ __pycache__/
 *.pyc
 *.tmp
 *.new
-Fence Estimator.lnk
+*.lnk
