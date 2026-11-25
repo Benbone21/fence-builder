@@ -52,6 +52,51 @@ async function terrainSource(lat, lng) {
   } catch (e) { return ''; }
 }
 
+// ----- saved downloads: the ground heights and photo for an area are kept in this browser (IndexedDB,
+// which also works on a plain http address on the office network) so opening the same spot again is quick.
+// Keeps the newest 40 files, about 300 MB at most. Never throws: if saving is not allowed it just skips it.
+const KEEP = 40, KEEP_BYTES = 300e6;
+let dbP = null;
+function cacheDb() {
+  if (!dbP) dbP = new Promise(ok => {
+    try {
+      const rq = indexedDB.open('fence3d', 1);
+      rq.onupgradeneeded = () => rq.result.createObjectStore('files');
+      rq.onsuccess = () => ok(rq.result);
+      rq.onerror = () => ok(null);
+    } catch (e) { ok(null); }
+  });
+  return dbP;
+}
+async function cacheGet(url) {
+  try {
+    const db = await cacheDb();
+    if (!db) return null;
+    const v = await new Promise((ok, no) => {
+      const rq = db.transaction('files').objectStore('files').get(url);
+      rq.onsuccess = () => ok(rq.result); rq.onerror = () => no(rq.error);
+    });
+    return v?.buf ? v : null;
+  } catch (e) { return null; }
+}
+async function cachePut(url, value) {
+  try {
+    const db = await cacheDb();
+    if (!db) return;
+    const st = db.transaction('files', 'readwrite').objectStore('files');
+    st.put(value, url);
+    // throw out the oldest files beyond the limits
+    const all = [], rq = st.openCursor();
+    rq.onsuccess = () => {
+      const c = rq.result;
+      if (c) { const b = c.value?.buf; all.push({k: c.key, at: c.value?.at || 0, size: b?.byteLength ?? b?.size ?? 0}); c.continue(); return; }
+      all.sort((a, b) => b.at - a.at);   // newest first
+      let bytes = 0;
+      all.forEach((x, i) => { bytes += x.size; if (i >= KEEP || bytes > KEEP_BYTES) st.delete(x.k); });
+    };
+  } catch (e) { /* no room or not allowed: just skip saving */ }
+}
+
 let open = null;
 
 export async function open3D({bounds, lines, types, nodes, key, focus, braces, materials, postRule, layoutOf}) {
@@ -59,7 +104,7 @@ export async function open3D({bounds, lines, types, nodes, key, focus, braces, m
   const ov = document.createElement('div');
   ov.id = 'v3d';
   ov.innerHTML = `<div class="v3bar"><b>3D view</b><span class="v3msg">Loading LiDAR terrain…</span>
-    <label class="v3l">Height stretch <input type="range" min="1" max="4" step="0.25" value="1.5" aria-label="Height stretch"><output>1.5×</output></label>
+    <label class="v3l">Height stretch <input type="range" min="1" max="4" step="0.25" value="1" aria-label="Height stretch"><output>1×</output></label>
     <label class="v3l"><input type="checkbox" class="v3fences" checked> Fences</label>
     <label class="v3l"><input type="checkbox" class="v3bld" checked> <span class="v3bldt">Buildings</span></label>
     <span class="v3counts v3l"></span>
@@ -67,9 +112,10 @@ export async function open3D({bounds, lines, types, nodes, key, focus, braces, m
     <button class="btn sm v3over" title="Back to the view from above">Overview</button>
     <button class="btn sm v3close">Close</button></div>
     <div class="v3c"></div>
+    <div class="v3note v3src" hidden></div>
     <div class="v3note">Move with <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> or the arrow keys, turn with <kbd>Q</kbd> <kbd>E</kbd>, up and down with <kbd>R</kbd> <kbd>F</kbd>, hold <kbd>Shift</kbd> to go faster. Drag to look around, right-drag to slide, scroll to zoom. Click a post to see what it is and the spacing.</div>`;
   document.body.appendChild(ov);
-  const msg = ov.querySelector('.v3msg'), box = ov.querySelector('.v3c'), note = ov.querySelector('.v3note'), counts = ov.querySelector('.v3counts');
+  const msg = ov.querySelector('.v3msg'), box = ov.querySelector('.v3c'), note = ov.querySelector('.v3note:not(.v3src)'), counts = ov.querySelector('.v3counts');
   let raf = 0, renderer, disposed = false;
   const trash = [];
   const close = () => {
@@ -84,7 +130,10 @@ export async function open3D({bounds, lines, types, nodes, key, focus, braces, m
   open = {close};
   let ro;
 
-  const s = bounds.getSouth(), n = bounds.getNorth(), w = bounds.getWest(), e = bounds.getEast();
+  // snap the area outward to a fixed grid (about 200 m) so a small change to the fence lines still
+  // asks for the very same area, and the saved ground and photo from last time can be used
+  const G = 0.002, snapDown = v => +(Math.floor(v / G) * G).toFixed(3), snapUp = v => +(Math.ceil(v / G) * G).toFixed(3);
+  const s = snapDown(bounds.getSouth()), n = snapUp(bounds.getNorth()), w = snapDown(bounds.getWest()), e = snapUp(bounds.getEast());
   const lat0 = (s + n) / 2, mx = 111320 * Math.cos(lat0 * Math.PI / 180), my = 110574;
   const Wm = (e - w) * mx, Hm = (n - s) * my, degAsp = (e - w) / (n - s);
   const N = 400, gw = degAsp >= 1 ? N : Math.max(40, Math.round(N * degAsp)), gh = degAsp >= 1 ? Math.max(40, Math.round(N / degAsp)) : N;
@@ -92,11 +141,36 @@ export async function open3D({bounds, lines, types, nodes, key, focus, braces, m
   const demUrl = `${USGS}/exportImage?bbox=${bbox}&bboxSR=4326&imageSR=4326&size=${gw},${gh}&format=tiff&pixelType=F32&noData=-9999&interpolation=RSP_BilinearInterpolation&compression=None&f=image`;
   // photo: about 0.25 m per pixel at most (asking for more detail than Esri has makes it fail), smaller tries after that
   const loader = new THREE.TextureLoader(); loader.setCrossOrigin('anonymous');
-  async function loadSat() {
-    let px = Math.min(4096, Math.round(Math.max(Wm, Hm) / 0.15));
+  // the photo addresses to try, biggest first
+  function satUrls(maxPx = 4096) {
+    const urls = [];
+    let px = Math.min(maxPx, Math.round(Math.max(Wm, Hm) / 0.15));
     for (let tries = 0; tries < 4; tries++, px = Math.round(px * 0.6)) {
       const tw = degAsp >= 1 ? px : Math.round(px * degAsp), th = degAsp >= 1 ? Math.round(px / degAsp) : px;
-      try { return await loader.loadAsync(`https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/export?bbox=${bbox}&bboxSR=4326&imageSR=4326&size=${tw},${th}&format=jpg&f=image`); }
+      urls.push(`https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/export?bbox=${bbox}&bboxSR=4326&imageSR=4326&size=${tw},${th}&format=jpg&f=image`);
+    }
+    return urls;
+  }
+  // one photo: the saved copy if there is one, otherwise download it and save it for next time
+  async function loadTex(url) {
+    let blob = (await cacheGet(url))?.buf, fresh = false;
+    if (!(blob instanceof Blob)) {
+      let r;
+      try { r = await fetch(url, {mode: 'cors'}); }
+      catch (e) { return loader.loadAsync(url); }   // the browser blocked it: load it the old way, just not saved
+      if (!r.ok || !/^image\//.test(r.headers.get('content-type') || '')) throw Error('no photo');
+      blob = await r.blob(); fresh = true;
+    }
+    const ou = URL.createObjectURL(blob);
+    try {
+      const t = await loader.loadAsync(ou);
+      if (fresh) cachePut(url, {buf: blob, at: Date.now()});   // only save photos that opened fine
+      return t;
+    } finally { URL.revokeObjectURL(ou); }
+  }
+  async function loadSat(maxPx = 4096) {
+    for (const url of satUrls(maxPx)) {
+      try { return await loadTex(url); }
       catch (e) { /* try smaller */ }
     }
     return null;
@@ -105,18 +179,22 @@ export async function open3D({bounds, lines, types, nodes, key, focus, braces, m
   // Elevation for the 3D ground: USGS 3DEP LiDAR first. When USGS is down or the spot is outside the
   // US, AWS Terrain Tiles (built from USGS 10 m data and others, about 5 to 10 m apart) fill in.
   const timeout = (ms, p) => Promise.race([p, new Promise((_, no) => setTimeout(() => no(Error('timed out')), ms))]);
-  async function terrainTiles() {
-    const span = Math.max(Wm, Hm), z = span < 3000 ? 15 : span < 8000 ? 14 : 13, nT = 2 ** z;
-    const tx = lng => (lng + 180) / 360 * nT, ty = lat => (1 - Math.log(Math.tan(lat * Math.PI / 180) + 1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2 * nT;
-    const x0 = Math.floor(tx(w)), x1 = Math.floor(tx(e)), y0 = Math.floor(ty(n)), y1 = Math.floor(ty(s));
-    if ((x1 - x0 + 1) * (y1 - y0 + 1) > 64) throw Error('area too large');
+  async function terrainTiles(maxTiles = 64, grid = N) {
+    let z = 15, nT, tx, ty, x0, x1, y0, y1;
+    for (; z >= 8; z--) {
+      nT = 2 ** z;
+      tx = lng => (lng + 180) / 360 * nT; ty = lat => (1 - Math.log(Math.tan(lat * Math.PI / 180) + 1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2 * nT;
+      x0 = Math.floor(tx(w)); x1 = Math.floor(tx(e)); y0 = Math.floor(ty(n)); y1 = Math.floor(ty(s));
+      if ((x1 - x0 + 1) * (y1 - y0 + 1) <= maxTiles) break;
+    }
     const cv = new OffscreenCanvas((x1 - x0 + 1) * 256, (y1 - y0 + 1) * 256), g = cv.getContext('2d');
     const jobs = [];
     for (let x = x0; x <= x1; x++) for (let y = y0; y <= y1; y++)
       jobs.push(fetch(`https://s3.amazonaws.com/elevation-tiles-prod/terrarium/${z}/${x}/${y}.png`)
         .then(r => { if (!r.ok) throw Error('tile'); return r.blob(); }).then(createImageBitmap).then(bm => g.drawImage(bm, (x - x0) * 256, (y - y0) * 256)));
     await Promise.all(jobs);
-    const px = g.getImageData(0, 0, cv.width, cv.height).data, gw2 = gw, gh2 = gh, out = new Float32Array(gw2 * gh2);
+    const k = grid / N, gw2 = Math.max(16, Math.round(gw * k)), gh2 = Math.max(16, Math.round(gh * k));
+    const px = g.getImageData(0, 0, cv.width, cv.height).data, out = new Float32Array(gw2 * gh2);
     const at = (X, Y) => { X = Math.min(cv.width - 1, Math.max(0, X)); Y = Math.min(cv.height - 1, Math.max(0, Y)); const i = (Y * cv.width + X) * 4; return px[i] * 256 + px[i + 1] + px[i + 2] / 256 - 32768; };
     for (let r = 0; r < gh2; r++) for (let c = 0; c < gw2; c++) {
       const lat = n - r / (gh2 - 1) * (n - s), lng = w + c / (gw2 - 1) * (e - w);
@@ -126,32 +204,52 @@ export async function open3D({bounds, lines, types, nodes, key, focus, braces, m
     return {W: gw2, H: gh2, data: out, fallback: true};
   }
   async function loadDem() {
+    const saved = await cacheGet(demUrl);
+    if (saved) try { return readTiff(saved.buf); } catch (e) { /* saved copy is no good, download it again */ }
     try {
       const r = await timeout(25000, fetch(demUrl));
       if (!r.ok) throw Error('USGS answered ' + r.status);
-      return readTiff(await r.arrayBuffer());
+      const buf = await r.arrayBuffer(), d = readTiff(buf);   // readTiff only reads buf, so it is still whole to save
+      cachePut(demUrl, {buf, at: Date.now()});   // only the USGS file is saved, never the AWS fill-in
+      return d;
     } catch (e) {
       console.warn('USGS elevation not available, using AWS Terrain Tiles', e);
       return terrainTiles();
     }
   }
-  let dem, tex, srcText;
-  try {
-    [dem, tex, srcText] = await Promise.all([loadDem(), loadSat(), timeout(8000, terrainSource(lat0, (w + e) / 2)).catch(() => '')]);
-  } catch (err) {
-    console.error(err);
-    msg.textContent = 'Could not load the terrain right now. The elevation services did not answer, so try again in a little while.';
-    return;
+  // ----- loading: a rough version first (a few map tiles and a small photo) so you can look around in a
+  // moment, then the sharp USGS LiDAR ground and the full photo swap in when they arrive -----
+  const srcBox = ov.querySelector('.v3src');
+  let srcText = '', srcFallback = false;
+  const showSrc = () => { const t = srcFallback ? 'AWS Terrain Tiles, about 10 m detail (USGS LiDAR is not answering right now)' : srcText; srcBox.hidden = !t; srcBox.textContent = t ? 'Terrain from ' + t + '.' : ''; };
+  timeout(8000, terrainSource(lat0, (w + e) / 2)).then(t => { srcText = t; showSrc(); }).catch(() => {});
+  const fullDem = loadDem().catch(() => null), fullSat = loadSat();   // start the sharp ones now, they take longer
+  // already saved from last time? then skip the rough version and show the sharp one straight away
+  const [savedDem, savedSat] = await Promise.all([cacheGet(demUrl), cacheGet(satUrls()[0])]);
+  let dem, tex, rough;
+  if (savedDem && savedSat) {
+    [dem, tex] = await Promise.all([fullDem, fullSat]);
+    rough = false; if (dem?.fallback) srcFallback = true;
+  } else {
+    [dem, tex] = await Promise.all([terrainTiles(16, 160).catch(() => null), loadSat(1024)]);
+    rough = !!dem;
   }
-  if (dem.fallback) srcText = 'AWS Terrain Tiles, about 10 m detail (USGS LiDAR is not answering right now)';
+  if (!dem) { dem = await fullDem; rough = false; if (dem?.fallback) srcFallback = true; }
+  if (!dem) { msg.textContent = 'Could not load the terrain right now. The elevation services did not answer, so try again in a little while.'; return; }
   if (disposed) return;
-  const {W, H, data} = dem;
-  let zmin = Infinity, zmax = -Infinity;
-  for (const v of data) if (v > -1000) { zmin = Math.min(zmin, v); zmax = Math.max(zmax, v); }
-  if (!isFinite(zmin)) { msg.textContent = 'USGS has no elevation for this spot.'; return; }
-  for (let i = 0; i < data.length; i++) if (!(data[i] > -1000)) data[i] = zmin;
-  msg.textContent = `${Math.round((zmax - zmin) * FT).toLocaleString()} ft from lowest to highest point`;
-  note.innerHTML = esc(srcText ? 'Terrain from ' + srcText + '. ' : '') + note.innerHTML;
+  let W, H, data, zmin, zmax, step;
+  // take in a grid of heights: fill any holes, find the lowest and highest
+  function takeDem(d) {
+    let lo = Infinity, hi = -Infinity;
+    for (const v of d.data) if (v > -1000) { lo = Math.min(lo, v); hi = Math.max(hi, v); }
+    if (!isFinite(lo)) return false;
+    for (let i = 0; i < d.data.length; i++) if (!(d.data[i] > -1000)) d.data[i] = lo;
+    ({W, H, data} = d); zmin = lo; zmax = hi; step = Wm / W;
+    return true;
+  }
+  if (!takeDem(dem)) { msg.textContent = 'USGS has no elevation for this spot.'; return; }
+  const rangeText = () => `${Math.round((zmax - zmin) * FT).toLocaleString()} ft from lowest to highest point`;
+  msg.textContent = rangeText() + (rough ? '. Sharpening the ground and photo…' : '');
 
   // ----- scene -----
   renderer = new THREE.WebGLRenderer({antialias: true});
@@ -169,28 +267,33 @@ export async function open3D({bounds, lines, types, nodes, key, focus, braces, m
   const sun = new THREE.DirectionalLight(0xffffff, 1.6); sun.position.set(-size, size * 1.2, size * 0.6); scene.add(sun);
 
   // ----- terrain -----
-  if (tex) { tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = renderer.capabilities.getMaxAnisotropy(); }
-  const pos = new Float32Array(W * H * 3), uv = new Float32Array(W * H * 2);
-  for (let r = 0; r < H; r++) for (let c = 0; c < W; c++) {
-    const i = r * W + c;
-    pos[i * 3] = -Wm / 2 + c / (W - 1) * Wm; pos[i * 3 + 2] = -Hm / 2 + r / (H - 1) * Hm;
-    uv[i * 2] = c / (W - 1); uv[i * 2 + 1] = 1 - r / (H - 1);
+  const prepTex = t => { if (t) { t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = renderer.capabilities.getMaxAnisotropy(); } return t; };
+  prepTex(tex);
+  let pos;
+  function terrainGeo() {
+    pos = new Float32Array(W * H * 3); const uv = new Float32Array(W * H * 2);
+    for (let r = 0; r < H; r++) for (let c = 0; c < W; c++) {
+      const i = r * W + c;
+      pos[i * 3] = -Wm / 2 + c / (W - 1) * Wm; pos[i * 3 + 2] = -Hm / 2 + r / (H - 1) * Hm;
+      uv[i * 2] = c / (W - 1); uv[i * 2 + 1] = 1 - r / (H - 1);
+    }
+    const idx = new Uint32Array((W - 1) * (H - 1) * 6); let k = 0;
+    for (let r = 0; r < H - 1; r++) for (let c = 0; c < W - 1; c++) {
+      const a = r * W + c, b = a + 1, d = a + W, f = d + 1;
+      idx[k++] = a; idx[k++] = d; idx[k++] = b; idx[k++] = b; idx[k++] = d; idx[k++] = f;
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+    g.setIndex(new THREE.BufferAttribute(idx, 1));
+    return g;
   }
-  const idx = new Uint32Array((W - 1) * (H - 1) * 6); let k = 0;
-  for (let r = 0; r < H - 1; r++) for (let c = 0; c < W - 1; c++) {
-    const a = r * W + c, b = a + 1, d = a + W, f = d + 1;
-    idx[k++] = a; idx[k++] = d; idx[k++] = b; idx[k++] = b; idx[k++] = d; idx[k++] = f;
-  }
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-  geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
-  geo.setIndex(new THREE.BufferAttribute(idx, 1));
+  let geo = terrainGeo();
   const mat = tex ? new THREE.MeshLambertMaterial({map: tex}) : new THREE.MeshLambertMaterial({color: 0x9c9a86});
   const terrain = new THREE.Mesh(geo, mat);
   scene.add(terrain);
-  trash.push(geo, mat); if (tex) trash.push(tex);
+  trash.push(mat, {dispose: () => { terrain.geometry.dispose(); mat.map?.dispose(); }});
 
-  const step = Wm / W;
   // ----- fences: every post, wire, brace and gate at real size -----
   const fences = new THREE.Group(); scene.add(fences);
   const hAt = (lat, lng) => {
@@ -202,7 +305,7 @@ export async function open3D({bounds, lines, types, nodes, key, focus, braces, m
   const xz = (lat, lng) => [-Wm / 2 + (lng - w) / (e - w) * Wm, -Hm / 2 + (n - lat) / (n - s) * Hm];
   const llOf = (x, z) => [n - (z + Hm / 2) / Hm * (n - s), w + (x + Wm / 2) / Wm * (e - w)];
   const inView = (x, z) => Math.abs(x) <= Wm / 2 && Math.abs(z) <= Hm / 2;
-  let ex = 1.5;
+  let ex = 1;
   const ground = (x, z) => { const [la, ln] = llOf(x, z); return (hAt(la, ln) - zmin) * ex; };
   const M = 1 / FT, clamp = (v, a, b) => Math.min(b, Math.max(a, v));
   const kitById = Object.fromEntries((braces || []).map(b => [b.id, b]));
@@ -405,6 +508,20 @@ export async function open3D({bounds, lines, types, nodes, key, focus, braces, m
   }
   const range = ov.querySelector('input[type=range]'), out = ov.querySelector('output');
   setStretch(+range.value);
+  // the sharp versions, as they come in
+  fullSat.then(t => {
+    if (t === tex) return;   // already showing it
+    if (disposed || !t) { t?.dispose(); return; }
+    const old = mat.map; mat.map = prepTex(t); mat.color.set(0xffffff); mat.needsUpdate = true; if (old && old !== t) old.dispose();
+  });
+  if (rough) fullDem.then(d => {
+    if (disposed) return;
+    if (!d || !takeDem(d)) { msg.textContent = rangeText(); return; }
+    if (d.fallback) { srcFallback = true; showSrc(); }
+    const old = terrain.geometry; geo = terrain.geometry = terrainGeo(); old.dispose();
+    setStretch(ex); buildBuildings(); if (walking) dropToGround();
+    msg.textContent = rangeText();
+  });
   range.oninput = () => { out.textContent = range.value + '×'; setStretch(+range.value); buildBuildings(); if (walking) dropToGround(); };
   ov.querySelector('.v3fences').onchange = ev => { fences.visible = ev.target.checked; };
 
@@ -450,32 +567,100 @@ export async function open3D({bounds, lines, types, nodes, key, focus, braces, m
 
   // ----- moving around: W A S D or arrows, Q E to turn, R F up and down, Shift to go faster -----
   const held = new Set(), MOVE = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyQ', 'KeyE', 'KeyR', 'KeyF', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'PageUp', 'PageDown'];
-  let walking = false; const EYE = 1.7;
-  const dropToGround = () => { const dy = ground(camera.position.x, camera.position.z) + EYE - camera.position.y; camera.position.y += dy; controls.target.y += dy; };
+  // ----- walk mode: you, at eye level, like a first-person game. Mouse looks, W A S D walks, Shift runs, Space jumps -----
+  let walking = false, locked = false, unlockedAt = 0; const EYE = 1.7;
+  const me = {x: 0, y: 0, z: 0, vy: 0, yaw: 0, pitch: 0, phase: 0, moving: 0};
+  const fwdOf = () => new THREE.Vector3(-Math.sin(me.yaw), 0, -Math.cos(me.yaw));
+  const dropToGround = () => { me.y = ground(me.x, me.z); me.vy = 0; };
+  const hud = document.createElement('div'); hud.className = 'v3hud'; hud.hidden = true;
+  hud.innerHTML = '<div class="v3cross"></div><div class="v3tip" hidden></div>';
+  box.appendChild(hud);
+  const tip = hud.querySelector('.v3tip');
+  const NOTE_FLY = note.innerHTML;
+  const NOTE_WALK = 'Move the mouse to look around (hold it near the edge to keep turning). <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> walk, <kbd>Shift</kbd> run, <kbd>Space</kbd> jump. <kbd>Esc</kbd> frees the mouse, <kbd>V</kbd> leaves walk mode. Click a post to see what it is.';
   function setWalk(on) {
     walking = on; walkBtn.classList.toggle('on', on); walkBtn.textContent = on ? 'Leave walk mode' : 'Walk the fence';
+    controls.enabled = !on; hud.hidden = !on; cvs.style.cursor = on ? 'none' : ''; note.innerHTML = on ? NOTE_WALK : NOTE_FLY;
     if (on) {
       const l = lines.find(x => x.id === focus && x.pts.length > 1) || lines.find(x => x.pts.length > 1), L = l && layouts.get(l.id);
       const q = L ? L.at(0) : {x: 0, z: 0, dx: 0, dz: -1};
       // stand a few steps to the side of the start of the line, looking along it
-      camera.position.set(q.x - q.dz * 3 - q.dx * 4, 0, q.z + q.dx * 3 - q.dz * 4);
-      controls.target.set(camera.position.x + q.dx * 0.6 + q.dz * 0.12, 0, camera.position.z + q.dz * 0.6 - q.dx * 0.12);
-      camera.position.y = controls.target.y = 0; dropToGround();
-      controls.minDistance = 0.3; controls.maxDistance = 1; controls.enableZoom = false; controls.maxPolarAngle = Math.PI * 0.75;
+      me.x = q.x - q.dz * 3 - q.dx * 4; me.z = q.z + q.dx * 3 - q.dz * 4; dropToGround();
+      me.yaw = Math.atan2(-q.dx, -q.dz); me.pitch = -0.08;
+      camera.near = 0.05; camera.updateProjectionMatrix();
+      grabMouse();   // the mouse steers your view right away, like a game
     } else {
+      if (locked) document.exitPointerLock?.();
       controls.minDistance = 1.2; controls.maxDistance = size * 4; controls.enableZoom = true; controls.maxPolarAngle = Math.PI * 0.48;
-      const t = controls.target.clone(); t.y = ground(t.x, t.z);
-      controls.target.copy(t); camera.position.set(t.x - 30, t.y + 40, t.z + 60);
+      controls.target.set(me.x, ground(me.x, me.z), me.z);
+      const f = fwdOf(); camera.position.set(me.x - f.x * 40, controls.target.y + 35, me.z - f.z * 40);
+      controls.update();
     }
-    controls.update();
   }
   const walkBtn = ov.querySelector('.v3walk'); walkBtn.onclick = () => setWalk(!walking);
   ov.querySelector('.v3over').onclick = () => { if (walking) setWalk(false); overview(); };
+  // mouse look: pointer lock after a click, or drag with the button held
+  const cvs = renderer.domElement;
+  // take over the mouse (pointer lock): moving it turns your head, no clicking or dragging needed
+  function grabMouse() {
+    if (locked || !cvs.requestPointerLock) return;
+    try {
+      const r = cvs.requestPointerLock({unadjustedMovement: true});
+      r?.catch?.(() => { try { cvs.requestPointerLock()?.catch?.(() => {}); } catch (e) {} });   // if the window won't lock the mouse, plain mouse moves still steer
+    } catch (e) { try { cvs.requestPointerLock(); } catch (e2) {} }
+  }
+  const look = (dx, dy) => { me.yaw -= dx * 0.0024; me.pitch = clamp(me.pitch - dy * 0.0024, -1.35, 1.25); };
+  const onLockChange = () => { locked = document.pointerLockElement === cvs; if (!locked) unlockedAt = performance.now(); tip.hidden = true; };
+  // moving the mouse turns your head, locked or not; near the left or right edge you keep turning
+  let edge = 0;
+  const onMouseMove = ev => {
+    if (!walking) return;
+    if (locked) return look(ev.movementX, ev.movementY);
+    const rc = cvs.getBoundingClientRect();
+    if (ev.clientX < rc.left || ev.clientX > rc.right || ev.clientY < rc.top || ev.clientY > rc.bottom) { edge = 0; return; }
+    if (Math.abs(ev.movementX) < 120 && Math.abs(ev.movementY) < 120) look(ev.movementX, ev.movementY);   // skip the jump when the mouse first comes onto the view
+    const nx = (ev.clientX - rc.left) / rc.width * 2 - 1;
+    edge = Math.abs(nx) > 0.82 ? Math.sign(nx) * (Math.abs(nx) - 0.82) / 0.18 : 0;
+  };
+  cvs.addEventListener('mouseleave', () => { edge = 0; });
+  document.addEventListener('pointerlockchange', onLockChange); document.addEventListener('mousemove', onMouseMove);
+  trash.push({dispose: () => { document.removeEventListener('pointerlockchange', onLockChange); document.removeEventListener('mousemove', onMouseMove); if (locked) document.exitPointerLock?.(); }});
+  cvs.addEventListener('pointerdown', () => { if (walking && !locked) grabMouse(); });
+
   const fwd = new THREE.Vector3(), right = new THREE.Vector3(), mv = new THREE.Vector3(), yAxis = new THREE.Vector3(0, 1, 0);
+  function stepWalk(dt) {
+    const f = fwdOf(), r = new THREE.Vector3(-f.z, 0, f.x);
+    const kf = (held.has('KeyW') || held.has('ArrowUp') ? 1 : 0) - (held.has('KeyS') || held.has('ArrowDown') ? 1 : 0);
+    const kr = (held.has('KeyD') || held.has('ArrowRight') ? 1 : 0) - (held.has('KeyA') || held.has('ArrowLeft') ? 1 : 0);
+    me.yaw += ((held.has('KeyQ') ? 1 : 0) - (held.has('KeyE') ? 1 : 0)) * dt * 2 - (locked ? 0 : edge * dt * 2.2);
+    const run = held.has('Shift'), speed = run ? 7 : 3;
+    mv.set(0, 0, 0).addScaledVector(f, kf).addScaledVector(r, kr);
+    const moving = mv.lengthSq() > 0;
+    if (moving) {
+      mv.normalize().multiplyScalar(speed * dt);
+      let nx = me.x + mv.x, nz = me.z + mv.z;
+      // bump into posts instead of walking through them
+      if (fences.visible) for (const it of infos) { const dx = nx - it.x, dz = nz - it.z, d = Math.hypot(dx, dz); if (d < 0.38 && d > 1e-6) { nx = it.x + dx / d * 0.38; nz = it.z + dz / d * 0.38; } }
+      me.x = clamp(nx, -Wm / 2 + 1, Wm / 2 - 1); me.z = clamp(nz, -Hm / 2 + 1, Hm / 2 - 1);
+    }
+    // jumping and falling, landing on the ground
+    const gy = ground(me.x, me.z);
+    if (held.has('Space') && me.y <= gy + 0.02) me.vy = 4.6;
+    me.vy -= 14 * dt; me.y += me.vy * dt;
+    if (me.y < gy) { me.y = gy; me.vy = 0; }
+    // a little step in your stride while you walk
+    me.moving += ((moving ? 1 : 0) - me.moving) * Math.min(1, dt * 10);
+    if (moving) me.phase += dt * (run ? 11 : 7);
+    const dir = new THREE.Vector3(-Math.sin(me.yaw) * Math.cos(me.pitch), Math.sin(me.pitch), -Math.cos(me.yaw) * Math.cos(me.pitch));
+    const bob = Math.abs(Math.sin(me.phase)) * (run ? 0.06 : 0.035) * me.moving;
+    camera.position.set(me.x, me.y + EYE + bob, me.z);
+    camera.lookAt(camera.position.clone().add(dir));
+  }
   function moveBy(dt) {
+    if (walking) return stepWalk(dt);
     if (!held.size) return;
     const dist = camera.position.distanceTo(controls.target), fast = held.has('Shift') ? 3 : 1;
-    const speed = (walking ? 5 : Math.max(4, dist * 0.9)) * fast;
+    const speed = Math.max(4, dist * 0.9) * fast;
     fwd.subVectors(controls.target, camera.position); fwd.y = 0;
     if (fwd.lengthSq() < 1e-8) fwd.set(0, 0, -1); fwd.normalize(); right.crossVectors(fwd, yAxis);
     const f = (held.has('KeyW') || held.has('ArrowUp') ? 1 : 0) - (held.has('KeyS') || held.has('ArrowDown') ? 1 : 0);
@@ -483,22 +668,22 @@ export async function open3D({bounds, lines, types, nodes, key, focus, braces, m
     const u = (held.has('KeyR') || held.has('PageUp') ? 1 : 0) - (held.has('KeyF') || held.has('PageDown') ? 1 : 0);
     mv.set(0, 0, 0).addScaledVector(fwd, f).addScaledVector(right, r);
     if (mv.lengthSq()) mv.normalize().multiplyScalar(speed * dt);
-    if (!walking) mv.y = u * speed * dt * 0.6;
+    mv.y = u * speed * dt * 0.6;
     camera.position.add(mv); controls.target.add(mv);
     const turn = (held.has('KeyQ') ? 1 : 0) - (held.has('KeyE') ? 1 : 0);
-    if (turn) {
-      // walking: turn your head; flying: swing around the spot you're looking at
-      const ang = turn * dt * 1.4, pivot = walking ? camera.position : controls.target, moved = walking ? controls.target : camera.position;
-      moved.sub(pivot).applyAxisAngle(yAxis, walking ? ang : -ang).add(pivot);
-    }
-    if (walking) dropToGround();
-    else { const floor = ground(clamp(camera.position.x, -Wm / 2, Wm / 2), clamp(camera.position.z, -Hm / 2, Hm / 2)) + 1; if (camera.position.y < floor) camera.position.y = floor; }
+    if (turn) camera.position.sub(controls.target).applyAxisAngle(yAxis, -turn * dt * 1.4).add(controls.target);
+    const floor = ground(clamp(camera.position.x, -Wm / 2, Wm / 2), clamp(camera.position.z, -Hm / 2, Hm / 2)) + 1; if (camera.position.y < floor) camera.position.y = floor;
   }
   onKeyDown = ev => {
     if (ev.target.closest?.('input,select,textarea')) return;
-    if (ev.key === 'Escape') return close();
+    if (ev.key === 'Escape') {
+      // Esc first frees the mouse, then leaves walk mode, then closes the 3D view
+      if (locked || performance.now() - unlockedAt < 400) return;
+      return walking ? setWalk(false) : close();
+    }
     if (ev.key === 'Shift') held.add('Shift');
     if (ev.code === 'KeyV') return setWalk(!walking);
+    if (walking && ev.code === 'Space') { held.add('Space'); ev.preventDefault(); return; }
     if (MOVE.includes(ev.code) && !ev.ctrlKey && !ev.metaKey) { held.add(ev.code); ev.preventDefault(); }
   };
   onKeyUp = ev => { held.delete(ev.code); if (ev.key === 'Shift') held.delete('Shift'); };
@@ -508,9 +693,13 @@ export async function open3D({bounds, lines, types, nodes, key, focus, braces, m
   const ray = new THREE.Raycaster(), ptr = new THREE.Vector2(); let down = null;
   renderer.domElement.addEventListener('pointerdown', ev => { down = [ev.clientX, ev.clientY]; });
   renderer.domElement.addEventListener('pointerup', ev => {
-    if (!down || Math.hypot(ev.clientX - down[0], ev.clientY - down[1]) > 5) return;
-    const rc = renderer.domElement.getBoundingClientRect();
-    ptr.set((ev.clientX - rc.left) / rc.width * 2 - 1, -(ev.clientY - rc.top) / rc.height * 2 + 1);
+    if (walking && locked) { ptr.set(0, 0); }
+    else {
+      if (!down || Math.hypot(ev.clientX - down[0], ev.clientY - down[1]) > 5) return;
+      if (walking) return;
+      const rc = renderer.domElement.getBoundingClientRect();
+      ptr.set((ev.clientX - rc.left) / rc.width * 2 - 1, -(ev.clientY - rc.top) / rc.height * 2 + 1);
+    }
     ray.setFromCamera(ptr, camera);
     const hit = ray.intersectObject(terrain)[0];
     if (!hit) return;
@@ -531,8 +720,9 @@ export async function open3D({bounds, lines, types, nodes, key, focus, braces, m
     moveBy(dt);
     // keep close-up posts from being clipped when you're right next to them
     const near = clamp(camera.position.distanceTo(controls.target) / 100, 0.05, Math.max(0.5, size / 2000));
-    if (Math.abs(near - camera.near) / camera.near > 0.2) { camera.near = walking ? 0.05 : near; camera.updateProjectionMatrix(); }
-    controls.update(); renderer.render(scene, camera); raf = requestAnimationFrame(loop);
+    if (!walking && Math.abs(near - camera.near) / camera.near > 0.2) { camera.near = near; camera.updateProjectionMatrix(); }
+    if (!walking) controls.update();
+    renderer.render(scene, camera); raf = requestAnimationFrame(loop);
   };
   raf = requestAnimationFrame(loop);
 }

@@ -19,10 +19,13 @@
 html,body{height:100%}
 body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;display:flex;flex-direction:column;overflow:hidden}
 button,input,select,textarea{font:inherit;color:inherit}
-header{display:flex;align-items:stretch;height:48px;flex:none;padding:0 16px;background:var(--pan);border-bottom:1px solid var(--line)}
-header h1{font-size:15px;font-weight:600;margin:0 20px 0 0;display:flex;align-items:center;white-space:nowrap}
-header nav.tabs{position:static;padding:0;background:none;border:0;gap:2px;align-items:stretch;overflow:visible}
-header nav.tabs button{padding:0 12px;border-bottom:2px solid transparent;border-top:2px solid transparent;white-space:nowrap}
+header{display:flex;align-items:center;min-height:64px;flex:none;padding:0 16px;gap:4px;background:light-dark(#eef1f4,#0f1114);border-bottom:2px solid var(--acc);box-shadow:0 2px 8px #0003;flex-wrap:wrap}
+header h1{font-size:19px;font-weight:700;margin:0 18px 0 4px;display:flex;align-items:center;gap:10px;white-space:nowrap}
+header h1::before{content:'';width:28px;height:28px;background:url(icon-256.png) center/contain no-repeat;flex:none}
+header nav.tabs{position:static;padding:8px 0;background:none;border:0;gap:6px;align-items:center;overflow:visible;flex-wrap:wrap}
+header nav.tabs button{padding:10px 18px;min-height:44px;font-size:15px;font-weight:600;color:var(--ink);background:var(--pan);border:1px solid var(--line);border-radius:6px;white-space:nowrap}
+header nav.tabs button:hover{border-color:var(--acc);color:var(--ink)}
+header nav.tabs button.on{background:var(--acc);color:var(--accInk);border-color:var(--acc);box-shadow:0 2px 6px #0004}
 #updbar{flex:none;display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap;padding:6px 16px;background:var(--ok);color:#fff;font-weight:500}
 #updbar[hidden]{display:none}#updbar .btn{background:var(--pan);color:var(--ink);border-color:var(--pan)}#updbar a{color:#fff}
 #stale{flex:none;display:flex;gap:10px;align-items:center;justify-content:center;padding:6px 16px;background:var(--acc);color:var(--accInk);font-weight:500}
@@ -43,16 +46,21 @@ span.up{color:light-dark(#b3261e,#f08a80)}span.down{color:var(--ok)}
 .mpic.none{display:inline-block;background:var(--pan2)}
 @media print{.mpic{display:none}}
 #b3dMap{position:absolute;z-index:500;left:10px;bottom:28px;box-shadow:0 2px 10px #0005;font-weight:600}
-td.ord{width:1%;white-space:nowrap;vertical-align:middle}td.ord .btn{display:block;min-height:20px;height:20px;font-size:11px}
+table.ed td.ord{width:1%;white-space:nowrap;vertical-align:middle}
+table.ed td:nth-child(2){width:auto}
+.rollbox{margin-top:6px;border:1px solid var(--line);border-radius:4px;padding:6px 8px;background:var(--pan2)}
+table.rollsz{width:auto;margin:2px 0 6px}table.rollsz td{padding:3px 10px 3px 0;border:0}
+table.ed td select[data-f="ftw.look"]{min-width:120px}td.ord .btn{display:block;min-height:20px;height:20px;font-size:11px}
 .alts{margin-top:4px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}.chip{border:1px solid var(--line);border-radius:10px;padding:0 8px;background:var(--pan2)}
 .altpick{width:auto!important;min-height:26px!important;font-size:12px}
 .savebar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:light-dark(#fff4d6,#3a3210);border:1px solid light-dark(#e2c66a,#6b5a1c);border-radius:4px;padding:8px 10px;margin:0 0 12px;position:sticky;top:0;z-index:4}
 .lnk{font-variant-numeric:tabular-nums}
-.vsep{width:1px;align-self:center;height:20px;background:var(--line);margin:0 8px;flex:none}
+.vsep{width:2px;align-self:center;height:28px;background:var(--line);margin:0 8px;flex:none}
 .hright{margin-left:auto;display:flex;align-items:center;gap:8px;padding-left:16px}
 body.pg-lib .jobpick,body.pg-lib #newProj{display:none}
-.jobpick{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--mut)}
-.jobpick select{font-weight:500;color:var(--ink);min-width:150px}
+.jobpick{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;color:var(--mut)}
+.hright .btn{min-height:40px;padding:0 16px;font-size:14px;font-weight:600}
+.jobpick select{font-weight:600;font-size:14px;color:var(--ink);min-width:180px;min-height:40px}
 .phead{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin:0 0 16px}
 .phead h1{font-size:20px;font-weight:600;margin:0}
 .phead p{margin:2px 0 0;color:var(--mut);max-width:70ch}
@@ -71,7 +79,7 @@ table.mats td:nth-child(3),table.mats td:nth-child(4){width:1%}
 table.mats td:nth-child(5){max-width:260px}
 table.mats td:first-child{min-width:230px}
 header select{width:auto;max-width:240px}
-#status{font-size:12px;color:var(--mut);white-space:nowrap}
+#status{font-size:13px;color:var(--mut);white-space:nowrap}
 main{flex:1;display:grid;grid-template-columns:minmax(0,1fr);min-height:0}
 body.pg-build main{grid-template-columns:min(420px,45%) minmax(0,1fr)}
 #side{display:none;overflow:auto;min-height:0;border-right:1px solid var(--line);padding:14px 14px 40px}
@@ -289,6 +297,9 @@ details summary{cursor:pointer;font-weight:500}
 #v3d .btn{background:#2a2e33;border-color:#3a4047;color:#e4e6e8}
 #v3d .v3c{flex:1;position:relative;min-height:0}
 #v3d .v3c canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+#v3d .v3hud{position:absolute;inset:0;pointer-events:none}#v3d .v3hud[hidden]{display:none}
+#v3d .v3cross{position:absolute;left:50%;top:50%;width:14px;height:14px;margin:-7px 0 0 -7px;background:linear-gradient(#fff,#fff) center/2px 100% no-repeat,linear-gradient(#fff,#fff) center/100% 2px no-repeat;filter:drop-shadow(0 0 2px #000);opacity:.85}
+#v3d .v3tip{position:absolute;left:50%;top:58%;transform:translateX(-50%);padding:6px 12px;border-radius:6px;background:#000a;color:#fff;font-size:14px}#v3d .v3tip[hidden]{display:none}
 #v3d .v3note{padding:6px 12px;font-size:12px;color:#98a0a8;background:#1b1e22}
 #v3d kbd{background:#2a2e33;border-color:#3a4047;color:#c9ccd1}
 #v3d .btn.on{background:#e4e6e8;color:#1b1e22}
@@ -303,8 +314,8 @@ details summary{cursor:pointer;font-weight:500}
   <div class="hright">
     <span id="status"></span>
     <label class="jobpick"><span>Job</span><select id="proj" aria-label="Job"></select></label>
-    <button class="btn sm" id="newProj">New job</button>
-    <button class="btn sm" id="bKeys" title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts">?</button>
+    <button class="btn pri" id="newProj">+ New job</button>
+    <button class="btn" id="bKeys" title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts">?</button>
   </div>
 </header>
 <div id="updbar" hidden></div>
@@ -322,7 +333,7 @@ details summary{cursor:pointer;font-weight:500}
       <button class="btn sm pri" id="bDraw" title="Draw a fence line (F)">Draw fence <kbd>F</kbd></button>
       <button class="btn sm" id="bGate" title="Add a gate (G)">Add gate <kbd>G</kbd></button>
       <button class="btn sm" id="bBrace" title="Add a brace (B)">Add brace <kbd>B</kbd></button>
-      <button class="btn sm" id="b3d" title="3D view (D)">3D view <kbd>D</kbd></button>
+      <button class="btn sm" id="b3d" title="See the fence in 3D">3D view</button>
       <span class="sp"></span>
       <button class="btn sm" id="bHU" title="Undo (Ctrl+Z)" disabled>Undo</button>
       <button class="btn sm" id="bHR" title="Redo (Ctrl+Y)" disabled>Redo</button>
@@ -335,7 +346,7 @@ details summary{cursor:pointer;font-weight:500}
     <div id="mapbox">
       <div id="map"></div>
       <div id="mapsum"></div>
-      <button class="btn" id="b3dMap" title="See the fence in 3D on the real ground (D)">3D view</button>
+      <button class="btn" id="b3dMap" title="See the fence in 3D on the real ground">3D view</button>
       <div id="drawbar" hidden><span id="drawMsg"></span><button class="btn sm" id="bUndo">Undo point</button><button class="btn sm pri" id="bFinish">Finish</button><button class="btn sm" id="bCancel">Cancel</button></div>
     </div>
   </aside>
@@ -343,8 +354,8 @@ details summary{cursor:pointer;font-weight:500}
 <dialog id="keys" aria-labelledby="keysT">
   <div class="row" style="justify-content:space-between;margin-bottom:6px"><h2 id="keysT" style="margin:0">Keyboard shortcuts</h2><button class="btn sm" id="keysClose">Close</button></div>
   <div class="kcols">
-  <div><h3>Map</h3><table><tr><td><kbd>F</kbd></td><td>Draw a fence line</td></tr><tr><td><kbd>G</kbd></td><td>Add a gate, then click a line</td></tr><tr><td><kbd>B</kbd></td><td>Add a brace, then click a line or point</td></tr><tr><td><kbd>Delete</kbd></td><td>Delete the selected point</td></tr><tr><td><kbd>T</kbd></td><td>Change the selected line's fence type</td></tr><tr><td><kbd>D</kbd></td><td>3D view</td></tr><tr><td><kbd>M</kbd></td><td>Switch between the builder and the estimate</td></tr><tr><td><span class="mut">/</span></td><td>Search the map</td></tr></table></div>
-  <div><h3>While drawing</h3><table><tr><td><kbd>Click</kbd></td><td>Add a corner</td></tr><tr><td><kbd>Backspace</kbd> <span class="mut">or</span> <kbd>Ctrl+Z</kbd></td><td>Remove the last point</td></tr><tr><td><kbd>Esc</kbd> <span class="mut">or</span> <kbd>Enter</kbd> <span class="mut">or</span> <kbd>F</kbd></td><td>End the line here and keep it</td></tr><tr><td><kbd>Double-click</kbd></td><td>End the line here</td></tr></table>
+  <div><h3>Map</h3><table><tr><td><kbd>F</kbd></td><td>Draw a fence line</td></tr><tr><td><kbd>G</kbd></td><td>Add a gate, then click a line</td></tr><tr><td><kbd>B</kbd></td><td>Add a brace, then click a line or point</td></tr><tr><td><kbd>Delete</kbd></td><td>Delete the selected point</td></tr><tr><td><kbd>T</kbd></td><td>Change the selected line's fence type</td></tr><tr><td><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> <span class="mut">or arrows</span></td><td>Move the map (hold Shift to go faster)</td></tr><tr><td><kbd>M</kbd></td><td>Switch between the builder and the estimate</td></tr><tr><td><span class="mut">/</span></td><td>Search the map</td></tr></table></div>
+  <div><h3>While drawing</h3><table><tr><td><kbd>Click</kbd></td><td>Add a corner</td></tr><tr><td><kbd>Backspace</kbd> <span class="mut">or</span> <kbd>Ctrl+Z</kbd></td><td>Remove the last point</td></tr><tr><td><kbd>Esc</kbd> <span class="mut">or</span> <kbd>Enter</kbd> <span class="mut">or</span> <kbd>F</kbd></td><td>End the line here and keep it</td></tr><tr><td><kbd>Double-click</kbd></td><td>End the line here</td></tr><tr><td><kbd>G</kbd></td><td>Gate: your last point is one gate post, click where the other one goes</td></tr><tr><td><kbd>F</kbd> <span class="mut">after a gate</span></td><td>Back to drawing fence</td></tr></table>
   <p class="small mut">The Cancel button throws the line away.</p></div>
   <div><h3>Anywhere</h3><table><tr><td><kbd>Ctrl+Z</kbd></td><td>Undo</td></tr><tr><td><kbd>Ctrl+Y</kbd> <span class="mut">or</span> <kbd>Ctrl+Shift+Z</kbd></td><td>Redo</td></tr><tr><td><kbd>R</kbd></td><td>Add a typed-in run</td></tr><tr><td><kbd>1</kbd> <span class="mut">to</span> <kbd>7</kbd></td><td>Switch pages</td></tr><tr><td><kbd>Esc</kbd></td><td>Close or deselect</td></tr><tr><td><kbd>?</kbd></td><td>Show this list</td></tr></table></div>
   </div>
@@ -620,10 +631,14 @@ function analyze(proj){
   for(const l of plines){const n=l.pts.length;l.pts.forEach((p,i)=>{const k=key(p);let o=nodes.get(k);if(!o)nodes.set(k,o={refs:[],ends:0,explicit:null,pt:p});o.refs.push({l,i});if(i===0||i===n-1)o.ends++;if(p.brace!=null&&o.explicit==null){o.explicit=p.brace;o.pt=p}})}
   for(const o of nodes.values()){
     let corner=o.refs.length>1;
-    for(const {l,i} of o.refs){const p=l.pts;if(i>0&&i<p.length-1&&deflect(p[i-1],p[i],p[i+1])>(+st.cornerAngle||25))corner=true}
+    for(const {l,i} of o.refs){const p=l.pts;if(i>0&&i<p.length-1&&deflect(p[i-1],p[i],p[i+1])>1)corner=true}   // fences are straight runs: any jog or bend is a corner and gets a brace
     const t=o.t=typeOf(o.refs[0].l.type);
-    o.role=corner?'Corner':o.ends?'End':'Line';
-    o.auto=corner?(t?.braceCorner||'none'):o.ends?(t?.braceEnd||'none'):'none';
+    // "Brace at every click" (on to start): every point you clicked on a line gets a brace, not just ends and corners
+    const every=!corner&&!o.ends;   // a point you clicked on a straight run is a brace too
+    o.role=corner?'Corner':o.ends?'End':every?'Brace':'Line';
+    // a point right beside a gate opening (from drawing a gate with G) is the gate's post
+    if(o.refs.some(({l,i})=>l.pts[i-1]?.brace==='gate'||l.pts[i+1]?.brace==='gate'))o.role='Gate post';
+    o.auto=corner?(t?.braceCorner||'none'):o.ends?(t?.braceEnd||'none'):every?([t?.bracePull,t?.braceCorner,t?.braceEnd].find(b=>b&&b!=='none')||'none'):'none';
     o.brace=o.explicit??o.auto;
   }
   const types={},lines=[];
@@ -906,12 +921,14 @@ function drawDims(l,r){
   // cut a path (list of pixel points) from distance d0 to d1 along it
   const cut=(path,d0,d1)=>{const out=[];let acc=0;for(let i=1;i<path.length;i++){const a=path[i-1],b=path[i],len=a.distanceTo(b);if(!len)continue;const s0=acc,s1=acc+len;
       if(s1>d0&&s0<d1){const f0=Math.max(0,(d0-s0)/len),f1=Math.min(1,(d1-s0)/len);if(!out.length)out.push(L.point(a.x+(b.x-a.x)*f0,a.y+(b.y-a.y)*f0));out.push(L.point(a.x+(b.x-a.x)*f1,a.y+(b.y-a.y)*f1))}acc=s1}return out};
+  let at=lineStartFt(r);   // feet of this fence type laid before this piece: rolls carry on across braces and lines
   for(let k=1;k<stops.length;k++){
     const info=r.stretches?.[k-1];if(!info||info.len<=0)continue;
     const path=lp.slice(stops[k-1],stops[k]+1);let total=0;for(let i=1;i<path.length;i++)total+=path[i-1].distanceTo(path[i]);
     const cuts=[0,...info.items.filter(x=>x.k==='p').map(x=>x.f),1];
     for(let p=0;p<cuts.length-1;p++){
       const part=cut(path,total*cuts[p],total*cuts[p+1]);if(part.length<2)continue;
+      const at0=at;at+=info.len*(cuts[p+1]-cuts[p]);
       let plen=0;for(let i=1;i<part.length;i++)plen+=part[i-1].distanceTo(part[i]);if(plen<64)continue;
       const side=(path,dist)=>path.map((q,i)=>{const a=path[Math.max(0,i-1)],b=path[Math.min(path.length-1,i+1)],dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy)||1;return L.point(q.x-dy/d*dist,q.y+dx/d*dist)});
       const plenOf=path=>{let t=0;for(let i=1;i<path.length;i++)t+=path[i-1].distanceTo(path[i]);return t};
@@ -930,13 +947,21 @@ function drawDims(l,r){
       // the rolls of the main wire, laid end to end along the other side of the fence: one band per roll
       const Rl=mainRoll(r.t);
       if(showRolls&&Rl>0){
-        const nR=Math.ceil(flen/Rl-1e-9);
-        for(let q=0;q<nR;q++){
-          const seg=cut(part,plen*q*Rl/flen,plen*Math.min(1,(q+1)*Rl/flen));if(seg.length<2)continue;
-          const band=side(seg,-13),col=q%2?'#ffb454':'#58b0ff',ft=Math.min(Rl,flen-q*Rl);
-          for(let i=1;i<band.length;i++){ln(band[i-1],band[i],8,'#000',.5);ln(band[i-1],band[i],5,col,1)}
-          if(q){const a=seg[0],b=band[0],nx=(b.x-a.x)/13,ny=(b.y-a.y)/13;stroke(L.point(a.x-nx*4,a.y-ny*4),L.point(a.x+nx*20,a.y+ny*20))}   // where two rolls join
-          if(plenOf(band)>=58)label(midOf(side(seg,-13)),'rolllab r'+(q%2),`Roll ${q+1} · ${fmtFt(ft)}`);
+        // a roll carries on past a brace into the next stretch until it runs out (in fence feet, with the sag and splice extra)
+        const W=1+(+r.t.waste||0)/100,Rf=Rl/W;let pos=0;
+        while(pos<flen-1e-6){
+          const abs=at0+pos,q=Math.floor(abs/Rf+1e-9),take=Math.min(flen-pos,(q+1)*Rf-abs);
+          const seg=cut(part,plen*pos/flen,plen*Math.min(1,(pos+take)/flen));
+          if(seg.length>=2){
+            const band=side(seg,-13),col=q%2?'#ffb454':'#58b0ff';
+            for(let i=1;i<band.length;i++){ln(band[i-1],band[i],8,'#000',.5);ln(band[i-1],band[i],5,col,1)}
+            if(pos>0){const a=seg[0],b=band[0],nx=(b.x-a.x)/13,ny=(b.y-a.y)/13;stroke(L.point(a.x-nx*4,a.y-ny*4),L.point(a.x+nx*20,a.y+ny*20))}   // where two rolls join
+            // "Roll 1 · 284 ft, 376 left" / "Rest of roll 1 · 357 ft" / last roll: what's spare
+            const endAt=(abs+take)*W,left=(q+1)*Rl-endAt,cont=abs*W>q*Rl+0.5,lastRoll=Math.ceil(totalOfType(r.t)*W/Rl-1e-9)-1===q;
+            const txt=`${cont?'Rest of roll':'Roll'} ${q+1} · ${fmtFt(take)}`+(left>0.5?(lastRoll&&pos+take>=flen-1e-6&&isLastPiece(r,k,p)?`, ${fmtFt(left)} spare`:`, ${fmtFt(left/W)} left`):'');
+            if(plenOf(band)>=58)label(midOf(band),'rolllab r'+(q%2),txt);
+          }
+          pos+=Math.max(take,1e-3);
         }
       }
     }
@@ -988,7 +1013,26 @@ function startDraw(appendTo){selNode=null;map.closePopup();draft={pts:[],appendT
 function addDraftPoint(p){
   const prev=draftAll().slice(-1)[0];
   if(prev&&pxLen(ll(prev),ll(p))<4)return;
+  draft.afterGate=false;
+  if(draft.gate){
+    // gate mode: the last point is one gate post, this click is the other. The gate sits between them.
+    const a=draft.pts[draft.pts.length-1];if(!a){draft.gate=false;return toast('Click where the fence starts first, then press G')}
+    const t=draftType(),w=Math.max(1,Math.round(ll(a).distanceTo(ll(p))*FT));
+    a.brace='none';
+    draft.pts.push({lat:(a.lat+p.lat)/2,lng:(a.lng+p.lng)/2,brace:'gate',gw:w,gm:t?.gateM},{lat:p.lat,lng:p.lng,brace:'none'});
+    draft.gate=false;draft.afterGate=true;toast(`${w} ft gate. Back to drawing fence.`);return drawDraft();
+  }
   draft.pts.push({lat:p.lat,lng:p.lng,brace:null});drawDraft();
+}
+// undo the last click while drawing; a gate comes off whole
+function draftUndo(){
+  const ps=draft.pts,b=ps.pop();draft.gate=draft.afterGate=false;
+  if(b&&b.brace==='none'&&ps[ps.length-1]?.brace==='gate'){ps.pop();const a=ps[ps.length-1];if(a&&a.brace==='none')a.brace=null}
+  drawDraft();
+}
+function draftGate(on){
+  if(!draft.pts.length){draft.gate=false;toast('Click where the fence starts first, then press G for a gate');return drawDraft()}
+  draft.gate=on;draft.afterGate=false;drawDraft();
 }
 function drawDraft(){
   draftLayer.clearLayers();if(mode!=='draw')return;
@@ -998,8 +1042,11 @@ function drawDraft(){
     L.polyline(all.map(ll),{color:col,weight:4,opacity:1,interactive:false}).addTo(draftLayer);
     for(let i=1;i<all.length;i++){const a=ll(all[i-1]),b=ll(all[i]);if(pxLen(a,b)>=60)segLabel(a,b,fmtFt(a.distanceTo(b)*FT)).addTo(draftLayer)}
   }
-  all.forEach((p,i)=>L.circleMarker(ll(p),{radius:i===0&&all.length>2&&!draft.appendTo?7:5,color:'#17191b',weight:2,fillColor:'#fff',fillOpacity:1,interactive:false}).addTo(draftLayer));
-  rubber.setStyle({color:col});
+  all.forEach((p,i)=>{if(p.brace==='gate'){const k=all[i-1],n=all[i+1];if(k&&n){L.polyline([ll(k),ll(n)],{color:'#000',weight:9,opacity:.5,interactive:false}).addTo(draftLayer);L.polyline([ll(k),ll(n)],{color:'#ffd21f',weight:5,dashArray:'6 6',interactive:false}).addTo(draftLayer);segLabel(ll(k),ll(n),'Gate '+fmtFt(+p.gw)).addTo(draftLayer)}return}
+    L.circleMarker(ll(p),{radius:i===0&&all.length>2&&!draft.appendTo?7:5,color:'#17191b',weight:2,fillColor:p.brace==='none'?'#ffd21f':'#fff',fillOpacity:1,interactive:false}).addTo(draftLayer)});
+  rubber.setStyle(draft.gate?{color:'#ffd21f',dashArray:'6 6'}:{color:col,dashArray:null});
+  $('#bGate').classList.toggle('on',!!draft.gate);
+  if(draft.gate){$('#drawMsg').textContent='Gate: click where the other gate post goes. Press F to go back to fence.';return}
   $('#drawMsg').textContent=all.length>1?fmtFt(flatLen(all))+' so far. Click to add corners, press Esc or double-click to end here':all.length?'Click the next corner':'Click the map where the fence starts';
 }
 // the side you're about to place follows the mouse, with its length
@@ -1011,7 +1058,7 @@ map.on('mousemove',e=>{
   const q=L.latLng(snap(e.latlng)),a=ll(last);
   rubber.setLatLngs([a,q]).addTo(map);
   rubberLab.setLatLng([(a.lat+q.lat)/2,(a.lng+q.lng)/2]).addTo(map);
-  rubberLab.getElement().firstChild.textContent=fmtFt(a.distanceTo(q)*FT);
+  rubberLab.getElement().firstChild.textContent=(draft.gate?'Gate ':'')+fmtFt(a.distanceTo(q)*FT);
 });
 map.on('mouseout',()=>{rubber.remove();rubberLab.remove()});
 function finishDraw(){
@@ -1021,9 +1068,95 @@ function finishDraw(){
     const l={id:uid('l'),name:'Fence '+(P().lines.length+1),type:S.drawType||S.fenceTypes[0]?.id,pts:draft.pts};
     P().lines.push(l);selLine=l.id;var picked=l.id;
   }else if(draft.pts.length)toast('A fence needs at least two points');
+  const done=selLine;
   draft=null;setMode('idle');draftLayer.clearLayers();S.tab='build';changed();
+  if(done&&S.settings.autoCross!==false)findCrossings(done,true);
 }
 function cancelDraw(){draft=null;setMode('idle');draftLayer.clearLayers();drawMap()}
+/* ---------- roads and rivers a fence line crosses (from OpenStreetMap) ----------
+   A road gets a gate as wide as the road (at least the fence type's gate width). A river, creek or ditch gets a
+   brace on each bank. They are ordinary points afterwards: drag them, change them or delete them. */
+const ROAD_W={motorway:24,trunk:20,primary:14,secondary:12,tertiary:10,unclassified:8,residential:9,living_street:7,road:8,service:6,track:4};
+const WATER_W={river:20,canal:10,stream:4,drain:3,ditch:2};
+// OpenStreetMap's public servers are often busy: ask every mirror at once and take the first answer
+const OVERPASS=['https://overpass-api.de/api/interpreter','https://overpass.private.coffee/api/interpreter','https://maps.mail.ru/osm/tools/overpass/api/interpreter','https://overpass.kumi.systems/api/interpreter'];
+function overpass(q){
+  const ac=new AbortController();setTimeout(()=>ac.abort(),15000);
+  return Promise.any(OVERPASS.map(async u=>{const r=await fetch(u,{method:'POST',body:'data='+encodeURIComponent(q),signal:ac.signal});if(!r.ok)throw Error(r.status);const j=await r.json();if(!Array.isArray(j.elements))throw Error('bad');return j.elements}))
+    .then(x=>{ac.abort();return x}).catch(()=>null);
+}
+// In the US, the Census road map (TIGER) and USGS rivers and creeks (National Hydrography) as a backup,
+// turned into the same shape as OpenStreetMap's answer
+const TIGER_KIND={S1100:'primary',S1200:'secondary',S1400:'residential',S1500:'track',S1630:'primary',S1640:'service',S1740:'service'};
+const NHD_KIND={460:'stream',336:'ditch',558:'river'};
+async function usRoadsRivers(bb){
+  const [s0,w0,n0,e0]=bb.split(',').map(Number),env=[w0,s0,e0,n0].join(',');
+  const q=(base,fields)=>`${base}/query?geometry=${env}&geometryType=esriGeometryEnvelope&inSR=4326&outSR=4326&spatialRel=esriSpatialRelIntersects&outFields=${fields}&returnGeometry=true&f=json`;
+  const get=async u=>{const ac=new AbortController(),tm=setTimeout(()=>ac.abort(),20000);try{const r=await fetch(u,{signal:ac.signal});if(!r.ok)throw Error(r.status);const j=await r.json();if(j.error)throw Error('bad');return j.features||[]}finally{clearTimeout(tm)}};
+  const T='https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Transportation/MapServer';
+  const res=await Promise.allSettled([...[2,6,8].map(n=>get(q(T+'/'+n,'NAME,MTFCC'))),get(q('https://hydro.nationalmap.gov/arcgis/rest/services/nhd/MapServer/6','gnis_name,ftype'))]);
+  if(res.every(r=>r.status==='rejected'))return null;
+  const out=[],seen=new Set();
+  res.forEach((r,k)=>{if(r.status!=='fulfilled')return;for(const f of r.value){
+    const at=f.attributes||{},tags={};
+    if(k<3){const kind=TIGER_KIND[at.MTFCC];if(!kind)continue;tags.highway=kind;if(at.NAME)tags.name=at.NAME}
+    else{const kind=NHD_KIND[at.ftype];if(!kind)continue;tags.waterway=kind;if(at.gnis_name)tags.name=at.gnis_name}
+    for(const path of f.geometry?.paths||[]){const id=JSON.stringify(path[0])+JSON.stringify(path[path.length-1]);if(seen.has(id))continue;seen.add(id);out.push({tags,geometry:path.map(([x,y])=>({lat:y,lon:x}))})}
+  }});
+  return out;
+}
+async function findCrossings(lid,quiet){
+  const l=getLine(lid);if(!l||l.pts.length<2)return;
+  const lat0=l.pts[0].lat,lng0=l.pts[0].lng,mx=111320*Math.cos(lat0*Math.PI/180),my=110574;
+  const xy=p=>[(p.lng-lng0)*mx,(p.lat-lat0)*my],back=([x,y])=>({lat:lat0+y/my,lng:lng0+x/mx});
+  let s0=90,w0=180,n0=-90,e0=-180;for(const p of l.pts){s0=Math.min(s0,p.lat);n0=Math.max(n0,p.lat);w0=Math.min(w0,p.lng);e0=Math.max(e0,p.lng)}
+  const pad=0.0005,bb=[s0-pad,w0-pad,n0+pad,e0+pad].map(v=>v.toFixed(6)).join(',');
+  const q=`[out:json][timeout:25];(way["highway"~"^(motorway|trunk|primary|secondary|tertiary|unclassified|residential|living_street|road|service|track)(_link)?$"](${bb});way["waterway"~"^(river|canal|stream|drain|ditch)$"](${bb}););out tags geom;`;
+  if(!quiet)toast('Looking for roads and rivers along '+l.name+'…');
+  let ways;
+  const us=usRoadsRivers(bb);   // asked at the same time, used if OpenStreetMap doesn't answer
+  ways=await overpass(q);
+  if(!ways)ways=await us.catch(()=>null);
+  if(!ways){if(!quiet)toast('The street map servers are busy, so roads and rivers could not be checked. Try "Find roads and rivers" again in a minute.');return}
+  const L2=getLine(lid);if(!L2)return;   // deleted while we waited
+  const t=S.fenceTypes.find(x=>x.id===L2.type)||S.fenceTypes[0],P2=L2.pts.map(xy),hits=[];
+  for(const w of ways){
+    const tg=w.tags||{},road=tg.highway?.replace(/_link$/,''),water=tg.waterway;if(!w.geometry)continue;
+    if(road&&tg.tunnel==='yes')continue;   // a road in a tunnel under the fence doesn't need a gate
+    const G=w.geometry.map(g=>xy({lat:g.lat,lng:g.lon}));
+    let width=parseFloat(tg.width)||0;   // meters, when the map says
+    if(!width)width=road?(ROAD_W[road]||8):(WATER_W[water]||4);
+    const name=tg.name||tg.ref||(road?(road==='track'?'farm track':road==='service'?'driveway':'road'):water);
+    for(let i=1;i<P2.length;i++){const [ax,ay]=P2[i-1],[bx,by]=P2[i];
+      for(let j=1;j<G.length;j++){const [cx,cy]=G[j-1],[dx,dy]=G[j];
+        const den=(bx-ax)*(dy-cy)-(by-ay)*(dx-cx);if(Math.abs(den)<1e-9)continue;
+        const u=((cx-ax)*(dy-cy)-(cy-ay)*(dx-cx))/den,v=((cx-ax)*(by-ay)-(cy-ay)*(bx-ax))/den;
+        if(u<=0||u>=1||v<0||v>1)continue;
+        const seg=Math.hypot(bx-ax,by-ay),ux=(bx-ax)/seg,uy=(by-ay)/seg,cross=Math.abs(ux*(dy-cy)-uy*(dx-cx))/Math.hypot(dx-cx,dy-cy)||1;
+        hits.push({i,u,seg,kind:road?'road':'water',name,w:width/Math.max(0.3,cross),at:[ax+(bx-ax)*u,ay+(by-ay)*u],ux,uy});
+      }}
+  }
+  // skip crossings already handled (a point or gate within a few meters of it)
+  const near=(a,b,d)=>Math.hypot(a[0]-b[0],a[1]-b[1])<d;
+  const fresh=hits.filter((h,k)=>!hits.slice(0,k).some(o=>near(o.at,h.at,3))&&!P2.some((p,i)=>near(p,h.at,Math.max(6,h.w/2+3))&&(L2.pts[i].auto||L2.pts[i].brace==='gate')));
+  if(!fresh.length){if(!quiet)toast('No roads or rivers cross '+L2.name+' on the street map');return}
+  fresh.sort((a,b)=>b.i-a.i||b.u-a.u);   // add from the far end back, so earlier spots keep their place
+  const kit=braceFor(t),said=[];
+  for(const h of fresh){
+    const ins=[];
+    if(h.kind==='road'){
+      const gw=Math.max(+t.gateW||16,Math.ceil(h.w*FT/2)*2+4);   // road width in ft plus room, rounded up
+      ins.push({...back(h.at),brace:'gate',gw,gm:t.gateM,auto:'road',autoName:h.name});said.push(`a ${gw} ft gate at ${h.name}`);
+    }else{
+      const off=Math.min(h.w/2+2,h.seg*h.u-0.5,h.seg*(1-h.u)-0.5);if(off<=0.5)continue;   // a couple of meters back from each bank
+      for(const sg of [-1,1])ins.push({...back([h.at[0]+h.ux*off*sg,h.at[1]+h.uy*off*sg]),brace:kit||null,auto:'water',autoName:h.name});
+      said.push(`braces on both banks of ${h.name}`);
+    }
+    L2.pts.splice(h.i,0,...ins);
+  }
+  if(!said.length)return;
+  changed();toast('Added '+said.reverse().join(', ')+'. Drag them to where you want them.');
+}
 // the brace a fence type uses in the middle of a run (its pull brace), else its end brace
 const braceFor=t=>[t?.bracePull,t?.braceEnd,S.braces[0]?.id].find(id=>id&&id!=='none'&&S.braces.some(b=>b.id===id));
 function addOnLine(latlng){
@@ -1062,11 +1195,30 @@ map.on('click',e=>{
 });
 map.on('dblclick',e=>{if(mode==='draw'){L.DomEvent.stop(e);finishDraw()}});
 $('#bDraw').onclick=()=>mode==='draw'?finishDraw():startDraw();
-$('#bGate').onclick=()=>toggleMode('gate');
+$('#bGate').onclick=()=>mode==='draw'?draftGate(!draft.gate):toggleMode('gate');
 $('#bBrace').onclick=()=>toggleMode('brace');
-$('#bUndo').onclick=()=>{draft.pts.pop();drawDraft()};
+$('#bUndo').onclick=draftUndo;
 $('#bFinish').onclick=finishDraw;
 $('#bCancel').onclick=()=>mode==='draw'?cancelDraw():setMode('idle');
+// W A S D or the arrow keys slide the map around while you hold them (Shift is faster)
+const panHeld=new Set(),PAN_KEYS={w:[0,-1],arrowup:[0,-1],s:[0,1],arrowdown:[0,1],a:[-1,0],arrowleft:[-1,0],d:[1,0],arrowright:[1,0]};
+let panRaf=0,panLast=0;
+map.keyboard?.disable();   // the map's own arrow keys would move it twice
+function panStep(now){
+  if(!panHeld.size){panRaf=0;return}
+  const dt=Math.min(0.05,(now-(panLast||now))/1000);panLast=now;let x=0,y=0;
+  for(const k of panHeld){const v=PAN_KEYS[k];if(v){x+=v[0];y+=v[1]}}
+  const sp=(panHeld.has('shift')?1500:600)*dt;if(x||y)map.panBy([x*sp,y*sp],{animate:false});
+  panRaf=requestAnimationFrame(panStep);
+}
+document.addEventListener('keydown',e=>{
+  if(document.querySelector('dialog[open]')||document.getElementById('v3d')||e.target.closest?.('input,textarea,select')||!UI.map)return;
+  const k=e.key.toLowerCase();if(k==='shift'){panHeld.add('shift');return}
+  if(!PAN_KEYS[k]||e.ctrlKey||e.metaKey||e.altKey)return;
+  e.preventDefault();e.stopImmediatePropagation();if(!e.repeat&&!panHeld.has(k)){const v=PAN_KEYS[k],n=panHeld.has('shift')?160:60;map.panBy([v[0]*n,v[1]*n])}panHeld.add(k);if(!panRaf){panLast=0;panRaf=requestAnimationFrame(panStep)}
+},true);
+document.addEventListener('keyup',e=>panHeld.delete(e.key.toLowerCase()));
+addEventListener('blur',()=>panHeld.clear());
 const keysDlg=$('#keys');
 $('#bKeys').onclick=()=>keysDlg.showModal();$('#keysClose').onclick=()=>keysDlg.close();
 keysDlg.addEventListener('click',e=>{if(e.target===keysDlg)keysDlg.close()});
@@ -1084,8 +1236,11 @@ document.addEventListener('keydown',e=>{
     return;
   }
   if(mode==='draw'){
-    if(e.key==='Enter'||(k==='f'&&!mod))finishDraw();
-    else if((mod&&k==='z')||e.key==='Backspace'){e.preventDefault();draft.pts.pop();drawDraft()}
+    // G: gate from the last point to your next click. F goes back to fence (and ends the line if you're already drawing fence)
+    if(k==='g'&&!mod)draftGate(!draft.gate);
+    else if(k==='f'&&!mod&&(draft.gate||draft.afterGate)){draft.gate=draft.afterGate=false;drawDraft();toast('Drawing fence')}
+    else if(e.key==='Enter'||(k==='f'&&!mod))finishDraw();
+    else if((mod&&k==='z')||e.key==='Backspace'){e.preventDefault();draftUndo()}
     return;
   }
   if(mod&&k==='z'){e.preventDefault();e.shiftKey?redo():undo()}
@@ -1095,7 +1250,6 @@ document.addEventListener('keydown',e=>{
   else if(e.key==='?'){e.preventDefault();keysDlg.showModal()}
   else if(k==='f'){if(!UI.map)setMap(true);startDraw()}
   else if(k==='g'||k==='b')toggleMode(k==='g'?'gate':'brace');
-  else if(k==='d')open3D(selLine);
   else if(k==='m')setMap(!UI.map);
   else if(k==='t'){if(selLine&&getLine(selLine)?.pts.length>1){if(!UI.map)setMap(true);openTypePicker(selLine)}else toast('Click a line on the map first')}
   else if(k==='r'){selLine=null;selNode=null;if(mode!=='idle')cancelDraw();S.tab='est';act('addRun',{})}
@@ -1359,13 +1513,13 @@ function lineView(){
   <label class="f">Fence type</label><select data-f="line.type" data-id="${l.id}">${S.fenceTypes.map(t=>opt(t.id,t.name,l.type)).join('')}</select>
   <p class="big" style="margin:14px 0 2px">${fmtFt(r.len)}</p><p class="small mut" style="margin:0">of wire run${r.gateW?`, after ${fmtFt(r.gateW)} of gate openings`:''}. ${postText(r)}${r.pulls?`, ${r.pulls} pull braces`:''}.</p>
   <p class="small" style="margin:4px 0 0">${gapText(r)}</p>
-  ${(()=>{const ps=stretchParts(r);return ps.length?`<div class="box" style="margin-top:10px"><table class="strs"><thead><tr><th>Stretch</th><th class="num">Length</th><th>Rolls of the main wire</th><th>Stretched</th></tr></thead><tbody>${ps.map((q,i)=>`<tr><td>${i+1}</td><td class="num">${fmtFt(q.len)}</td><td>${q.rolls?q.rolls+' × '+fmtQ(mainRoll(r.t))+' ft roll'+(q.rolls>1?'s':''):'–'}</td><td>${q.split?'Into the pull brace':'From the end brace'}</td></tr>`).join('')}</tbody></table></div>`:''})()}
+  ${(()=>{const ps=stretchParts(r);return ps.length?`<div class="box" style="margin-top:10px"><table class="strs"><thead><tr><th>Stretch</th><th class="num">Length</th><th>Uses roll</th><th>Stretched</th></tr></thead><tbody>${ps.map((q,i)=>`<tr><td>${i+1}</td><td class="num">${fmtFt(q.len)}</td><td>${q.on?(q.on.q1>q.on.q0?`Rolls ${q.on.q0+1}–${q.on.q1+1}`:`Roll ${q.on.q0+1}`)+` <span class="mut">(${fmtQ(mainRoll(r.t))} ft)</span>`:'–'}</td><td>${q.split?'Into the pull brace':'From the end brace'}</td></tr>`).join('')}</tbody></table></div>`:''})()}
   <p class="small mut" style="margin:4px 0 0">Zoom in on the map to drag any post or pull brace along the fence, or click one to change it, delete it or add another.</p>
   ${r.stretches.some(x=>x.custom)?`<button class="btn sm" data-act="resetCust" data-id="${l.id}" style="margin-top:6px">Put all posts back to automatic</button>`:''}
   ${evh}
   <h3>Points, braces and gates</h3>
   <div class="box"><table class="nodes"><thead><tr><th>#</th><th>Spot</th><th>Brace</th><th></th></tr></thead><tbody>${nodes}</tbody></table></div>
-  <div class="row" style="margin-top:12px"><button class="btn" data-act="cont" data-id="${l.id}">Keep drawing from the end</button><button class="btn" data-act="rev" data-id="${l.id}">Flip direction</button><button class="btn del" data-act="delLine" data-id="${l.id}">Delete line</button></div>
+  <div class="row" style="margin-top:12px"><button class="btn" data-act="cont" data-id="${l.id}">Keep drawing from the end</button><button class="btn" data-act="rev" data-id="${l.id}">Flip direction</button><button class="btn" data-act="cross" data-id="${l.id}" title="Put a gate where it crosses a road and braces on both banks of a river or creek">Find roads and rivers</button><button class="btn del" data-act="delLine" data-id="${l.id}">Delete line</button></div>
   <p class="small mut">Drag points on the map to move them. A point shared with another line counts as one corner.</p>`;
 }
 const KINDS=[['wire','Wire'],['post','Posts'],['hw','Hardware'],['gate','Gates'],['other','Other']];
@@ -1507,11 +1661,32 @@ function stretchFields(t){
     <div><label class="f">When a run is longer than that</label><select data-f="ft.pullMode" ${d}>${opt('even','Split it into equal stretches',t.pullMode||'even')}${opt('full','Full stretches first, leftover at the end',t.pullMode||'even')}</select></div>`;
 }
 // each stretch of wire on a line (brace to brace or pull brace): its length, rolls, and where to stretch it from
+// how many feet of fence of the same type come before this line: rolls carry on from one line to the next
+function totalOfType(t){let a=0;for(const r2 of A.lines)if(r2.t?.id===t?.id&&!r2.manual)for(const s of r2.stretches||[])a+=s.len;return a}
+// is this the very last piece of fence of its type (so what's left on the roll is spare)
+function isLastPiece(r,k,p){const same=A.lines.filter(r2=>r2.t?.id===r.t?.id&&!r2.manual);if(same[same.length-1]!==r)return false;const st=r.stretches||[];if(k!==st.length)return false;return p===st[k-1].items.filter(x=>x.k==='p').length}
+function lineStartFt(r){let a=0;for(const r2 of A.lines){if(r2===r)break;if(r2.t?.id===r.t?.id&&!r2.manual)for(const s of r2.stretches||[])a+=s.len}return a}
+// which rolls of the main wire a piece of fence from a to b feet (along all fence of its type) uses
+function rollsAt(t,a,b){const R=mainRoll(t),W=1+(+t.waste||0)/100;if(!R||b<=a)return null;const q0=Math.floor(a*W/R+1e-9),q1=Math.max(q0,Math.ceil(b*W/R-1e-9)-1);return {q0,q1}}
 function stretchParts(r){
-  const R=mainRoll(r.t),W=1+(+r.t.waste||0)/100,out=[];
+  const R=mainRoll(r.t),W=1+(+r.t.waste||0)/100,out=[];let at=lineStartFt(r);
   (r.stretches||[]).forEach((s,si)=>{const bs=[0,...s.items.filter(x=>x.k==='p').map(x=>x.f),1];
-    for(let q=0;q<bs.length-1;q++){const len=s.len*(bs[q+1]-bs[q]);if(len<=0)continue;out.push({si,f0:bs[q],f1:bs[q+1],len,rolls:R?Math.ceil(len*W/R-1e-9):0,split:bs.length>2})}});
+    for(let q=0;q<bs.length-1;q++){const len=s.len*(bs[q+1]-bs[q]);if(len<=0)continue;out.push({si,f0:bs[q],f1:bs[q+1],len,on:rollsAt(r.t,at,at+len),split:bs.length>2});at+=len}});
   return out;
+}
+// every roll size a wire comes in, with its price and cost per foot; each stretch uses the cheapest mix
+function rollSizes(t,w,i){
+  const d=`data-id="${t.id}"`,main=matOf(w.m);if(!main)return '';
+  const row=(id,isMain)=>{const m=matOf(id);if(!m)return '';const r=rollOf({m:id}),pr=+m.price||0;
+    return `<tr><td>${r?`<b>${fmtQ(r)} ft</b> roll`:'by the foot'}${isMain?' <span class="tag">main</span>':''}</td>
+      <td class="num">${matLink(id,money(pr))}</td><td class="num small mut">${r?money(pr/r)+' a foot':''}</td>
+      <td class="small mut">${isMain?'':esc(m.name.length>46?m.name.slice(0,44)+'…':m.name)}</td>
+      <td>${isMain?'':`<button class="btn x" data-act="ftwAltDel" ${d} data-i="${i}" data-alt="${id}" title="Stop using this roll size">×</button>`}</td></tr>`};
+  const alts=(w.alts||[]).filter(id=>matOf(id));
+  const pick=S.materials.filter(m=>m.id!==w.m&&!alts.includes(m.id)&&(m.kind==='wire'||rollOf({m:m.id})>0));
+  return `<div class="rollbox"><div class="small mut">Roll sizes of this wire${alts.length?' · each stretch gets the cheapest mix of these':''}</div>
+    <table class="rollsz"><tbody>${row(w.m,true)}${alts.map(id=>row(id,false)).join('')}</tbody></table>
+    <select data-f="ftwalt.add" ${d} data-i="${i}" aria-label="Add another roll size of this wire" class="altpick"><option value="">+ Add another roll size of this wire…</option>${pick.map(m=>opt(m.id,(rollOf({m:m.id})?fmtQ(rollOf({m:m.id}))+' ft · ':'')+money(+m.price||0)+' · '+m.name,'')).join('')}</select></div>`;
 }
 function postsEditor(t){
   const d=`data-id="${t.id}"`,n=v=>+v||0;
@@ -1543,15 +1718,12 @@ function typeEditor(t){
   const wl=(t.wires||[]).length;
   const wires=(t.wires||[]).map((w,i)=>`<tr><td class="ord"><button class="btn x" data-act="ftwUp" ${d} data-i="${i}" title="Move up (higher on the fence)"${i===wl-1?' disabled':''}>▲</button><button class="btn x" data-act="ftwDown" ${d} data-i="${i}" title="Move down (lower on the fence)"${i===0?' disabled':''}>▼</button></td>
     <td><div class="small mut">${i===0?'Bottom':i===wl-1?'Top':'Wire '+(i+1)}</div><select data-f="ftw.m" ${d} data-i="${i}" aria-label="Wire product">${matOpts(w.m,true)}</select>
-      <div class="small alts">Also comes in: ${(w.alts||[]).filter(id=>matOf(id)).map(id=>`<span class="chip">${esc(fmtQ(rollOf({m:id})))} ft <button class="lnk" data-act="ftwAltDel" ${d} data-i="${i}" data-alt="${id}" title="Remove">×</button></span>`).join('')||'<span class="mut">one roll size</span>'}
-        <select data-f="ftwalt.add" ${d} data-i="${i}" aria-label="Add another roll size" class="altpick"><option value="">+ shorter or longer roll…</option>${S.materials.filter(m=>m.id!==w.m&&!(w.alts||[]).includes(m.id)&&(m.kind==='wire'||rollOf({m:m.id})>0)).map(m=>opt(m.id,m.name+(rollOf({m:m.id})?' ('+fmtQ(rollOf({m:m.id}))+' ft)':''),'')).join('')}</select></div></td>
+      ${rollSizes(t,w,i)}</td>
     <td><input type="number" min="0" step="1" value="${n(w.strands)}" data-f="ftw.strands" ${d} data-i="${i}" aria-label="Strands or layers"></td>
     <td><input type="number" min="0" step="0.5" value="${w.start??''}" placeholder="auto" data-f="ftwsp.start" ${d} data-i="${i}" aria-label="Starts at, inches above ground"></td>
     <td><input type="number" min="0" step="0.5" value="${w.gap??''}" placeholder="auto" data-f="ftwsp.gap" ${d} data-i="${i}" aria-label="Inches apart"${+w.strands>1?'':' disabled title="Only for more than one strand"'}></td>
-    <td>${matOf(w.m)?`${matLink(w.m,fmtQ(rollOf(w)))}`:''}</td>
     <td><select data-f="ftw.look" ${d} data-i="${i}" aria-label="How it looks in 3D">${LOOKS.map(([k,lbl])=>opt(k,lbl,w.look||'')).join('')}</select></td>
-    <td>${priceIn(w.m)}</td>
-    <td><button class="btn x" data-act="delFtw" ${d} data-i="${i}" title="Remove">×</button></td></tr>`).join('');
+    <td><button class="btn x" data-act="delFtw" ${d} data-i="${i}" title="Remove">×</button></td></tr>`).reverse().join('');   // shown top of the fence first
   const extras=(t.extras||[]).map((e,i)=>`<tr><td><select data-f="fte.m" ${d} data-i="${i}" aria-label="Extra product">${matOpts(e.m,true)}</select></td>
     <td><input type="number" min="0" step="any" value="${n(e.q)}" data-f="fte.q" ${d} data-i="${i}" aria-label="Quantity"></td>
     <td><select data-f="fte.per" ${d} data-i="${i}" aria-label="Counted">${PER.map(([k,lbl])=>opt(k,lbl,e.per)).join('')}</select></td>
@@ -1565,10 +1737,10 @@ function typeEditor(t){
     <input type="text" class="grow tname" style="width:auto" value="${esc(t.name)}" data-f="ft.name" ${d} aria-label="Fence type name">
     <button class="btn sm" data-act="dupFt" ${d}>Duplicate</button><button class="btn sm del" data-act="delFt" ${d}>Delete</button></div>
   <div class="sec"><h3>Wire and strands</h3>
-    <table class="ed"><thead><tr><th></th><th>Wire, from the bottom of the fence up</th><th class="num">Strands</th><th class="num" title="Inches above the ground for this wire's lowest strand, or the bottom of the woven wire">Starts at, in</th><th class="num" title="Inches between this wire's strands">Apart, in</th><th class="num">Roll ft</th><th>3D look</th><th class="num">$ each</th><th></th></tr></thead><tbody>${[...wires.split('</tr>').filter(x=>x.trim())].reverse().map(x=>x+'</tr>').join('')||'<tr><td colspan="9" class="mut">No wire yet.</td></tr>'}</tbody></table>
+    <table class="ed"><thead><tr><th></th><th>Wire, from the bottom of the fence up</th><th class="num">Strands</th><th class="num" title="Inches above the ground for this wire's lowest strand, or the bottom of the woven wire">Starts at, in</th><th class="num" title="Inches between this wire's strands">Apart, in</th><th>3D look</th><th></th></tr></thead><tbody>${wires||'<tr><td colspan="7" class="mut">No wire yet.</td></tr>'}</tbody></table>
     <div class="row" style="margin-top:8px"><button class="btn sm" data-act="addFtw" ${d}>Add wire</button><span class="grow"></span>
       <label class="lbl">Extra wire for sag and splices % <input type="number" min="0" step="0.5" value="${n(t.waste)}" data-f="ft.waste" ${d} style="width:70px"></label></div>
-    <p class="small mut" style="margin:6px 0 0">The list runs from the top of the fence down, so use ▲ ▼ to put your wires in order. "Starts at" sets how high a wire's lowest strand (or the bottom of woven wire) is, and "Apart" the gap between its strands, both in inches. Leave them on auto to space them evenly. "Also comes in" lists the other roll sizes of a wire: each stretch then gets the cheapest mix of rolls that covers it, so short stretches use shorter rolls. Woven wire or mesh is 1 layer. Barbed or smooth wire is one line per strand. Set roll length to 0 if you buy it by the foot.</p></div>
+    <p class="small mut" style="margin:6px 0 0">The list runs from the top of the fence down, so use ▲ ▼ to put your wires in order. "Starts at" sets how high a wire's lowest strand (or the bottom of woven wire) is, and "Apart" the gap between its strands, both in inches. Leave them on auto to space them evenly. Under each wire, "Roll sizes" lists every roll it comes in with its price. Add a shorter or longer roll there, and each stretch gets the cheapest mix of rolls that covers it, so short stretches use shorter rolls. Click a price to change it. Woven wire or mesh is 1 layer. Barbed or smooth wire is one line per strand. Set roll length to 0 if you buy it by the foot.</p></div>
   <div class="sec"><h3>Posts</h3>${postsEditor(t)}<div class="g3" style="margin-top:8px">
     <div><label class="f">Clips or insulators <span class="r">$ each</span></label><div class="pick"><select data-f="ft.clipM" ${d}>${matOpts(t.clipM,true,'None')}</select>${priceIn(t.clipM)}</div></div>
     <div><label class="f">Clips per normal line post</label>${inp('clipsPer',t.clipsPer)}</div>
@@ -1672,9 +1844,9 @@ function settingsView(){
   return `<div class="phead"><div><h1>Settings</h1></div></div>
   <div class="cards">
   <div class="card"><h3 style="margin-top:0">Measuring</h3>
-  <label class="f">A bend counts as a corner past (degrees)</label><input type="number" min="1" max="179" value="${+s.cornerAngle}" data-f="set.cornerAngle">
-  <p class="small mut">Small wiggles below it stay as line posts.</p>
-  <label class="row"><input type="checkbox" ${s.useSurface?'checked':''} data-f="set.useSurface" style="width:18px;height:18px"> Measure along the ground slope when elevation is loaded</label></div>
+  <p class="small mut" style="margin-top:0">Every point you click gets a brace: any bend or jog uses the corner brace, a point on a straight run uses the pull brace. Change a single point on the map if it needs something else.</p>
+  <label class="row"><input type="checkbox" ${s.useSurface?'checked':''} data-f="set.useSurface" style="width:18px;height:18px"> Measure along the ground slope when elevation is loaded</label>
+  <label class="row"><input type="checkbox" ${s.autoCross!==false?'checked':''} data-f="set.autoCross" style="width:18px;height:18px"> When I finish a line, put a gate where it crosses a road and braces on both banks of a river or creek (from OpenStreetMap)</label></div>
   <div class="card"><h3 style="margin-top:0">Costs</h3><label class="f">Sales tax % (on materials)</label><input type="number" step="0.01" value="${+s.tax}" data-f="set.tax">
   <p class="small mut">Labor is a $ per foot on each fence type. Headache charges and fees are added on each job's Final bill.</p></div>
   <div class="card"><h3 style="margin-top:0">Version and updates</h3>
@@ -1725,7 +1897,7 @@ function setupView(){
     <label class="mini">${matOf(w.m)?`${matLink(w.m,fmtQ(rollOf(w)))}`:''}<span>ft on a roll</span></label>
     <button class="btn x" data-act="delFtw" ${d} data-i="${i}" title="Remove">×</button>
     <label class="mini"><span>$</span>${priceIn(w.m)}<span>per ${esc(u)}</span></label>
-    <span class="small mut need">${need!=null?`This job needs ${fmtQ(roundQ(need,u))} ${esc(u)}. `:''}${matOf(w.m)?`<button class="lnk" data-act="matInfo" data-id="${w.m}">Details</button>`:''}</span></div>`}).join('');
+    <span class="small mut need">${need!=null?`This job needs ${fmtQ(roundQ(need,u))} ${esc(u)}${u==="roll"&&roundQ(need,u)!==1?"s":""}. `:''}${matOf(w.m)?`<button class="lnk" data-act="matInfo" data-id="${w.m}">Details</button>`:''}</span></div>`}).join('');
   return `<h2>1. Set up the fence</h2>${saveBar('Ft',t.id)}
   <div class="pick"><select data-f="ui.drawType" aria-label="Fence type">${typeOpts(t.id)}</select><button class="btn sm" data-act="addFt">New</button></div>
   ${(()=>{const n=P().lines.filter(l=>l.type!==t.id).length;return n?`<button class="btn sm" data-act="applyType" data-id="${t.id}" style="margin-top:8px;width:100%;white-space:normal;min-height:0;padding:6px 10px">Switch the ${n===P().lines.length?'whole fence':n+' other line'+(n>1?'s':'')} in this job to ${esc(t.name)}</button>`:''})()}
@@ -1743,7 +1915,7 @@ function setupView(){
   <button class="btn sm" data-act="editFt" ${d}>All options for this fence type</button>
   <h2>2. Draw it</h2>
   <div class="row"><button class="btn pri" data-act="draw">${mode==='draw'?'Finish line':'Draw fence'} <kbd>F</kbd></button><button class="btn" data-act="gate">Add gate <kbd>G</kbd></button><button class="btn" data-act="brace">Add brace <kbd>B</kbd></button></div>
-  <p class="small mut">Click each corner on the map. Ends and corners get their braces, and the posts space themselves evenly in between, so the last gap is never a short one. Zoom in to see every post.</p>`;
+  <p class="small mut">Click each spot on the map. Every click is a brace (any bend is a corner brace), and the posts space themselves evenly in between, so the last gap is never a short one. Zoom in to see every post.</p>`;
 }
 
 /* where each line post sits, for the dots on the map (matches the counts in the estimate) */
@@ -1900,6 +2072,7 @@ async function act(a,d){
     if(mode!=='idle')cancelDraw();map.closePopup();P().lines=P().lines.filter(l=>l.manual);selLine=null;selNode=null;changed();toast('Map cleared. Ctrl+Z brings the lines back.');break}
   case 'draw':mode==='draw'?finishDraw():startDraw();renderPanel();break;
   case 'gate':toggleMode('gate');break;
+  case 'cross':findCrossings(id,false);break;
   case 'brace':toggleMode('brace');break;
   case 'editFt':typeSel=id;gotoTab('types');break;
   case 'openJob':S.cur=id;selLine=null;selNode=null;if(mode!=='idle')cancelDraw();S.tab='build';changed();setTimeout(fitProject,50);break;
@@ -1988,7 +2161,7 @@ function shopParse(title,vt){
   const text=(title+' '+vt).replace(/½/g,'.5').replace(/¼/g,'.25').replace(/¾/g,'.75').replace(/(\d+)-(\d+)\/(\d+)/g,(m,a,b,c)=>String(+a+b/c)),out={};   // "6-1/2'" reads as 6.5
   let x;
   if((x=text.replace(/,/g,'').match(/(\d+(?:\.\d+)?)\s*(?:"|in\.?)\s*x\s*(\d{3,5})\s*(?:'|ft)/i))){out.height=+x[1];out.roll=+x[2]}   // woven wire written 47" x 330'
-  if(!out.roll&&(x=vt.replace(/,/g,'').match(/(\d+(?:\.\d+)?)\s*-?\s*(?:ft|feet|')/i)))out.roll=+x[1];          // "660-ft" roll
+  if(!out.roll&&(x=vt.replace(/,/g,'').match(/(\d+(?:\.\d+)?)\s*-?\s*(?:ft|feet|')/i))){out.roll=+x[1];out.rollSure=true}          // "660-ft" roll
   if((x=text.match(/(\d+(?:\.\d+)?)\s*-?\s*g(?:a|auge)?\b/i)))out.gauge=x[1];                                   // "12.5 Ga"
   if((x=text.match(/\b\d+\s*\/\s*(\d+)\s*"?\s*\/\s*\d+/)))out.height=+x[1];                           // woven wire "9/49/12": 49 in tall
   if(!out.roll&&(x=text.replace(/,/g,'').match(/(\d+(?:\.\d+)?)\s*-?\s*(?:ft|')\s*(?:roll|coil|spool)/i)))out.roll=+x[1];
@@ -2074,7 +2247,7 @@ function shopAdd(pi,vi){
   const p=shop.items[pi],v=p?.variants[vi];if(!v)return;
   const st=curStore(),host=st.host,d=shopParse(p.title,v.title),now=new Date().toISOString(),t=p.title.toLowerCase();
   const kind=kindGuess(p.title,d);
-  S.materials.unshift({id:uid('m'),image:v.image||p.image||'',name:p.title+(v.title?', '+v.title:''),unit:d.roll?'roll':'each',price:v.price,url:p.url||('https://'+host+'/products/'+p.handle+'?variant='+v.id),checked:now,updated:now,src:host.replace(/^www\./,'')+(v.sku?' · '+v.sku:''),kind,...d});
+  S.materials.unshift({id:uid('m'),image:v.image||p.image||'',name:p.title+(v.title?', '+v.title:''),unit:d.roll?'roll':'each',price:v.price,url:p.url||('https://'+host+'/products/'+p.handle+'?variant='+v.id),checked:now,updated:now,src:host.replace(/^www\./,'')+(v.sku?' · '+v.sku:''),kind,...d,rollSure:undefined});
   shop.added[host+v.id]=1;changed();toast('Added '+p.title+(v.title?', '+v.title:'')+' at '+money(v.price));shopRender();
 }
 function shopPick(i){if(i===shop.sel&&shop.cols)return;Object.assign(shop,{sel:i,cols:null,cat:null,all:null,items:[],title:'',msg:'',q:''});const q=$('#shopDlg').querySelector('#shopQ');if(q)q.value='';shopRender();shopLoadCats()}
@@ -2143,6 +2316,8 @@ function applyLookup(m,j){
   if(Math.abs((+m.price||0)-(+j.price||0))>0.004&&+m.price>0){m.prevPrice=+m.price;m.priceMoved=now;m.updated=now}
   m.price=j.price;m.checked=now;m.src=j.source+(j.sku?' · '+j.sku:'');
   for(const k of ['roll','gauge','height','len','image'])if(j[k]!=null&&j[k]!==''&&(m[k]==null||m[k]===''))m[k]=j[k];
+  // the roll length in the store's product option (like "660-ft") is what you buy, so it wins over a wrong saved one
+  if(+j.roll>0&&j.rollSure&&+m.roll!==+j.roll){m.rollWas=+m.roll||null;m.roll=+j.roll;m.updated=now}
   if(j.roll&&!m.kind)m.kind='wire';
 }
 /* ---------- automatic price updates from the stores ---------- */
