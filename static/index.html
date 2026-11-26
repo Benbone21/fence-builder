@@ -444,6 +444,15 @@ const wirePull=m=>m&&m.maxPull!=null&&m.maxPull!==''?+m.maxPull||0:PULL_USUAL[wi
 // automatic: the shortest of the fence type's wires decides, since they are all stretched between the same braces
 function autoPull(t){let best=0;for(const w of t.wires||[]){const m=matOf(w.m);if(!m||!(+w.strands>0))continue;const v=wirePull(m);if(v>0&&(!best||v<best))best=v}return best||(+t.pullEvery||0)}   // no usable wire: fall back to the type's own number
 const pullLimit=t=>t.pullBy==='ft'?(+t.pullEvery||0):t.pullBy==='roll2'?2*mainRoll(t):autoPull(t);
+// where the "in between each post" posts go in a stretch (fractions of it), spread evenly in every gap:
+// brace to post, post to post, and either side of a pull brace. [{f, i}] with i the post row
+function midPosts(t,items,start,end,rpf){
+  const slots=[];(t.posts||[]).forEach((r,i)=>{if(r.by==='between'&&+r.n>0)for(let k=0;k<Math.round(+r.n);k++)slots.push(i)});
+  if(!slots.length)return [];
+  const out=[],gap=(a,b)=>{if(b<=a)return;slots.forEach((i,k)=>out.push({f:a+(b-a)*(k+1)/(slots.length+1),i}))};
+  let a=start;for(const it of items){if(it.k==='p'){gap(a,it.f-rpf);a=it.f+rpf}else{gap(a,it.f);a=it.f}}gap(a,end);
+  return out;
+}
 const postHow=r=>r.by==='between'?`${+r.n||0} in between each post`:`every ${+r.n||0} ${r.by==='ft'?'ft':'posts'} in place of a line post`;
 function postRule(t,j,gap,n){
   const rs=t.posts||[];
@@ -843,7 +852,7 @@ function analyze(proj){
       if(items.length){const g=(1-rb/s-last)*s;gmin=Math.min(gmin,g);gmax=Math.max(gmax,g)}
       // posts set "in between each post": that many in every gap, brace to post and post to post
       (t.posts||[]).forEach((r,i)=>{if(r.by==='between'&&+r.n>0)other[i]+=Math.round(+r.n)*(np+items.filter(x=>x.k==='p').length+1)});
-      stretches.push({len:s,key:kk,items,custom:Array.isArray(cust),n:np,gmin,gmax});
+      stretches.push({len:s,key:kk,items,custom:Array.isArray(cust),n:np,gmin,gmax,mids:midPosts(t,items,ra/s,1-rb/s,rp/s)});
     });
     const len=secs.reduce((a,b)=>a+b,0);
     lines.push({l,t,...o,len,posts,wood,other,tposts:posts-wood,pulls,sections:secs.length+pulls,stretches});
@@ -1062,6 +1071,7 @@ function drawMap(){rollEndsBy={};
       if(r.manual||shown>3000)continue;const sp=postSpots(r.l,r),edit=r.l.id===selLine&&mode==='idle';
       for(const m of sp.marks){
         if(!b.contains(m.ll))continue;shown++;
+        if(m.k==='m'){L.circleMarker(m.ll,{radius:1.8,color:'#17191b',weight:1,fillColor:'#9aa3ab',fillOpacity:1,interactive:false}).addTo(layer);continue}   // in between posts and stays
         if(edit){
           const pull=m.k==='p',mk=L.marker(m.ll,{draggable:true,keyboard:false,title:'Drag to move it along the fence, click for options',icon:L.divIcon({className:'nd '+(pull?'brace pull':m.k>=0?'post wood':'post'),iconSize:pull?[13,13]:[10,10]})}).addTo(layer);
           mk.on('click',e=>{L.DomEvent.stop(e);openPostPopup(r.l.id,m.si,m.ii)});
@@ -1852,7 +1862,7 @@ function lineView(){
 const KINDS=[['wire','Wire'],['post','Posts'],['hw','Hardware'],['gate','Gates'],['other','Other']];
 // a post used in a brace counts as a post; everything else in a brace is hardware
 const isPostName=n=>/post|pole|pipe|piling/i.test(n||'')&&!/insulator|clip|cap|driver|puller|bracket|clamp/i.test(n||'');
-const MADE=[['','Not set'],['tpost','Steel T-post'],['pipe','Steel pipe'],['wood','Wood']];
+const MADE=[['','Not set'],['tpost','Steel T-post'],['pipe','Steel pipe'],['wood','Wood'],['stay','Stay (hangs on the wire, not in the ground)']];
 function matUse(m){
   // where a material is used, and (unless you set its kind yourself) which kind that makes it
   const uses=[];let kind='';const C=c=>{kind=kind||c};
@@ -2301,6 +2311,7 @@ function postSpots(l,r){
     const info=r.stretches?.[k-1];if(!info)break;
     const d0=stops[k-1].d+stops[k-1].gw/2,d1=stops[k].d-stops[k].gw/2;st[k-1]={d0,d1};if(d1<=d0)continue;
     info.items.forEach((it,ii)=>marks.push({ll:at(d0+(d1-d0)*it.f),k:it.k,si:k-1,ii}));
+    for(const m of info.mids||[])marks.push({ll:at(d0+(d1-d0)*m.f),k:'m',si:k-1});
   }
   return {marks,st,at,near};
 }

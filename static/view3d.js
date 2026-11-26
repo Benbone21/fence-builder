@@ -314,6 +314,15 @@ export async function open3D({bounds, lines, types, nodes, key, focus, braces, m
   const lookOf = wr => wr.look || matOf(wr.m)?.look || (/woven|field|mesh|knot|net|hinge|panel|no.?climb/i.test(matName(wr.m)) ? 'mesh' : /barb/i.test(matName(wr.m)) ? 'barbed' : 'smooth');
 
   // where everything goes along one line (distances in metres along the line)
+  function postMade(mm, p) {
+    if (mm?.made) return mm.made;
+    const n = mm?.name || p.what || '';
+    if (/\bstay|dropper|spacer|twist/i.test(n)) return 'stay';
+    if (/t-?\s?post|studded|\bu-?post|steel post/i.test(n)) return 'tpost';
+    if (/pipe|tube|tubing/i.test(n)) return 'pipe';
+    if (/wood|treated|cedar|pine|pole|timber|lumber|cca|cac/i.test(n)) return 'wood';
+    return p.kind === 't' ? 'tpost' : 'wood';
+  }
   function layout(l, t) {
     const pts = l.pts.map(p => { const [x, z] = xz(p.lat, p.lng); return {x, z, o: nodes.get(key(p))}; });
     const cum = [0];
@@ -354,6 +363,8 @@ export async function open3D({bounds, lines, types, nodes, key, focus, braces, m
           if (it.k === 'p') spots.push({d, kit: t.bracePull, dirs: [-1, 1], what: 'Pull brace'});
           else posts.push({d, mid: it.k >= 0 ? t.posts?.[it.k]?.m : t.postM, kind: it.k >= 0 ? 'wood' : 't', what: it.k >= 0 ? matName(t.posts?.[it.k]?.m) : matName(t.postM)});
         }
+        // posts set "in between each post" (often stays that hang on the wire)
+        for (const m of SI[k - 1].mids || []) posts.push({d: d0 + len * m.f, mid: t.posts?.[m.i]?.m, kind: 'mid', what: matName(t.posts?.[m.i]?.m)});
         continue;
       }
       for (let p = 0; p < parts; p++) {
@@ -380,7 +391,7 @@ export async function open3D({bounds, lines, types, nodes, key, focus, braces, m
   function buildFences() {
     fences.traverse(o => { o.geometry?.dispose(); if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => m.dispose()); });
     fences.clear(); infos = []; layouts = new Map();
-    const tposts = [], woods = [], pipes = [], cyls = [], wire = {barbed: [], smooth: []}, meshV = [], meshUV = [], meshI = [], braceWire = [];
+    const tposts = [], stays = [], woods = [], pipes = [], cyls = [], wire = {barbed: [], smooth: []}, meshV = [], meshUV = [], meshI = [], braceWire = [];
     const up = new THREE.Vector3(0, 1, 0);
     const cyl = (a, b, r, color) => cyls.push({a, b, r, color});
     for (const l of lines) {
@@ -394,15 +405,33 @@ export async function open3D({bounds, lines, types, nodes, key, focus, braces, m
       const route = [];
       for (let d = 0; d <= L.total; d += Math.max(1, step)) { const q = P(d); if (inView(q.x, q.z)) route.push(new THREE.Vector3(q.x, q.y + 0.06, q.z)); }
       if (route.length > 1) fences.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(route), new THREE.LineBasicMaterial({color: col, transparent: true, opacity: dim ? 0.35 : 0.9})));
+      // wire: woven wire as a grid panel, barbed and smooth wire as single strands, post to post
+      const rows = (t.wires || []).map(wr => ({look: lookOf(wr), n: Math.max(0, Math.round(+wr.strands || 0)), name: matName(wr.m), h: +matOf(wr.m)?.height || 0, start: wr.start, gap: wr.gap})).filter(r => r.n > 0);
+      // the wires go up the fence in the order they are listed: woven wire takes its height, strands share what is left
+      const meshH = r => { const inch = r.h || +(r.name.match(/(\d+(?:\.\d+)?)\s*(?:"|in\b|inch)/i)?.[1] || 0); return inch ? inch * 0.0254 : Hf * 0.8; };
+      // "starts at" and "apart" on a wire row (inches) place it exactly; without them it is spaced out evenly
+      const INCH = 0.0254, isSetV = v => v !== undefined && v !== null && v !== '' && +v >= 0;
+      const nStr = rows.filter(r => r.look !== 'mesh').reduce((a, r) => a + r.n, 0), meshSum = rows.filter(r => r.look === 'mesh').reduce((a, r) => a + meshH(r), 0);
+      const autoGap = nStr ? Math.max(0.08, (Hf - 0.05 - meshSum) / nStr) : 0;
+      const heights = [], meshes = []; // strands: [height, look]; woven panels: [bottom, top]
+      { let y = 0.05; for (const r of rows) {
+          if (r.look === 'mesh') { if (isSetV(r.start)) y = +r.start * INCH; const h = meshH(r); meshes.push([y, y + h]); y += h; }
+          else { const g = isSetV(r.gap) && +r.gap > 0 ? +r.gap * INCH : autoGap;
+            for (let k = 0; k < r.n; k++) { y = k === 0 && isSetV(r.start) ? +r.start * INCH : y + g; heights.push([y, r.look]); } }
+      } }
+      const wireLo = Math.min(...heights.map(h => h[0]), ...meshes.map(m => m[0]), Infinity), wireHi = Math.max(...heights.map(h => h[0]), ...meshes.map(m => m[1]), -Infinity);
+      const stayLo = isFinite(wireLo) ? Math.max(0.05, wireLo - 0.04) : 0.15, stayHi = isFinite(wireHi) ? wireHi + 0.04 : Hf;
       // line posts
       const marks = [];
       for (const p of L.posts) {
         const q = P(p.d); if (!inView(q.x, q.z)) continue;
         // drawn from the material's details when they are filled in: what it's made of and how thick it is
-        const mm = matOf(p.mid), made = mm?.made || (p.kind === 't' ? 'tpost' : /pipe|steel/i.test(p.what || '') ? 'pipe' : 'wood');
-        const rad = +mm?.dia > 0 ? mm.dia * 0.0127 : made === 'tpost' ? 0.04 : made === 'pipe' ? 0.045 : 0.075;
-        (made === 'tpost' ? tposts : made === 'pipe' ? pipes : woods).push({x: q.x, y: q.y, z: q.z, h: Hf + 0.15, r: rad});
-        marks.push({d: p.d, q, what: p.what || (p.kind === 't' ? 'Line post' : 'Post')});
+        const mm = matOf(p.mid), made = postMade(mm, p);
+        const rad = +mm?.dia > 0 ? mm.dia * 0.0127 : made === 'pipe' ? 0.045 : made === 'stay' ? 0.009 : 0.075;
+        if (made === 'stay') { stays.push({x: q.x - (q.dz || 0) * 0.014, y: q.y + stayLo, z: q.z + (q.dx || 0) * 0.014, h: stayHi - stayLo, r: rad}); continue; }   // just off the wire, where it clips on   // hangs on the wire, not in the ground
+        if (made === 'tpost') tposts.push({x: q.x, y: q.y, z: q.z, h: Hf + 0.1, dx: q.dx, dz: q.dz});
+        else (made === 'pipe' ? pipes : woods).push({x: q.x, y: q.y, z: q.z, h: Hf + 0.15, r: rad});
+        if (p.kind !== 'mid') marks.push({d: p.d, q, what: p.what || (p.kind === 't' ? 'Line post' : 'Post')});
       }
       // braces: built from each brace's own measurements (style, post heights, distance between posts, thickness)
       for (const sp of L.spots) {
@@ -440,20 +469,6 @@ export async function open3D({bounds, lines, types, nodes, key, focus, braces, m
         for (const f of [0, 0.5, 1]) { const m = P(g.d0 + 0.08 + (g.d1 - g.d0 - 0.16) * f); cyl(new THREE.Vector3(m.x, m.y + 0.2, m.z), new THREE.Vector3(m.x, m.y + gh, m.z), 0.022, 0x8f9aa3); }
         marks.push({d: (g.d0 + g.d1) / 2, q: P((g.d0 + g.d1) / 2), what: 'Gate, ' + ((g.d1 - g.d0) * FT).toFixed(0) + ' ft wide'});
       }
-      // wire: woven wire as a grid panel, barbed and smooth wire as single strands, post to post
-      const rows = (t.wires || []).map(wr => ({look: lookOf(wr), n: Math.max(0, Math.round(+wr.strands || 0)), name: matName(wr.m), h: +matOf(wr.m)?.height || 0, start: wr.start, gap: wr.gap})).filter(r => r.n > 0);
-      // the wires go up the fence in the order they are listed: woven wire takes its height, strands share what is left
-      const meshH = r => { const inch = r.h || +(r.name.match(/(\d+(?:\.\d+)?)\s*(?:"|in\b|inch)/i)?.[1] || 0); return inch ? inch * 0.0254 : Hf * 0.8; };
-      // "starts at" and "apart" on a wire row (inches) place it exactly; without them it is spaced out evenly
-      const INCH = 0.0254, isSetV = v => v !== undefined && v !== null && v !== '' && +v >= 0;
-      const nStr = rows.filter(r => r.look !== 'mesh').reduce((a, r) => a + r.n, 0), meshSum = rows.filter(r => r.look === 'mesh').reduce((a, r) => a + meshH(r), 0);
-      const autoGap = nStr ? Math.max(0.08, (Hf - 0.05 - meshSum) / nStr) : 0;
-      const heights = [], meshes = []; // strands: [height, look]; woven panels: [bottom, top]
-      { let y = 0.05; for (const r of rows) {
-          if (r.look === 'mesh') { if (isSetV(r.start)) y = +r.start * INCH; const h = meshH(r); meshes.push([y, y + h]); y += h; }
-          else { const g = isSetV(r.gap) && +r.gap > 0 ? +r.gap * INCH : autoGap;
-            for (let k = 0; k < r.n; k++) { y = k === 0 && isSetV(r.start) ? +r.start * INCH : y + g; heights.push([y, r.look]); } }
-      } }
       for (const [d0, d1] of L.stretches) {
         const ds = [d0, d1, ...L.posts.filter(p => p.d > d0 && p.d < d1).map(p => p.d), ...L.spots.filter(p => p.d > d0 && p.d < d1).map(p => p.d), ...L.cum.filter(c => c > d0 && c < d1)].sort((a, b) => a - b);
         const qs = ds.map(P);
@@ -483,7 +498,28 @@ export async function open3D({bounds, lines, types, nodes, key, focus, braces, m
       list.forEach((p, i) => { ps.set(p.x, p.y + p.h / 2, p.z); sc.set(p.r * 2, p.h, p.r * 2); im.setMatrixAt(i, m4.compose(ps, qn.identity(), sc)); });
       im.instanceMatrix.needsUpdate = true; fences.add(im);
     };
-    inst(tposts, new THREE.BoxGeometry(1, 1, 1), new THREE.MeshLambertMaterial({color: 0x2f5d3a}));
+    // a steel T-post: the flat face the wire clips to, along the fence, and the stem behind it, painted green with a white top
+    if (tposts.length) {
+      const yaw = new THREE.Quaternion(), flange = 0.035, thick = 0.0045, stem = 0.03, tip = 0.1;
+      const part = (geo, color, place) => {
+        const im = new THREE.InstancedMesh(geo, new THREE.MeshLambertMaterial({color}), tposts.length);
+        tposts.forEach((p, i) => { yaw.setFromAxisAngle(up, Math.atan2(-(p.dz || 0), p.dx ?? 1)); const [ox, oy, oz, h] = place(p); const off = new THREE.Vector3(ox, 0, oz).applyQuaternion(yaw);
+          ps.set(p.x + off.x, p.y + oy, p.z + off.z); sc.set(1, h, 1); im.setMatrixAt(i, m4.compose(ps, yaw, sc)); });
+        im.instanceMatrix.needsUpdate = true; fences.add(im);
+      };
+      part(new THREE.BoxGeometry(flange, 1, thick), 0x2f6b3a, p => [0, (p.h - tip) / 2, 0, p.h - tip]);
+      part(new THREE.BoxGeometry(thick, 1, stem), 0x2f6b3a, p => [0, (p.h - tip) / 2, stem / 2, p.h - tip]);
+      part(new THREE.BoxGeometry(flange, 1, thick), 0xf2f2ee, p => [0, p.h - tip / 2, 0, tip]);
+      part(new THREE.BoxGeometry(thick, 1, stem), 0xf2f2ee, p => [0, p.h - tip / 2, stem / 2, tip]);
+      // the studs down the face that hold the clips
+      const studs = [];
+      for (const p of tposts) for (let y = 0.12; y < p.h - tip; y += 0.1) studs.push({x: p.x, y: p.y + y, z: p.z, dx: p.dx, dz: p.dz});
+      const im = new THREE.InstancedMesh(new THREE.BoxGeometry(0.008, 0.012, 0.006), new THREE.MeshLambertMaterial({color: 0x2f6b3a}), studs.length || 1);
+      studs.forEach((p, i) => { yaw.setFromAxisAngle(up, Math.atan2(-(p.dz || 0), p.dx ?? 1)); const off = new THREE.Vector3(0, 0, -0.004).applyQuaternion(yaw); ps.set(p.x + off.x, p.y, p.z + off.z); sc.set(1, 1, 1); im.setMatrixAt(i, m4.compose(ps, yaw, sc)); });
+      im.count = studs.length; im.instanceMatrix.needsUpdate = true; fences.add(im);
+    }
+    // stays: a thin rod clipped to the wires, from just under the bottom wire to just over the top one
+    inst(stays, new THREE.CylinderGeometry(0.5, 0.5, 1, 8), new THREE.MeshLambertMaterial({color: 0x4f565c}));
     inst(woods, new THREE.CylinderGeometry(0.5, 0.5, 1, 10), new THREE.MeshLambertMaterial({color: 0x8a6a48}));
     inst(pipes, new THREE.CylinderGeometry(0.5, 0.5, 1, 12), new THREE.MeshLambertMaterial({color: 0x9aa3ab}));
     for (const color of new Set(cyls.map(c => c.color))) {
@@ -498,7 +534,7 @@ export async function open3D({bounds, lines, types, nodes, key, focus, braces, m
       g.setAttribute('position', new THREE.Float32BufferAttribute(meshV, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(meshUV, 2)); g.setIndex(meshI);
       fences.add(new THREE.Mesh(g, new THREE.MeshBasicMaterial({map: meshTex, transparent: true, alphaTest: 0.3, side: THREE.DoubleSide})));
     }
-    counts.textContent = `${tposts.length.toLocaleString()} line posts, ${(woods.length + pipes.length).toLocaleString()} other and brace posts shown`;
+    counts.textContent = `${tposts.length.toLocaleString()} T-posts, ${(woods.length + pipes.length).toLocaleString()} other and brace posts${stays.length ? `, ${stays.length.toLocaleString()} stays` : ''} shown`;
   }
   function setStretch(v) {
     ex = v;
