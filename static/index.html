@@ -106,6 +106,43 @@ a.btn{text-decoration:none;color:var(--ink);display:inline-flex;align-items:cent
 #drawbar [hidden]{display:none!important}
 #offbar{position:absolute;left:10px;bottom:34px;z-index:900;background:var(--pan);border:1px solid var(--line);border-radius:6px;padding:6px 12px;font-size:13px;box-shadow:0 2px 8px #0006}
 .offrow{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}.offrow:last-child{border-bottom:0}
+.setwrap{display:grid;grid-template-columns:260px minmax(0,760px);gap:20px;align-items:start}
+.setmenu{display:flex;flex-direction:column;gap:6px;position:sticky;top:0}
+.setnav{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;padding:10px 14px;background:var(--pan);border:1px solid var(--line);border-radius:6px;color:var(--ink);cursor:pointer}
+.setnav b{font-size:16px}.setnav span{font-size:13.5px;color:var(--mut)}.setnav:hover{background:var(--pan2)}
+.setnav.on{background:var(--acc);border-color:var(--acc);color:var(--accInk)}.setnav.on span{color:inherit;opacity:.85}
+.setbody{background:var(--pan);border:1px solid var(--line);border-radius:6px;padding:18px 22px 22px}
+.setbody h2{font-size:20px;margin:0 0 4px}.setbody h3{font-size:16px;margin:22px 0 4px}.setbody .lead{margin:0 0 16px;font-size:15px;max-width:62ch}
+.setbody .note{margin:16px 0 0;font-size:14px}.setfield{max-width:360px;margin:0 0 12px}.setfield input,.setfield select{min-height:42px;font-size:15px}
+.setcheck{display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--line);cursor:pointer}
+.setcheck input{width:22px;height:22px;flex:none;margin-top:2px}.setcheck b{display:block;font-size:15px}.setcheck span span{display:block;color:var(--mut);font-size:14px;margin-top:2px}
+.sizepick{display:flex;gap:10px;flex-wrap:wrap}.sizebtn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;width:130px;height:100px;background:var(--pan);border:2px solid var(--line);border-radius:8px;color:var(--ink);cursor:pointer}
+.sizebtn b{font-size:15px}.sizebtn.on{border-color:var(--acc);background:var(--pan2);box-shadow:inset 0 0 0 1px var(--acc)}
+.crewlist{display:flex;flex-direction:column;gap:8px}.crewrow{display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end;padding:10px 0;border-bottom:1px solid var(--line)}
+.crewrow input{min-height:42px;font-size:15px}
+.setbody .offrow{padding:10px 12px}
+@media (max-width:900px){.setwrap{grid-template-columns:1fr}.setmenu{position:static;flex-direction:row;flex-wrap:wrap}.setnav span{display:none}}
+/* Final bill: bigger and easier to read, with the count to buy up front */
+.est{font-size:15.5px}
+.est .sum b{font-size:24px}.est .sum span{font-size:14px}.est .sum .tot b{font-size:28px}
+.est h2{font-size:20px}
+.est table td,.est table th{padding:10px 10px;font-size:15px}
+.est table th{font-size:14px;color:var(--ink);font-weight:600}
+.est table input,.est table select{min-height:42px;font-size:15.5px}
+.est tr.grp td{font-size:15px;font-weight:700;color:var(--ink);padding:12px 10px 6px;background:var(--pan2)}
+.est table.runs select{min-width:170px}.est table.runs td.name{white-space:nowrap}.est table.runs td.name .small{display:block}
+.est .small{font-size:14px}.est label.f{font-size:14px}
+.bill.final td{vertical-align:middle}
+.bill.final td b{font-size:16px}.bill.final .small{font-size:14px;line-height:1.4}
+.bill.final .buyq{width:1%;text-align:center;white-space:nowrap}
+.qbadge{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;min-width:64px;padding:6px 10px;border:2px solid var(--acc);border-radius:8px;background:var(--pan2);line-height:1.1}
+.qbadge b{font-size:26px!important;font-weight:800;font-variant-numeric:tabular-nums;color:var(--ink)}
+.qbadge span{font-size:13px;color:var(--mut);margin-top:2px}
+.bill.final tfoot td{font-size:16px;padding:8px 10px}.bill.final tfoot tr.tot td{font-size:22px;font-weight:700;padding-top:14px}
+.billsum{font-size:15px;margin:0 0 10px;line-height:1.5}
+.bill.final tbody tr:not(.grp) td:nth-last-child(2){font-weight:700;font-size:16px}
+.est .btn.sm{min-height:38px;font-size:14px;padding:0 12px}
+@media print{.qbadge{border:2px solid #000;background:none}.qbadge b{color:#000}}
 .jobtools{display:flex;gap:10px;align-items:center;margin:0 0 12px;flex-wrap:wrap}
 .jobtools input[type=search]{flex:1;min-width:260px;min-height:44px;font-size:15px}
 .seg{display:flex}.seg .btn{min-height:44px;padding:0 16px;font-size:15px;border-radius:0}.seg .btn:first-child{border-radius:6px 0 0 6px}.seg .btn:last-child{border-radius:0 6px 6px 0}
@@ -2000,10 +2037,9 @@ function estView(){
     :`<div class="note">No fence yet. Draw it on the map with <b>Fence map</b>, or press <b>+ Add a fence run by length</b> and type how long it is.</div>`;
   let g='',body='';
   const hd=p.headache||{};
-  for(const r of A.rows){if(r.grp!==g){g=r.grp;body+=`<tr class="grp"><td colspan="6">${esc(g)}</td></tr>`}
+  for(const r of A.rows){if(r.grp!==g){g=r.grp;body+=`<tr class="grp"><td colspan="7">${esc(g)}</td></tr>`}
     let host='';try{host=new URL(r.m.url).hostname.replace(/^www\./,'')}catch(e){}
-    body+=`<tr class="${r.custom?'custp':''}"><td><div class="mrow" style="align-items:flex-start">${thumb(r.m.image,44)}<div><b>${esc(r.m.name)}</b>${r.why?.length?`<div class="small mut">${r.why.map(([w,q])=>`${fmtQ(Math.round(q*10)/10)} for ${esc(w)}`).join(' · ')}</div>`:''}${r.custom?`<div class="small warn">Custom price for this job. Your normal price is ${money(r.base)}. <button class="lnk" data-act="jobPriceReset" data-id="${r.m.id}">Use the normal price</button></div>`:''}</div></div></td>
-      <td class="num"><b>${fmtQ(r.q)}</b> <span class="small mut">${esc(r.m.unit)}</span></td>
+    body+=`<tr class="${r.custom?'custp':''}"><td class="buyq"><span class="qbadge"><b>${fmtQ(r.q)}</b><span>${esc(r.m.unit||'each')}${r.m.unit==='roll'&&r.q!==1?'s':''}</span></span></td><td><div class="mrow" style="align-items:flex-start">${thumb(r.m.image,44)}<div><b>${esc(r.m.name)}</b>${r.why?.length?`<div class="small mut">${r.why.map(([w,q])=>`${fmtQ(Math.round(q*10)/10)} for ${esc(w)}`).join(' · ')}</div>`:''}${r.custom?`<div class="small warn">Custom price for this job. Your normal price is ${money(r.base)}. <button class="lnk" data-act="jobPriceReset" data-id="${r.m.id}">Use the normal price</button></div>`:''}</div></div></td>
       <td class="num"><input type="number" class="pr noprint" min="0" step="0.01" value="${r.price}" data-f="jobp.price" data-id="${r.m.id}" aria-label="Price for this job" title="Type a different price to use on this job only. Your Materials page is not changed."><span class="printonly">${money(r.price)}</span></td>
       <td class="num"><input type="number" class="pr noprint" min="0" step="0.01" value="${hd[r.m.id]??''}" placeholder="0" data-f="jobhead.v" data-id="${r.m.id}" aria-label="Headache charge each, this job" title="Extra $ per unit for something fussy to install, on this job"><span class="printonly">${hd[r.m.id]?money(+hd[r.m.id]):''}</span></td>
       <td class="num">${money(r.cost)}</td>
@@ -2011,22 +2047,23 @@ function estView(){
   const nCustom=A.rows.filter(r=>r.custom).length;
   const kits=Object.entries(A.kits).map(([id,n])=>`${n} ${esc(kitName(id))}`).join(', ');
   const types=Object.values(A.types).filter(T=>T.L>0).map(T=>`${esc(T.t.name)}: ${fmtFt(T.L)}, ${postText(T)}${T.pulls?`, ${T.pulls} pull braces`:''}`).join('<br>');
-  const bill=A.rows.length?`<p class="small mut" style="margin:0 0 8px">${types}${kits?`<br>Braces: ${kits}`:''}</p>
+  const bill=A.rows.length?`<p class="billsum">${types}${kits?`<br>Braces: ${kits}`:''}</p>
     ${nCustom?`<div class="note warnbox">${nCustom} material${nCustom>1?'s use':' uses'} a custom price on this job, not your normal price. <button class="lnk" data-act="jobPriceResetAll">Put them all back to normal</button></div>`:''}
-    <div class="box scroll"><table class="bill final"><thead><tr><th>Material and what it is for</th><th class="num">How many to buy</th><th class="num">Price each, this job</th><th class="num">Headache $ each</th><th class="num">Total</th><th>Store</th></tr></thead><tbody>${body}</tbody>
-    <tfoot><tr><td colspan="4">Materials</td><td class="num">${money(A.sub)}</td><td></td></tr>
-    <tr><td colspan="4">Sales tax ${+st.tax||0}%</td><td class="num">${money(A.tax)}</td><td></td></tr>
-    ${laborFoot().replace(/<td colspan="3">/g,'<td colspan="4">').replace(/<\/td><\/tr>/g,'</td><td></td></tr>')}
-    <tr class="tot"><td colspan="4">Total</td><td class="num">${money(A.total)}</td><td></td></tr></tfoot></table></div>
+    <div class="box scroll"><table class="bill final"><thead><tr><th class="buyq">Buy</th><th>Material and what it is for</th><th class="num">Price each, this job</th><th class="num">Headache $ each</th><th class="num">Total</th><th>Store</th></tr></thead><tbody>${body}</tbody>
+    <tfoot><tr><td colspan="5">Materials</td><td class="num">${money(A.sub)}</td><td></td></tr>
+    <tr><td colspan="5">Sales tax ${+st.tax||0}%</td><td class="num">${money(A.tax)}</td><td></td></tr>
+    ${laborFoot().replace(/<td colspan="3">/g,'<td colspan="5">').replace(/<\/td><\/tr>/g,'</td><td></td></tr>')}
+    <tr class="tot"><td colspan="5">Total</td><td class="num">${money(A.total)}</td><td></td></tr></tfoot></table></div>
 `
     :`<p class="mut">Once there is some fence, the list of what to buy shows up here.</p>`;
   return `<div class="phead"><div><h1>Final bill: ${esc(p.name)}</h1><p>${p.customer?esc(p.customer)+'. ':''}What to buy and what to charge for this job. A price you change here is for this job only.</p></div><div class="row noprint"><button class="btn big" data-act="jobPage" data-id="${p.id}">Job details</button><button class="btn big" data-act="showMap">Fence map</button><button class="btn big" data-act="copyBill">Copy list</button><button class="btn pri big" data-act="print">Print</button></div></div>
   <div class="est"><div class="sum"><div><span>Fence length</span><b>${fmtFt(A.totalFt)}</b></div><div><span>Braces</span><b>${braces}</b></div><div><span>Gates</span><b>${A.gates}</b></div>
     <div><span>Materials</span><b>${money(A.sub)}</b></div><div><span>Labor</span><b>${money(A.lab.cost)}</b></div><div><span>Headache and fees</span><b>${money(A.lab.matHead+A.lab.feeTotal)}</b></div><div class="tot"><span>Total</span><b>${money(A.total)}</b></div></div>
-  <div><h2>The fence</h2>${runs}
+  <div class="wide"><h2>Materials to buy</h2>${bill}</div>
+  <div class="wide"><h2>The fence</h2>${runs}
   <div class="row noprint" style="margin-top:8px"><button class="btn" data-act="addRun">+ Add a fence run by length</button>
     <span class="small mut">For fence you measured yourself. Ends, corners and both sides of each gate get braces, as set on its fence type.</span></div>
-  </div><div>${laborView()}</div><div class="wide"><h2>Materials to buy</h2>${bill}</div></div>`;
+  </div><div class="wide">${laborView()}</div></div>`;
 }
 function lineView(){
   const l=getLine(selLine),r=A.lines.find(x=>x.l===l);if(!r)return estView();
@@ -2418,44 +2455,52 @@ function bracesView(){
   return `<div class="phead"><div><h1>Braces</h1><p>What goes into each brace and what it costs. Each fence type picks which brace goes at its ends, corners, gates and long runs. Click one to open it and make changes.</p></div><button class="btn pri big" data-act="addKit">+ New brace</button></div>
   ${cards?`<div class="jobgrid tgrid">${cards}</div>`:'<p class="mut">Make a brace to get started.</p>'}`;
 }
+// Settings: a list of sections down the left, one open at a time
+let setSec='look';
+const SET_SECS=[['look','Text size','Make words and buttons bigger'],['crew','Crew','Who works on your jobs'],['money','Sales tax','Tax on materials'],['map','Drawing on the map','Slope, roads and rivers'],['offline','Offline maps','Maps saved for no internet'],['prices','Store prices','Keep prices up to date'],['backup','Backup','Save or load a copy of everything'],['updates','Updates','Your version and new ones']];
 function settingsView(){
-  const s=S.settings;
+  const s=S.settings,sec=SET_SECS.some(x=>x[0]===setSec)?setSec:'look';
+  const nav=SET_SECS.map(([k,n,d])=>`<button class="setnav${k===sec?' on':''}" data-act="setSec" data-k="${k}"${k===sec?' aria-current="page"':''}><b>${n}</b><span>${d}</span></button>`).join('');
+  const check=(f,on,label,help)=>`<label class="setcheck"><input type="checkbox" ${on?'checked':''} data-f="set.${f}"><span><b>${label}</b>${help?`<span>${help}</span>`:''}</span></label>`;
+  const crew=s.crew||[];
+  const body={
+    look:`<h2>Text size</h2><p class="lead">Make the words and buttons bigger. It counts on this computer and every other one. The map itself stays the same.</p>
+      <div class="sizepick">${[['1','Normal'],['1.15','Large'],['1.3','Larger']].map(([v,n])=>`<button class="sizebtn${String(+s.textSize||1)===v?' on':''}" data-act="textSize" data-k="${v}"><span style="font-size:${17*+v}px">Aa</span><b>${n}</b></button>`).join('')}</div>`,
+    crew:`<h2>Crew</h2><p class="lead">The people who build your fences. Pick who works on each job on that job's page.</p>
+      ${crew.length?`<div class="crewlist">${crew.map((c,i)=>`<div class="crewrow"><div><label class="f" for="cn${i}">Name</label><input id="cn${i}" type="text" value="${esc(c.name||'')}" data-f="crew.name" data-i="${i}" placeholder="Name"></div>
+        <div><label class="f" for="cp${i}">Phone</label><input id="cp${i}" type="tel" value="${esc(c.phone||'')}" data-f="crew.phone" data-i="${i}" placeholder="Phone (optional)"></div>
+        <button class="btn del" data-act="delCrew" data-i="${i}">Remove</button></div>`).join('')}</div>`:'<p class="mut">No one yet.</p>'}
+      <button class="btn pri big" data-act="addCrew" style="margin-top:12px">+ Add a person</button>`,
+    money:`<h2>Sales tax</h2><p class="lead">Added to the materials on every Final bill.</p>
+      <div class="setfield"><label class="f" for="stax">Sales tax on materials, %</label><input id="stax" type="number" min="0" step="0.01" value="${+s.tax}" data-f="set.tax"></div>
+      <div class="note">Labor is set as a $ per foot on each fence type, and per brace on the Braces page. Headache charges and other fees are added on each job's Final bill.</div>`,
+    map:`<h2>Drawing on the map</h2><p class="lead">How fence lines are measured and what gets added when you draw.</p>
+      ${check('useSurface',s.useSurface,'Measure along the ground slope','Footage follows the hills, from the LiDAR ground heights, instead of a flat line on the map.')}
+      ${check('autoCross',s.autoCross!==false,'Add gates and braces at roads and rivers','When you finish a line, a gate goes where it crosses a road, and a brace on each bank of a river or creek. You can move or delete them.')}
+      <div class="note">Every spot you click gets a brace: a bend gets the corner brace, a spot on a straight run gets the pull brace. You can change any single spot on the map afterwards.</div>`,
+    offline:`<h2>Offline maps</h2><p class="lead">Areas saved on this computer to use with no internet: the aerial photo, the LiDAR bare-earth map and ground heights, and the property lines. With no internet the map switches to them on its own.</p>
+      ${serverOK?(offList.length?`<div class="box">${offList.map(a=>{const pct=a.total?Math.floor(a.done/a.total*100):0,st=a.status==='downloading'?`Downloading, ${pct}%`:a.status==='done'?'Ready':a.status==='partly'?`Ready, ${a.failed} pieces missing`:a.status==='stopped'?`Stopped at ${pct}%`:'Did not finish';
+        return `<div class="offrow"><div><b>${esc(a.name)}</b><div class="mut">${st} · ${fmtQ(Math.round((a.bytes||0)/1e6))} MB · saved ${new Date(a.created*1000).toLocaleDateString()}</div></div>
+          <div class="row" style="flex-wrap:nowrap">${['stopped','partly','error'].includes(a.status)?`<button class="btn" data-act="offResume" data-id="${a.id}">Finish it</button>`:''}<button class="btn" data-act="offShow" data-id="${a.id}">Show on map</button><button class="btn del" data-act="offDel" data-id="${a.id}">Delete</button></div></div>`}).join('')}</div>`:'<p class="mut">None saved yet.</p>'):'<p class="mut">This needs the Fence Builder app or server.</p>'}
+      <button class="btn pri big" data-act="offNew" style="margin-top:12px">+ Save an area for offline</button>`,
+    prices:`<h2>Store prices</h2><p class="lead">Prices of materials with a store link can update on their own. Prices you set on a single job are never changed.</p>
+      <div class="setfield"><label class="f" for="sap">Update prices</label><select id="sap" data-f="set.autoPrices">${opt('day','Automatically, once a day',s.autoPrices??'day')}${opt('week','Automatically, once a week',s.autoPrices??'day')}${opt('off','Only when I press Update now',s.autoPrices??'day')}</select></div>
+      <button class="btn big" data-act="fetchAll">Update now</button>
+      ${s.priceRun?`<div class="note">Last checked ${new Date(s.priceRun.at).toLocaleString()}: ${s.priceRun.checked} checked, ${s.priceRun.moved} changed${s.priceRun.failed?`, ${s.priceRun.failed} could not be read`:''}.
+        ${s.priceRun.list?.length?`<ul style="margin:6px 0 0;padding-left:18px">${s.priceRun.list.map(x=>`<li>${esc(x.name)}: ${money(x.from)} → ${money(x.to)}</li>`).join('')}</ul>`:''}</div>`:''}
+      <h3>Another store</h3><p class="mut" style="margin-top:0">Kencove and D&amp;B Supply are built in. Add one more store here if it is built on Shopify, and it shows up in the store finder on the Materials page.</p>
+      <div class="setfield"><label class="f" for="sshop">Store website (optional)</label><input id="sshop" type="text" value="${esc(s.shop||'')}" data-f="set.shop" placeholder="example.com"></div>`,
+    backup:`<h2>Backup</h2><p class="lead">${serverOK?'Everything saves on its own as you work, with a backup copy kept every hour.':'No Fence Builder server found, so everything only saves in this browser.'} You can also keep your own copy.</p>
+      <div class="row"><button class="btn pri big" data-act="export">Download a backup</button><button class="btn big" data-act="import">Load a backup</button></div>
+      <h3>Starting setup for new installs</h3><p class="mut" style="margin-top:0">Saves your fence types, braces, materials and prices as what Fence Builder starts with on a new computer. Jobs are not included.</p>
+      <button class="btn big" data-act="saveSeed">Save my setup as the starting setup</button>`,
+    updates:`<h2>Updates</h2><p class="lead">You have <b>Fence Builder ${esc(upd?.version||'…')}</b>.${upd?.available?` <b>${esc(upd.latest)}</b> is out.`:upd&&!upd.reason?' It is the newest version.':''}</p>
+      ${upd?.reason?`<p class="mut">${esc(upd.reason)}</p>`:''}
+      <div class="row">${upd?.available?'<button class="btn pri big" data-act="installUpd">Update now</button>':''}<button class="btn big" data-act="checkUpd">Check for updates</button>${upd?.url?`<a class="btn big" href="${esc(upd.url)}" target="_blank" rel="noopener">What's new</a>`:''}</div>
+      <div class="note">Fence Builder checks for updates when it opens and every few hours. Updating never touches your jobs, prices or settings.</div>`,
+  }[sec];
   return `<div class="phead"><div><h1>Settings</h1><p>Choices for the whole app and every job. Changes save on their own.</p></div></div>
-  <div class="cards">
-  <div class="card"><h3 style="margin-top:0">Text size</h3>
-  <p class="small mut" style="margin-top:0">Make the words and buttons bigger on this computer and every other one. The map stays the same.</p>
-  <div class="seg" role="group" aria-label="Text size">${[['1','Normal'],['1.15','Large'],['1.3','Larger']].map(([v,n])=>`<button class="btn${String(+s.textSize||1)===v?' on':''}" data-act="textSize" data-k="${v}" style="font-size:${15*+v}px">${n}</button>`).join('')}</div></div>
-  <div class="card"><h3 style="margin-top:0">Measuring</h3>
-  <p class="small mut" style="margin-top:0">Every spot you click on the map gets a brace: a bend gets the corner brace, a spot on a straight run gets the pull brace. You can change any single spot on the map afterwards.</p>
-  <label class="row"><input type="checkbox" ${s.useSurface?'checked':''} data-f="set.useSurface" style="width:18px;height:18px"> Measure along the ground slope when elevation is loaded</label>
-  <label class="row"><input type="checkbox" ${s.autoCross!==false?'checked':''} data-f="set.autoCross" style="width:18px;height:18px"> When I finish a line, put a gate where it crosses a road and braces on both banks of a river or creek (from OpenStreetMap)</label></div>
-  <div class="card"><h3 style="margin-top:0">Costs</h3><label class="f">Sales tax % (on materials)</label><input type="number" step="0.01" value="${+s.tax}" data-f="set.tax">
-  <p class="small mut">Labor is a $ per foot on each fence type. Headache charges and fees are added on each job's Final bill.</p></div>
-  <div class="card"><h3 style="margin-top:0">Offline maps</h3>
-  <p class="small mut" style="margin-top:0">Areas saved on this computer to use with no internet: the USGS aerial photo, the LiDAR bare-earth map and the LiDAR ground heights. With no internet the map switches to them on its own.</p>
-  ${serverOK?(offList.length?offList.map(a=>{const pct=a.total?Math.floor(a.done/a.total*100):0,st=a.status==='downloading'?`Downloading, ${pct}%`:a.status==='done'?'Ready':a.status==='partly'?`Ready, ${a.failed} pieces missing`:a.status==='stopped'?`Stopped at ${pct}%`:'Did not finish';
-    return `<div class="offrow"><div><b>${esc(a.name)}</b><div class="small mut">${st} · ${fmtQ(Math.round((a.bytes||0)/1e6))} MB · ${new Date(a.created*1000).toLocaleDateString()}</div></div>
-      <div class="row" style="flex-wrap:nowrap">${['stopped','partly','error'].includes(a.status)?`<button class="btn sm" data-act="offResume" data-id="${a.id}">Finish it</button>`:''}<button class="btn sm" data-act="offShow" data-id="${a.id}">Show</button><button class="btn sm del" data-act="offDel" data-id="${a.id}">Delete</button></div></div>`}).join(''):'<p class="mut">None saved yet.</p>'):'<p class="mut">This needs the Fence Builder app or server.</p>'}
-  <button class="btn" data-act="offNew" style="margin-top:8px">Save an area for offline</button></div>
-  <div class="card"><h3 style="margin-top:0">Version and updates</h3>
-  <p style="margin:0 0 6px">You have <b>Fence Builder ${esc(upd?.version||'…')}</b>.${upd?.available?` <b>${esc(upd.latest)}</b> is out.`:upd&&!upd.reason?' It is the newest version.':''}</p>
-  ${upd?.reason?`<p class="small mut">${esc(upd.reason)}</p>`:''}
-  <div class="row"><button class="btn" data-act="checkUpd">Check for updates</button>${upd?.available?'<button class="btn pri" data-act="installUpd">Update now</button>':''}${upd?.url?`<a class="btn" href="${esc(upd.url)}" target="_blank" rel="noopener">Release notes</a>`:''}</div>
-  <p class="small mut">The app checks GitHub when it opens and every few hours. Updates never touch your jobs, prices or settings.</p></div>
-  <div class="card"><h3 style="margin-top:0">Store prices</h3>
-  <label class="f">Update prices from Kencove, D&amp;B and other store links</label><select data-f="set.autoPrices">${opt('day','Automatically, once a day',s.autoPrices??'day')}${opt('week','Automatically, once a week',s.autoPrices??'day')}${opt('off','Only when I press Update',s.autoPrices??'day')}</select>
-  <p class="small mut">It runs while the app is open: when you open it, and then hourly if it is due. Only materials with a store link are checked. Custom prices you set on a single job are never changed.</p>
-  ${s.priceRun?`<p class="small">Last run ${new Date(s.priceRun.at).toLocaleString()}: checked ${s.priceRun.checked}, ${s.priceRun.moved} changed${s.priceRun.failed?`, ${s.priceRun.failed} could not be read`:''}.</p>
-    ${s.priceRun.list?.length?`<ul class="small" style="margin:0;padding-left:18px">${s.priceRun.list.map(x=>`<li>${esc(x.name)}: ${money(x.from)} → ${money(x.to)}</li>`).join('')}</ul>`:''}`:''}
-  <div class="row" style="margin-top:8px"><button class="btn" data-act="fetchAll">Update now</button></div></div>
-  <div class="card"><h3 style="margin-top:0">Another store</h3><label class="f">Store website (optional)</label><input type="text" value="${esc(S.settings.shop||'')}" data-f="set.shop" placeholder="example.com">
-  <p class="small mut">Kencove and D&amp;B Supply are built in. Add one more store here if it is built on Shopify, and it shows up as a third choice in the store finder on the Materials page.</p></div>
-  <div class="card"><h3 style="margin-top:0">Starting setup for new installs</h3>
-  <p class="small mut">Saves your current fence types, braces, materials and prices as what the app starts with on a fresh install. Jobs are not included.</p>
-  <div class="row"><button class="btn" data-act="saveSeed">Save my setup as the starting setup</button></div></div>
-  <div class="card"><h3 style="margin-top:0">Backup</h3><p class="small mut">${serverOK?'Your data saves to the server, with a daily backup copy.':'No server found, so data only saves in this browser.'}</p>
-  <div class="row"><button class="btn" data-act="export">Download backup</button><button class="btn" data-act="import">Load backup</button></div></div>
-  </div>`;
+  <div class="setwrap"><nav class="setmenu" aria-label="Settings sections">${nav}</nav><section class="setbody">${body}</section></div>`;
 }
 
 /* ---------- builder sidebar: set the fence up, then draw it ---------- */
@@ -2655,7 +2700,7 @@ function jobPage(p){
       <div class="g2">${field('bidDate','Bid sent','date')}${field('start','Start date','date')}</div>
       <div class="g2">${field('due','Finish by','date')}<div></div></div>
       ${overdue(p)?`<p class="warn">This job is past its finish date.</p>`:''}
-      ${crew.length?`<label class="f">Crew on this job</label><div class="crewpick">${crew.map(c=>`<label class="row"><input type="checkbox" ${mine.includes(c.id)?'checked':''} data-f="jcrew.on" data-id="${c.id}" data-job="${p.id}"> ${esc(c.name||'Crew member')}</label>`).join('')}</div>`:''}
+      ${crew.length?`<label class="f">Crew on this job</label><div class="crewpick">${crew.map(c=>`<label class="row"><input type="checkbox" ${mine.includes(c.id)?'checked':''} data-f="jcrew.on" data-id="${c.id}" data-job="${p.id}"> ${esc(c.name||'Crew member')}</label>`).join('')}</div>`:`<p class="mut">No crew set up yet. <button class="lnk" data-act="goCrew">Add your crew</button></p>`}
     </div>
     <div class="card"><h2>Money</h2>
       <div class="money"><div><span>Job total</span><b>${money(a.total)}</b></div><div><span>Paid so far</span><b>${money(paid)}</b></div><div class="tot"><span>Still owed</span><b>${money(bal)}</b></div></div>
@@ -2753,6 +2798,8 @@ async function act(a,d){
   case 'editFt':typeSel=id;gotoTab('types');break;
   case 'openJob':S.cur=id;selLine=null;selNode=null;if(mode!=='idle')cancelDraw();S.tab='build';changed();setTimeout(fitProject,50);break;
   case 'jobInfo':case 'jobPage':jobOpen=id;S.tab='jobs';renderAll();$('#panel').scrollTop=0;break;
+  case 'goCrew':setSec='crew';gotoTab('settings');break;
+  case 'setSec':setSec=d.k;renderPanel();$('#panel').scrollTop=0;break;
   case 'textSize':S.settings.textSize=+d.k;changed();break;
   case 'offNew':startOffSel();break;
   case 'offShow':{const a=offList.find(x=>x.id===id);if(!a)break;gotoTab('build');const [w,s2,e,n]=a.bbox;setTimeout(()=>{map.fitBounds([[s2,w],[n,e]]);if(!map.hasLayer(offAreas))offAreas.addTo(map)},60);break}
