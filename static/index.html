@@ -95,6 +95,48 @@ body:not(.pg-build) #mapwrap{display:none}
 #side .po .mini input,#body .po .mini input{width:74px}
 #body .wr input,#side .wr input{width:100%}
 .sec h3 .r{float:right;font-weight:400}
+.phead .btn.big,.btn.big{min-height:44px;padding:0 18px;font-size:15px;font-weight:600}
+a.btn{text-decoration:none;color:var(--ink);display:inline-flex;align-items:center}a.btn:hover{color:var(--ink)}
+.tgrid{grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+.tcard{background:var(--pan);border:1px solid var(--line);border-radius:6px;padding:0 14px 14px;overflow:hidden}
+.tcbar{height:6px;margin:0 -14px 12px}
+.tfacts{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:10px 0;font-size:14px}.tfacts dt{color:var(--mut)}.tfacts dd{margin:0;overflow-wrap:anywhere}
+.dot.big{width:16px;height:16px;vertical-align:middle}
+.fdlg label.f{font-size:14px;margin-top:12px}.fdlg select,.fdlg input{min-height:40px;font-size:15px}.fdlg input[type=number]{text-align:left}
+.jobtools{display:flex;gap:10px;align-items:center;margin:0 0 12px;flex-wrap:wrap}
+.jobtools input[type=search]{flex:1;min-width:260px;min-height:44px;font-size:15px}
+.seg{display:flex}.seg .btn{min-height:44px;padding:0 16px;font-size:15px;border-radius:0}.seg .btn:first-child{border-radius:6px 0 0 6px}.seg .btn:last-child{border-radius:0 6px 6px 0}
+.stagechips{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 16px}
+.stagechip{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:8px 14px;min-width:130px;background:var(--pan);border:1px solid var(--line);border-radius:6px;color:var(--ink);cursor:pointer;text-align:left}
+.stagechip b{font-size:15px}.stagechip span{font-size:13px;color:var(--mut)}.stagechip.on{border-color:var(--acc);box-shadow:inset 0 0 0 1px var(--acc)}.stagechip:hover{background:var(--pan2)}
+.colhelp{margin:-6px 4px 10px}
+.jobgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.job{font-size:14px;line-height:1.5}.job>div{overflow-wrap:anywhere}
+.jobname{all:unset;cursor:pointer;font-size:16px;font-weight:700;display:block;margin-bottom:2px}.jobname:hover{text-decoration:underline}.jobname:focus-visible{outline:2px solid var(--acc)}
+.job .when{margin-top:4px;font-weight:600}
+.jobnums{display:flex;justify-content:space-between;align-items:baseline;margin-top:8px;padding-top:8px;border-top:1px solid var(--line)}.jobnums b{font-size:16px}
+.jobbtns{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.jobbtns .btn{min-height:38px;font-size:14px}
+.warn{color:var(--red);font-weight:600}
+.stagepill{font-size:13px;font-weight:600;padding:2px 10px;border-radius:12px;border:1px solid var(--line);vertical-align:middle;white-space:nowrap}
+.s-bid{background:#3b82f622;border-color:#3b82f6}.s-sched{background:#eab30822;border-color:#eab308}.s-prog{background:#f9731622;border-color:#f97316}.s-done{background:#22c55e22;border-color:#22c55e}
+table.joblist td{vertical-align:middle;font-size:14px;padding:8px}table.joblist .jobname{font-size:15px}table.joblist tr:hover td{background:var(--pan2)}
+.jobtop{margin:0 0 12px}
+.stepper{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:0 0 16px}
+.step{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;padding:10px 12px;background:var(--pan);border:1px solid var(--line);border-radius:6px;color:var(--ink);cursor:pointer}
+.step b{font-size:15px}.step span{font-size:12px;color:var(--mut)}.step.past{background:var(--pan2)}.step.past b::after{content:" ✓";color:var(--ok)}
+.step.on{background:var(--acc);border-color:var(--acc);color:var(--accInk)}.step.on span{color:inherit;opacity:.85}
+.jobcols{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px}
+.jobcols .card{background:var(--pan);border:1px solid var(--line);border-radius:6px;padding:14px 16px}.jobcols .card.wide{grid-column:1/-1}
+.jobcols input{min-height:40px}.jobcols input[type=number]{text-align:left}
+.jobcols h2{margin:0 0 6px;font-size:17px}.jobcols label.f{font-size:13px}.jobcols input,.jobcols textarea{font-size:15px}
+.jobcols textarea{width:100%;box-sizing:border-box}
+.crewpick{display:flex;flex-wrap:wrap;gap:6px 16px}.crewpick input{width:18px;height:18px}
+.money{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:4px 0 8px}.money span{display:block;font-size:13px;color:var(--mut)}.money b{font-size:19px;font-variant-numeric:tabular-nums}.money .tot b{color:var(--acc)}
+table.mini2 td{padding:6px 4px;font-size:14px}table.mini2 tfoot td{border-top:1px solid var(--line)}
+.joblog{list-style:none;padding:0;margin:10px 0 0}.joblog li{padding:6px 0;border-bottom:1px solid var(--line);font-size:14px}.joblog li .mut{display:inline-block;min-width:110px}
+@media print{.jobcols{display:block}.jobcols .card{border:0;padding:0;margin-bottom:12px}}
+/* text size (Settings): everything but the map itself */
+header,#panel,#side,dialog,#drawbar{zoom:var(--tz,1)}
 .board{display:grid;grid-template-columns:repeat(4,minmax(230px,1fr));gap:12px;align-items:start;overflow-x:auto}
 .col{background:var(--pan2);border:1px solid var(--line);border-radius:6px;padding:8px;min-height:240px}
 .col.over{outline:2px solid var(--acc)}
@@ -248,7 +290,7 @@ h3{font-size:14px;font-weight:600;margin:18px 0 6px}
 .grow{flex:1}
 .num{font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right}
 label.f{display:block;font-size:12px;color:var(--mut);margin:8px 0 2px}
-input[type=text],input[type=number],input[type=url],input[type=search],select,textarea{width:100%;border:1px solid var(--line);border-radius:4px;background:var(--pan);padding:4px 8px;min-height:32px}
+input[type=text],input[type=number],input[type=url],input[type=search],input[type=tel],input[type=email],input[type=date],select,textarea{color:var(--ink);width:100%;border:1px solid var(--line);border-radius:4px;background:var(--pan);padding:4px 8px;min-height:32px}
 input[type=number]{text-align:right}
 input[type=color]{width:36px;height:32px;border:1px solid var(--line);border-radius:4px;padding:2px;background:var(--pan)}
 .g2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 10px}
@@ -402,9 +444,11 @@ const wirePull=m=>m&&m.maxPull!=null&&m.maxPull!==''?+m.maxPull||0:PULL_USUAL[wi
 // automatic: the shortest of the fence type's wires decides, since they are all stretched between the same braces
 function autoPull(t){let best=0;for(const w of t.wires||[]){const m=matOf(w.m);if(!m||!(+w.strands>0))continue;const v=wirePull(m);if(v>0&&(!best||v<best))best=v}return best||(+t.pullEvery||0)}   // no usable wire: fall back to the type's own number
 const pullLimit=t=>t.pullBy==='ft'?(+t.pullEvery||0):t.pullBy==='roll2'?2*mainRoll(t):autoPull(t);
+const postHow=r=>r.by==='between'?`${+r.n||0} in between each post`:`every ${+r.n||0} ${r.by==='ft'?'ft':'posts'} in place of a line post`;
 function postRule(t,j,gap,n){
   const rs=t.posts||[];
   for(let i=0;i<rs.length;i++){
+    if(rs[i].by==='between')continue;   // added between posts, not in place of one
     const v=+rs[i].n||0;if(v<=0)continue;
     const N=rs[i].by==='ft'?Math.max(1,Math.round(v/(gap||1))):Math.floor(v);if(N<1)continue;
     if(!n){if(j%N===0)return i;continue}
@@ -653,6 +697,50 @@ function ask(msg){return new Promise(res=>{
   d.oncancel=e=>{e.preventDefault();fin(false)};
   d.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();fin(true)}};
   d.showModal();d.querySelector('[data-a="1"]').focus()})}
+// a small form in a window: returns {name: value} from its fields, or null if cancelled.
+// A product list's "+ New product…" opens the new material window on top and picks the new one.
+function formDlg(title,body,okLabel='Add'){return new Promise(res=>{
+  const d=$('#askDlg');
+  d.innerHTML=`<h2 style="margin:0 0 10px">${esc(title)}</h2><div class="fdlg">${body}</div><div class="row" style="justify-content:flex-end;margin-top:16px"><button class="btn big" data-a="0">Cancel</button><button class="btn pri big" data-a="1">${esc(okLabel)}</button></div>`;
+  let done=false;const vals=()=>{const o={};d.querySelectorAll('[name]').forEach(el=>o[el.name]=el.type==='number'?+el.value||0:el.value);return o};
+  const fin=v=>{if(done)return;done=true;d.close();res(v)};
+  d.onclick=e=>{const b=e.target.closest('[data-a]');if(b)fin(b.dataset.a==='1'?vals():null)};
+  d.oncancel=e=>{e.preventDefault();fin(null)};
+  d.onkeydown=e=>{if(e.key==='Enter'&&e.target.tagName!=='SELECT'){e.preventDefault();fin(vals())}};
+  d.onchange=async e=>{const el=e.target;if(el.value==='__new'){const nid=await openMatDlg(null,JSON.parse(el.dataset.preset||'{}'));
+      if(nid){el.insertAdjacentHTML('beforeend',opt(nid,matName(nid),''));el.value=nid}else el.value=el.dataset.was||'';}
+    el.dataset.was=el.value;d.querySelectorAll('[data-when]').forEach(x=>x.hidden=!x.dataset.when.split(' ').includes(d.querySelector('[name="'+x.dataset.whenOf+'"]')?.value))};
+  d.showModal();d.querySelectorAll('[data-when]').forEach(x=>x.hidden=!x.dataset.when.split(' ').includes(d.querySelector('[name="'+x.dataset.whenOf+'"]')?.value));
+  d.querySelector('select,input')?.focus()})}
+// a product list for a window, with what fits first
+function prodSelect(name,fits,preset,label){
+  const good=S.materials.filter(fits),rest=S.materials.filter(m=>!fits(m));
+  return `<label class="f">${esc(label)}</label><select name="${name}" data-preset='${esc(JSON.stringify(preset))}'>${good.length?`<optgroup label="Suggested">${good.map(m=>opt(m.id,m.name,'')).join('')}</optgroup>`:''}${rest.length?`<optgroup label="Everything else">${rest.map(m=>opt(m.id,m.name,'')).join('')}</optgroup>`:''}<option value="__new">+ New product…</option></select>`;
+}
+const isWire=m=>m.kind==='wire'||rollOf({m:m.id})>0||/wire|woven|barb|mesh/i.test(m.name);
+const isPost=m=>m.kind==='post'||/post|stay|dropper/i.test(m.name);
+async function addWireDlg(id){
+  const v=await formDlg('Add wire',`${prodSelect('m',isWire,{kind:'wire',unit:'roll',roll:330},'Which wire')}
+    <label class="f">How many strands (1 for a roll of woven wire)</label><input type="number" name="strands" min="1" step="1" value="1">`,'Add wire');
+  if(!v||!v.m||v.m==='__new')return;draftFt(id).wires.push({m:v.m,strands:Math.max(1,Math.round(v.strands||1))});renderPanel();toast('Wire added. Press Save to keep it.');
+}
+async function addPostDlg(id){
+  const t=draftFt(id);
+  const v=await formDlg('Add a post',`${prodSelect('m',isPost,{kind:'post'},'Which post')}
+    <label class="f">Where it goes</label><select name="by">${opt('between','In between each post (added to the line posts)','between')}${opt('nth','Every so many posts, in place of a line post','between')}${opt('ft','Every so many feet, in place of a line post','between')}</select>
+    <div data-when="between" data-when-of="by"><label class="f">How many in each gap</label><input type="number" name="nb" min="1" step="1" value="1"><p class="small mut">With line posts every ${+t.spacing||0} ft, 1 in between puts a post every ${fmtQ((+t.spacing||0)/2)} ft.</p></div>
+    <div data-when="nth" data-when-of="by"><label class="f">Every how many posts</label><input type="number" name="nn" min="2" step="1" value="5"></div>
+    <div data-when="ft" data-when-of="by"><label class="f">Every how many feet</label><input type="number" name="nf" min="1" step="any" value="100"></div>`,'Add post');
+  if(!v||!v.m||v.m==='__new')return;
+  (t.posts=t.posts||[]).push({m:v.m,by:v.by,n:v.by==='between'?Math.max(1,Math.round(v.nb||1)):v.by==='nth'?Math.max(2,Math.round(v.nn||5)):Math.max(1,v.nf||100)});renderPanel();toast('Post added. Press Save to keep it.');
+}
+async function addExtraDlg(id){
+  const v=await formDlg('Add an extra',`${prodSelect('m',m=>!isWire(m)&&!isPost(m),{},'What is it')}
+    <div class="g2"><div><label class="f">How many</label><input type="number" name="q" min="0" step="any" value="1"></div>
+    <div><label class="f">For each</label><select name="per">${PER.map(([k,l])=>opt(k,l,'ft')).join('')}</select></div></div>
+    <p class="small mut">For example 1 per line post for a clip, or 1 once per job for delivery.</p>`,'Add extra');
+  if(!v||!v.m||v.m==='__new')return;draftFt(id).extras.push({m:v.m,q:v.q,per:v.per});renderPanel();toast('Extra added. Press Save to keep it.');
+}
 function askText(msg,def=''){return new Promise(res=>{
   const d=$('#askDlg');
   d.innerHTML=`<label style="display:block;margin:0 0 8px;white-space:pre-line">${esc(msg)}</label><input type="text" value="${esc(def)}"><div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn" data-a="0">Cancel</button><button class="btn pri" data-a="1">OK</button></div>`;
@@ -753,6 +841,8 @@ function analyze(proj){
       for(const it of items){if(it.k==='p'){const g=(it.f-last)*s-rp;gmin=Math.min(gmin,g);gmax=Math.max(gmax,g);last=it.f+rp/s;pulls++;continue}
         const g=(it.f-last)*s;last=it.f;gmin=Math.min(gmin,g);gmax=Math.max(gmax,g);posts++;np++;if(it.k>=0){other[it.k]++;wood++}}
       if(items.length){const g=(1-rb/s-last)*s;gmin=Math.min(gmin,g);gmax=Math.max(gmax,g)}
+      // posts set "in between each post": that many in every gap, brace to post and post to post
+      (t.posts||[]).forEach((r,i)=>{if(r.by==='between'&&+r.n>0)other[i]+=Math.round(+r.n)*(np+items.filter(x=>x.k==='p').length+1)});
       stretches.push({len:s,key:kk,items,custom:Array.isArray(cust),n:np,gmin,gmax});
     });
     const len=secs.reduce((a,b)=>a+b,0);
@@ -813,7 +903,7 @@ function analyze(proj){
         q.wires.push(cnt[0]);q.left.push({m:w.m,used,bought,left,roll:sizes[0].roll,mix:sizes.map((z,j)=>cnt[j]?`${cnt[j]} × ${fmtQ(z.roll)} ft`:'').filter(Boolean).join(' + ')});continue;
       }
       const ft=T.L*(+w.strands||0)*W,rl=rollOf(w),n=rl>0?Math.ceil(ft/rl-1e-9):ft,left=rl>0?Math.max(0,n*rl-ft):0;add(w.m,n,t.name,`${+w.strands||0} strand${+w.strands===1?'':'s'} along ${fmtFt(T.L)}${rl>0?` (${fmtQ(Math.round(ft))} ft of wire with extra, ${fmtQ(rl)} ft rolls${leftNote(left)})`:''}`);q.wires.push(n);q.left.push(rl>0?{m:w.m,used:ft,bought:n*rl,left,roll:rl}:null)}
-    add(t.postM,T.tposts,t.name,`line posts every ${+t.spacing||12} ft`);(t.posts||[]).forEach((r,i)=>add(r.m,T.other[i]||0,t.name,`every ${+r.n||0} ${r.by==='ft'?'ft':'posts'} in place of a line post`));
+    add(t.postM,T.tposts,t.name,`line posts every ${+t.spacing||12} ft`);(t.posts||[]).forEach((r,i)=>add(r.m,T.other[i]||0,t.name,postHow(r)));
     q.clips=T.tposts*(+t.clipsPer||0);add(t.clipM,q.clips,t.name,`${+t.clipsPer||0} per line post`);
     const per={ft:T.L,post:T.posts,tpost:T.tposts,woodpost:T.wood,stretch:T.sections,brace:T.kits,gate:T.gates,line:T.lines,job:1};
     for(const e of t.extras||[]){const n=(+e.q||0)*(per[e.per]??0);add(e.m,n,t.name,`${+e.q||0} ${(PER.find(x=>x[0]===e.per)||['',''])[1]}`);q.extras.push(n)}
@@ -1640,7 +1730,7 @@ function renderPanel(){
   if(S.tab==='fence'||S.tab==='bill')S.tab='est';
   if(S.tab==='builds')S.tab='types';
   if(!TABS.some(t=>t[0]===S.tab))S.tab='build';
-  applyUI();
+  applyUI();document.documentElement.style.setProperty('--tz',String(+S.settings.textSize||1));
   document.body.classList.toggle('pg-lib',['types','braces','prices','settings'].includes(S.tab));
   $('#tabs').innerHTML=TABS.map(([k,n])=>`${k==='types'?'<span class="vsep"></span>':''}<button data-tab="${k}" class="${S.tab===k?'on':''}"${S.tab===k?' aria-current="page"':''}>${n}</button>`).join('');
   const build=S.tab==='build',box=build?$('#side'):$('#panel'),out=build?$('#side'):$('#body');
@@ -1935,11 +2025,12 @@ function rollSizes(t,w,i){
     <table class="rollsz"><tbody>${row(w.m,true)}${alts.map(id=>row(id,false)).join('')}</tbody></table>
     <select data-f="ftwalt.add" ${d} data-i="${i}" aria-label="Add another roll size of this wire" class="altpick"><option value="">+ Add another roll size of this wire…</option>${pick.map(m=>opt(m.id,(rollOf({m:m.id})?fmtQ(rollOf({m:m.id}))+' ft · ':'')+money(+m.price||0)+' · '+m.name,'')).join('')}</select></div>`;
 }
+const POST_BY=[['nth','posts (in place of a line post)'],['ft','ft (in place of a line post)'],['between','in between each post']];
 function postsEditor(t){
   const d=`data-id="${t.id}"`,n=v=>+v||0;
-  const rows=(t.posts||[]).map((r,i)=>`<div class="po"><select data-f="fto.m" ${d} data-i="${i}" aria-label="Post">${matOpts(r.m,true)}</select><span class="mut small">every</span>
+  const rows=(t.posts||[]).map((r,i)=>`<div class="po"><select data-f="fto.m" ${d} data-i="${i}" aria-label="Post">${matOpts(r.m,true)}</select><span class="mut small">${r.by==='between'?'add':'every'}</span>
     <input type="number" min="0" step="any" value="${n(r.n)}" data-f="fto.n" ${d} data-i="${i}" aria-label="How often">
-    <select data-f="fto.by" ${d} data-i="${i}" aria-label="Counted in">${opt('nth','posts',r.by||'nth')}${opt('ft','ft',r.by||'nth')}</select><span class="mini"><span>$</span>${priceIn(r.m)}</span>
+    <select data-f="fto.by" ${d} data-i="${i}" aria-label="Counted in">${POST_BY.map(([k,l])=>opt(k,l,r.by||'nth')).join('')}</select><span class="mini"><span>$</span>${priceIn(r.m)}</span>
     <button class="btn x" data-act="delFto" ${d} data-i="${i}" title="Remove">×</button></div>`).join('');
   return `<div class="po head small mut"><span>Post</span><span></span><span>How often</span><span></span><span>$ each</span><span></span></div>
     <div class="po"><select data-f="ft.postM" ${d} aria-label="Normal line post">${matOpts(t.postM,true,'None')}</select><span class="mut small">every</span>
@@ -1948,16 +2039,29 @@ function postsEditor(t){
       <select data-f="ft.postFit" ${d} style="width:auto">${opt('closest','Space them closest to '+n(t.spacing)+' ft',t.postFit||'closest')}${opt('wide','Never closer than '+n(t.spacing)+' ft (a bit wider)',t.postFit||'closest')}${opt('tight','Never wider than '+n(t.spacing)+' ft (a bit closer)',t.postFit||'closest')}</select></label>
     ${rows}
     <button class="btn sm" data-act="addFto" ${d}>Add another post</button>
-    <p class="small mut" style="margin:6px 0 0">The first row is your normal line post and its spacing. Each post you add takes the place of a normal one: "every 5 posts" or "every 100 ft". They are centered in each stretch, with the leftover split evenly at both ends, so the fence is mirrored.</p>`;
+    <p class="small mut" style="margin:6px 0 0">The first row is your normal line post and its spacing. A post you add either takes the place of a normal one ("every 5 posts" or "every 100 ft"), or goes in between each post ("1 in between each post" puts one in every gap, so a 20 ft spacing gets a post every 10 ft). Ones that take a normal post's place are centered in each stretch, with the leftover split evenly at both ends, so the fence is mirrored.</p>`;
 }
 function typesView(){
   const all=[...S.fenceTypes.map(x=>TYP(x.id)),...Object.values(drafts.ft).filter(x=>x._new)];
-  const t=all.find(x=>x.id===typeSel)||all[0];typeSel=t?.id;
-  const list=all.map(x=>{
-    return `<button class="tli${x.id===t?.id?' on':''}" data-act="selFt" data-id="${x.id}"><span class="dot" style="background:${esc(x.color)}"></span><span class="grow"><b>${esc(x.name)}</b>${drafts.ft[x.id]?' <span class="tag">not saved</span>':''}<span class="small mut">${(x.wires||[]).length} wire${(x.wires||[]).length===1?'':'s'}, posts every ${+x.spacing||0} ft</span></span></button>`}).join('');
-  return `<div class="phead"><div><h1>Fence types</h1><p>What each kind of fence is made of. The builder uses these when you draw.</p></div><button class="btn pri" data-act="addFt">New fence type</button></div>
-  <div class="types"><aside class="tlist">${list}</aside>
-    <section class="tedit">${t?typeEditor(t):'<p class="mut">Make a fence type to get started.</p>'}</section></div>`;
+  const t=all.find(x=>x.id===typeSel);
+  if(t)return `<div class="jobtop"><button class="btn big" data-act="typesBack">← All fence types</button></div>
+    <div class="phead"><div><h1><span class="dot big" style="background:${esc(t.color)}"></span> ${esc(t.name)}</h1><p>Change anything below, then press <b>Save</b>.</p></div></div>
+    <section class="tedit">${typeEditor(t)}</section>`;
+  typeSel=null;
+  const used=id=>{let n=0,ft=0;for(const p of S.projects)for(const l of p.lines)if(l.type===id){n++}return n};
+  const cards=all.map(x=>{const nl=used(x.id),ws=(x.wires||[]).filter(w=>matOf(w.m));
+    return `<div class="tcard"><div class="tcbar" style="background:${esc(x.color)}"></div>
+      <button class="jobname" data-act="selFt" data-id="${x.id}">${esc(x.name)}</button>${drafts.ft[x.id]?' <span class="tag warnt">not saved</span>':''}
+      <dl class="tfacts">
+        <dt>Wire</dt><dd>${ws.length?ws.map(w=>`${+w.strands>1?w.strands+' × ':''}${esc(matName(w.m))}`).join('<br>'):'<span class="mut">none yet</span>'}</dd>
+        <dt>Posts</dt><dd>${matOf(x.postM)?esc(matName(x.postM))+', ':''}every ${+x.spacing||0} ft${(x.posts||[]).filter(r=>matOf(r.m)).map(r=>`<br>${esc(matName(r.m))}: ${esc(postHow(r))}`).join('')}</dd>
+        <dt>Braces</dt><dd>Ends ${esc(kitName(x.braceEnd||'none'))} · corners ${esc(kitName(x.braceCorner||'none'))}</dd>
+        <dt>Labor</dt><dd>${money(+x.labor||0)} a foot</dd>
+      </dl>
+      <div class="small mut">${nl?`Used on ${nl} fence line${nl===1?'':'s'}`:'Not used on any job yet'}</div>
+      <div class="jobbtns"><button class="btn pri" data-act="selFt" data-id="${x.id}">Open and change</button><button class="btn" data-act="dupFt" data-id="${x.id}">Make a copy</button></div></div>`}).join('');
+  return `<div class="phead"><div><h1>Fence types</h1><p>What each kind of fence is made of. The builder uses these when you draw. Click one to open it and make changes.</p></div><button class="btn pri big" data-act="addFt">+ New fence type</button></div>
+  ${cards?`<div class="jobgrid tgrid">${cards}</div>`:'<p class="mut">Make a fence type to get started.</p>'}`;
 }
 function typeEditor(t){
   const T=A.types[t.id],q=T?.q,d=`data-id="${t.id}"`,n=v=>+v||0;
@@ -2097,6 +2201,9 @@ function settingsView(){
   const s=S.settings;
   return `<div class="phead"><div><h1>Settings</h1></div></div>
   <div class="cards">
+  <div class="card"><h3 style="margin-top:0">Text size</h3>
+  <p class="small mut" style="margin-top:0">Make the words and buttons bigger on this computer and every other one. The map stays the same.</p>
+  <div class="seg" role="group" aria-label="Text size">${[['1','Normal'],['1.15','Large'],['1.3','Larger']].map(([v,n])=>`<button class="btn${String(+s.textSize||1)===v?' on':''}" data-act="textSize" data-k="${v}" style="font-size:${15*+v}px">${n}</button>`).join('')}</div></div>
   <div class="card"><h3 style="margin-top:0">Measuring</h3>
   <p class="small mut" style="margin-top:0">Every point you click gets a brace: any bend or jog uses the corner brace, a point on a straight run uses the pull brace. Change a single point on the map if it needs something else.</p>
   <label class="row"><input type="checkbox" ${s.useSurface?'checked':''} data-f="set.useSurface" style="width:18px;height:18px"> Measure along the ground slope when elevation is loaded</label>
@@ -2235,46 +2342,111 @@ function openPostPopup(lid,si,ii){
   L.popup({minWidth:220,maxWidth:270,offset:[0,-4],autoPanPadding:[20,20]}).setLatLng(m.ll).setContent(el).openOn(map);
 }
 
-/* ---------- jobs board ---------- */
+/* ---------- jobs ---------- */
 const STAGES=[['bid','Bid'],['sched','Scheduled'],['prog','In progress'],['done','Done']];
+const STAGE_HELP={bid:'Measured and priced, waiting on the customer',sched:'The customer said yes, it has a start date',prog:'The crew is building it',done:'Built and finished'};
+const stageName=k=>(STAGES.find(s=>s[0]===k)||STAGES[0])[1];
+let jobOpen=null,jobQ='',jobStage='all';   // the job page that's open, the search, the stage filter (this window only)
+const jobView=()=>{try{return localStorage.getItem('fence-jobview')||'cards'}catch(e){return 'cards'}};
+const dayOf=s=>s?new Date(s+'T12:00'):null;
+const fmtDay=s=>{const d=dayOf(s);return d&&!isNaN(d)?d.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric',year:'numeric'}):''};
+const todayISO=()=>{const d=new Date();return new Date(d-d.getTimezoneOffset()*6e4).toISOString().slice(0,10)};
+const overdue=p=>p.due&&p.due<todayISO()&&(p.stage||'bid')!=='done';
+function logJob(p,text){p.log=[...(p.log||[]),{at:new Date().toISOString(),text}]}
+function setStage(p,k){if((p.stage||'bid')===k)return;p.stage=k;logJob(p,'Moved to '+stageName(k))}
+const jobAnalysis=p=>p.id===S.cur?A:analyze(p);
+const jobSearch=p=>[p.name,p.customer,p.phone,p.email,p.address,p.notes].filter(Boolean).join(' ').toLowerCase();
+// the one line under a job's name that says when
+function whenLine(p){
+  const st=p.stage||'bid';
+  if(overdue(p))return `<span class="warn">Past due: ${esc(fmtDay(p.due))}</span>`;
+  if(st==='sched'&&p.start)return 'Starts '+esc(fmtDay(p.start));
+  if(st==='prog'&&p.due)return 'Finish by '+esc(fmtDay(p.due));
+  if(st==='done'&&p.due)return 'Finished '+esc(fmtDay(p.due));
+  if(st==='bid'&&p.bidDate)return 'Bid sent '+esc(fmtDay(p.bidDate));
+  return p.due?'Finish by '+esc(fmtDay(p.due)):'';
+}
 function jobsView(){
-  const jobs=S.projects.map(p=>({p,a:p.id===S.cur?A:analyze(p)}));
-  const cols=STAGES.map(([k,name])=>{
-    const mine=jobs.filter(j=>(j.p.stage||'bid')===k),sum=mine.reduce((a,j)=>a+j.a.total,0);
-    return `<div class="col" data-stage="${k}"><h3><span>${name} <span class="mut">${mine.length}</span></span><span class="mut num">${mine.length?money(sum):''}</span></h3>
-    ${mine.map(({p,a})=>`<div class="job${p.id===S.cur?' cur':''}" draggable="true" data-job="${p.id}">
-      <div class="row" style="justify-content:space-between;flex-wrap:nowrap"><b>${esc(p.name)}</b>${p.id===S.cur?'<span class="tag">open</span>':''}</div>
-      ${p.customer||p.address?`<div class="small mut">${esc([p.customer,p.address].filter(Boolean).join(' · '))}</div>`:''}
-      <div class="row" style="justify-content:space-between;margin-top:6px"><span class="num">${fmtFt(a.totalFt)}</span><b class="num">${money(a.total)}</b></div>
-      ${p.est?`<div class="small mut">Estimate saved ${new Date(p.est.at).toLocaleDateString()}: ${money(p.est.total)}${Math.abs(p.est.total-a.total)>0.5?' (the job has changed since)':''}</div>`:''}
-      ${p.due?`<div class="small mut">Due ${esc(new Date(p.due+'T12:00').toLocaleDateString())}</div>`:''}
-      ${p.notes?`<div class="small mut note2">${esc(p.notes)}</div>`:''}
-      <div class="row" style="margin-top:8px"><button class="btn sm pri" data-act="openJob" data-id="${p.id}">Open in builder</button><button class="btn sm" data-act="jobInfo" data-id="${p.id}">Details</button></div></div>`).join('')||'<p class="small mut" style="margin:4px">Nothing here.</p>'}</div>`}).join('');
-  return `<div class="phead"><div><h1>Jobs</h1><p>Drag a job to the next column as it moves along, or change its stage in Details.</p></div><button class="btn pri" data-act="newJob">New job</button></div>
-  <div class="board">${cols}</div>`;
+  if(jobOpen){const p=S.projects.find(x=>x.id===jobOpen);if(p)return jobPage(p);jobOpen=null}
+  const jobs=S.projects.map(p=>({p,a:jobAnalysis(p),st:p.stage||'bid'}));
+  const shown=jobs.filter(j=>(jobStage==='all'||j.st===jobStage)&&(!jobQ||jobSearch(j.p).includes(jobQ.toLowerCase())));
+  const chip=(k,name,list)=>`<button class="stagechip${jobStage===k?' on':''}" data-act="jobStage" data-k="${k}"><b>${name}</b><span>${list.length} job${list.length===1?'':'s'}${list.length?' · '+money(list.reduce((a,j)=>a+j.a.total,0)):''}</span></button>`;
+  const chips=chip('all','All jobs',jobs)+STAGES.map(([k,n])=>chip(k,n,jobs.filter(j=>j.st===k))).join('');
+  const view=jobView();
+  const next=st=>{const i=STAGES.findIndex(s=>s[0]===st);return STAGES[i+1]};
+  const card=({p,a,st})=>{const nx=next(st);return `<div class="job${p.id===S.cur?' cur':''}" draggable="true" data-job="${p.id}">
+      <button class="jobname" data-act="jobPage" data-id="${p.id}">${esc(p.name)}</button>
+      ${p.customer?`<div>${esc(p.customer)}</div>`:''}
+      ${p.phone?`<div class="mut">${esc(p.phone)}</div>`:''}
+      ${p.address?`<div class="mut">${esc(p.address)}</div>`:''}
+      ${whenLine(p)?`<div class="when">${whenLine(p)}</div>`:''}
+      <div class="jobnums"><span>${fmtFt(a.totalFt)}</span><b>${money(a.total)}</b></div>
+      <div class="jobbtns"><button class="btn pri" data-act="jobPage" data-id="${p.id}">Open job</button>${nx?`<button class="btn" data-act="jobNext" data-id="${p.id}" title="${esc(STAGE_HELP[nx[0]])}">Move to ${nx[1]} →</button>`:''}</div></div>`};
+  let body;
+  if(!jobs.length)body='<p class="mut">No jobs yet. Press <b>+ New job</b> to start one.</p>';
+  else if(!shown.length)body=`<div class="note">No jobs match${jobQ?` "${esc(jobQ)}"`:''}${jobStage!=='all'?' in '+stageName(jobStage):''}. <button class="lnk" data-act="jobClear">Show all jobs</button></div>`;
+  else if(view==='list')body=`<div class="box"><table class="joblist"><thead><tr><th>Job</th><th>Customer</th><th>Phone</th><th>Stage</th><th>When</th><th class="num">Fence</th><th class="num">Total</th><th></th></tr></thead><tbody>${shown.map(({p,a,st})=>`<tr data-job="${p.id}"><td><button class="jobname" data-act="jobPage" data-id="${p.id}">${esc(p.name)}</button></td><td>${esc(p.customer||'')}</td><td>${esc(p.phone||'')}</td><td><span class="stagepill s-${st}">${stageName(st)}</span></td><td>${whenLine(p)}</td><td class="num">${fmtFt(a.totalFt)}</td><td class="num"><b>${money(a.total)}</b></td><td><button class="btn pri" data-act="jobPage" data-id="${p.id}">Open job</button></td></tr>`).join('')}</tbody></table></div>`;
+  else if(jobStage!=='all')body=`<div class="jobgrid">${shown.map(card).join('')}</div>`;
+  else body=`<div class="board">${STAGES.map(([k,name])=>{const mine=shown.filter(j=>j.st===k);return `<div class="col" data-stage="${k}"><h3><span>${name}</span><span class="mut">${mine.length}</span></h3><p class="small mut colhelp">${STAGE_HELP[k]}</p>${mine.map(card).join('')||'<p class="mut" style="margin:6px 4px">None</p>'}</div>`}).join('')}</div>`;
+  return `<div class="phead"><div><h1>Jobs</h1><p>Click a job to see everything about it. Move a job along with its button, or drag its card to another column.</p></div><button class="btn pri big" data-act="newJob">+ New job</button></div>
+  <div class="jobtools"><input type="search" id="jobQ" value="${esc(jobQ)}" placeholder="Find a job: name, customer, phone or address" aria-label="Find a job">
+    <div class="seg" role="group" aria-label="Show jobs as"><button class="btn${view==='cards'?' on':''}" data-act="jobView" data-k="cards">Cards</button><button class="btn${view==='list'?' on':''}" data-act="jobView" data-k="list">List</button></div></div>
+  <div class="stagechips">${chips}</div>
+  ${body}`;
 }
-function openJobDlg(id){
-  const p=S.projects.find(x=>x.id===id);if(!p)return;const dlg=$('#jobDlg'),d=`data-id="${p.id}"`;
-  dlg.innerHTML=`<div class="row" style="justify-content:space-between;margin-bottom:6px"><h2 style="margin:0">Job details</h2><button class="btn sm" data-k="close">Close</button></div>
-    <label class="f">Job name</label><input type="text" value="${esc(p.name)}" data-f="job.name" ${d}>
-    <div class="g2"><div><label class="f">Customer</label><input type="text" value="${esc(p.customer)}" data-f="job.customer" ${d}></div><div><label class="f">Phone</label><input type="text" value="${esc(p.phone)}" data-f="job.phone" ${d}></div></div>
-    <label class="f">Address or location</label><input type="text" value="${esc(p.address)}" data-f="job.address" ${d}>
-    <div class="g2"><div><label class="f">Stage</label><select data-f="job.stage" ${d}>${STAGES.map(([k,n])=>opt(k,n,p.stage||'bid')).join('')}</select></div><div><label class="f">Due date</label><input type="date" value="${esc(p.due)}" data-f="job.due" ${d}></div></div>
-    <label class="f">Notes</label><textarea rows="4" data-f="job.notes" ${d}>${esc(p.notes)}</textarea>
-    <div class="row" style="justify-content:space-between;margin-top:12px"><button class="btn pri" data-k="open">Open in builder</button><button class="btn del" data-k="del">Delete job</button></div>`;
-  dlg.onchange=e=>{const t=e.target;if(!t.dataset.f)return;p[t.dataset.f.split('.')[1]]=t.value;save();renderAll()};
-  dlg.onclick=async e=>{const k=e.target.closest('[data-k]')?.dataset.k;if(e.target===dlg||k==='close')return dlg.close();
-    if(k==='open'){dlg.close();act('openJob',{id:p.id})}
-    if(k==='del'){if(S.projects.length<2)return toast('This is your only job');if(await ask('Delete the job "'+p.name+'" and its fence lines?')){S.projects=S.projects.filter(x=>x.id!==p.id);if(S.cur===p.id)S.cur=S.projects[0].id;selLine=null;selNode=null;dlg.close();changed()}}};
-  if(!dlg.open)dlg.showModal();
+// everything about one job on one page
+function jobPage(p){
+  const a=jobAnalysis(p),st=p.stage||'bid',d=`data-id="${p.id}"`;
+  const field=(k,label,type='text',extra='')=>`<div><label class="f" for="jf_${k}">${label}</label><input id="jf_${k}" type="${type}" value="${esc(p[k]??'')}" data-f="job.${k}" ${d} ${extra}></div>`;
+  const stepper=STAGES.map(([k,n],i)=>{const at=STAGES.findIndex(s=>s[0]===st);return `<button class="step${k===st?' on':''}${i<at?' past':''}" data-act="jobSetStage" data-k="${k}" ${d}><b>${i+1}. ${n}</b><span>${STAGE_HELP[k]}</span></button>`}).join('');
+  const crew=S.settings.crew||[],mine=Array.isArray(p.crew)?p.crew:crew.map(c=>c.id);
+  const paid=+p.paid||0,bal=a.total-paid;
+  const where=p.address?encodeURIComponent(p.address):(()=>{const pt=p.lines.find(l=>l.pts?.length)?.pts[0];return pt?`${pt.lat},${pt.lng}`:''})();
+  const lines=a.lines.map(r=>`<tr><td>${esc(r.l.name)}</td><td><span class="dot" style="background:${esc(r.t?.color||'#fff')}"></span> ${esc(r.t?.name||'')}</td><td class="num">${fmtFt(r.len)}</td></tr>`).join('');
+  const log=[...(p.log||[])].reverse().map(x=>`<li><span class="mut">${esc(new Date(x.at).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}))}</span> ${esc(x.text)}</li>`).join('');
+  return `<div class="jobtop noprint"><button class="btn big" data-act="jobBack">← All jobs</button></div>
+  <div class="phead"><div><h1>${esc(p.name)} <span class="stagepill s-${st}">${stageName(st)}</span></h1><p>${esc([p.customer,p.address].filter(Boolean).join(' · ')||'Add the customer below.')}</p></div>
+    <div class="row noprint"><button class="btn pri big" data-act="openJob" ${d}>Fence map</button><button class="btn big" data-act="jobBill" ${d}>Final bill</button><button class="btn big" data-act="print">Print</button></div></div>
+  <div class="stepper noprint" role="group" aria-label="Stage">${stepper}</div>
+  <div class="jobcols">
+    <div class="card"><h2>Customer</h2>
+      ${field('name','Job name')}
+      <div class="g2">${field('customer','Customer name')}${field('phone','Phone','tel')}</div>
+      ${field('email','Email','email')}
+      ${field('address','Address or location')}
+      ${field('access','Gate code, directions or how to get in')}
+      <div class="row noprint" style="margin-top:10px">${p.phone?`<a class="btn" href="tel:${esc(p.phone.replace(/[^\d+]/g,''))}">Call ${esc(p.phone)}</a>`:''}${p.email?`<a class="btn" href="mailto:${esc(p.email)}">Email</a>`:''}${where?`<a class="btn" href="https://www.google.com/maps/dir/?api=1&destination=${where}" target="_blank" rel="noopener">Directions</a>`:''}</div>
+    </div>
+    <div class="card"><h2>Schedule</h2>
+      <div class="g2">${field('bidDate','Bid sent','date')}${field('start','Start date','date')}</div>
+      <div class="g2">${field('due','Finish by','date')}<div></div></div>
+      ${overdue(p)?`<p class="warn">This job is past its finish date.</p>`:''}
+      ${crew.length?`<label class="f">Crew on this job</label><div class="crewpick">${crew.map(c=>`<label class="row"><input type="checkbox" ${mine.includes(c.id)?'checked':''} data-f="jcrew.on" data-id="${c.id}" data-job="${p.id}"> ${esc(c.name||'Crew member')}</label>`).join('')}</div>`:'<p class="small mut">Add your crew in Settings to pick who works on this job.</p>'}
+    </div>
+    <div class="card"><h2>Money</h2>
+      <div class="money"><div><span>Job total</span><b>${money(a.total)}</b></div><div><span>Paid so far</span><b>${money(paid)}</b></div><div class="tot"><span>Still owed</span><b>${money(bal)}</b></div></div>
+      <div class="g2">${field('paid','Paid so far $','number','min="0" step="0.01"')}<div></div></div>
+      <p class="small mut">Materials ${money(a.sub+a.tax)} with tax · labor ${money(a.lab?.cost||0)}${a.lab?.feeTotal?` · fees ${money(a.lab.feeTotal)}`:''}${p.est?`<br>Estimate saved ${esc(new Date(p.est.at).toLocaleDateString())}: ${money(p.est.total)}${Math.abs(p.est.total-a.total)>0.5?' (the job has changed since)':''}`:''}</p>
+    </div>
+    <div class="card"><h2>The fence</h2>
+      ${lines?`<table class="mini2"><tbody>${lines}</tbody><tfoot><tr><td colspan="2">Total</td><td class="num"><b>${fmtFt(a.totalFt)}</b></td></tr></tfoot></table>`:'<p class="mut">No fence drawn yet. Press <b>Fence map</b> to draw it.</p>'}
+    </div>
+    <div class="card wide"><h2>Notes</h2><textarea rows="5" data-f="job.notes" ${d} aria-label="Notes" placeholder="Anything to remember about this job">${esc(p.notes||'')}</textarea></div>
+    <div class="card wide"><h2>History</h2>
+      <div class="row noprint"><input type="text" id="jobLogT" placeholder="Add to the history, like &quot;Called, left a message&quot;" style="flex:1"><button class="btn" data-act="jobLog" ${d}>Add</button></div>
+      ${log?`<ul class="joblog">${log}</ul>`:'<p class="small mut">Stage changes and your notes show here with their dates.</p>'}
+    </div>
+  </div>
+  <div class="row noprint" style="justify-content:space-between;margin-top:18px"><button class="btn" data-act="jobCopy" ${d}>Copy this job</button><button class="btn del" data-act="jobDel" ${d}>Delete this job</button></div>`;
 }
+function openJobDlg(id){jobOpen=id;gotoTab('jobs')}
 // drag a job card to another column
 {
   const pn=$('#panel');let dragId=null;
   pn.addEventListener('dragstart',e=>{const c=e.target.closest?.('.job');if(!c)return;dragId=c.dataset.job;e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',dragId)});
   pn.addEventListener('dragover',e=>{const c=e.target.closest?.('.col');if(!c||!dragId)return;e.preventDefault();pn.querySelectorAll('.col.over').forEach(x=>x!==c&&x.classList.remove('over'));c.classList.add('over')});
   pn.addEventListener('dragend',()=>{dragId=null;pn.querySelectorAll('.col.over').forEach(x=>x.classList.remove('over'))});
-  pn.addEventListener('drop',e=>{const c=e.target.closest?.('.col');if(!c||!dragId)return;e.preventDefault();const p=S.projects.find(x=>x.id===dragId);dragId=null;if(p&&(p.stage||'bid')!==c.dataset.stage){p.stage=c.dataset.stage;changed()}else renderPanel()});
+  pn.addEventListener('drop',e=>{const c=e.target.closest?.('.col');if(!c||!dragId)return;e.preventDefault();const p=S.projects.find(x=>x.id===dragId);dragId=null;if(p&&(p.stage||'bid')!==c.dataset.stage){setStage(p,c.dataset.stage);changed()}else renderPanel()});
 }
 
 /* ---------- panel events ---------- */
@@ -2306,6 +2478,8 @@ async function setField(t){
   else if(sc==='fee'){const p=P();if(p.fees?.[i])p.fees[i][k]=v}
   else if(sc==='crew'){if(S.settings.crew?.[i])S.settings.crew[i][k]=v}
   else if(sc==='jobcrew'){const p=P(),all=(S.settings.crew||[]).map(c=>c.id);let cur=Array.isArray(p.crew)?p.crew.filter(x=>all.includes(x)):all.slice();cur=t.checked?[...new Set([...cur,id])]:cur.filter(x=>x!==id);p.crew=cur.length===all.length?undefined:cur}
+  else if(sc==='job'){const p=S.projects.find(x=>x.id===id);if(!p)return;if(k==='name'&&!String(v).trim())return renderPanel();p[k]=k==='paid'?Math.max(0,+v||0):v}
+  else if(sc==='jcrew'){const p=S.projects.find(x=>x.id===t.dataset.job);if(!p)return;const all=(S.settings.crew||[]).map(c=>c.id);let cur=Array.isArray(p.crew)?p.crew.filter(x=>all.includes(x)):all.slice();cur=t.checked?[...new Set([...cur,id])]:cur.filter(x=>x!==id);p.crew=cur.length===all.length?undefined:cur}
   else if(sc==='ui'){if(k==='drawType')setDrawType(v);else S[k]=v}
   else if(sc==='jobp'){const p=P(),base=+(matOf(id)?.price)||0;p.prices=p.prices||{};if(t.value===''||+t.value===base)delete p.prices[id];else p.prices[id]=Math.max(0,+t.value||0)}
   else if(sc==='line'){if(k==='type')retype(getLine(id),v);else getLine(id)[k]=v}
@@ -2320,8 +2494,10 @@ async function setField(t){
   setTimeout(changed,0);
 }
 for(const el of [$('#panel'),$('#side')])el.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(b)act(b.dataset.act,b.dataset)});
+$('#panel').addEventListener('input',e=>{if(e.target.id==='jobQ'){jobQ=e.target.value;const at=e.target.selectionStart;renderPanel();const q=$('#jobQ');if(q){q.focus();q.setSelectionRange(at,at)}return}});
+$('#panel').addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='jobLogT'){e.preventDefault();$('#panel').querySelector('[data-act="jobLog"]')?.click()}});
 $('#panel').addEventListener('input',e=>{if(e.target.id!=='matQ')return;const q=e.target.value.trim().toLowerCase();for(const tr of $('#panel').querySelectorAll('table.mats tbody tr[data-name]'))tr.hidden=!!q&&!tr.dataset.name.includes(q)});
-$('#tabs').addEventListener('click',e=>{const b=e.target.closest('[data-tab]');if(b)gotoTab(b.dataset.tab)});
+$('#tabs').addEventListener('click',e=>{const b=e.target.closest('[data-tab]');if(!b)return;if(b.dataset.tab==='jobs')jobOpen=null;if(b.dataset.tab==='types')typeSel=null;gotoTab(b.dataset.tab)});
 async function act(a,d){
   const id=d.id,i=+d.i;
   switch(a){
@@ -2337,7 +2513,18 @@ async function act(a,d){
   case 'brace':toggleMode('brace');break;
   case 'editFt':typeSel=id;gotoTab('types');break;
   case 'openJob':S.cur=id;selLine=null;selNode=null;if(mode!=='idle')cancelDraw();S.tab='build';changed();setTimeout(fitProject,50);break;
-  case 'jobInfo':openJobDlg(id);break;
+  case 'jobInfo':case 'jobPage':jobOpen=id;S.tab='jobs';renderAll();$('#panel').scrollTop=0;break;
+  case 'textSize':S.settings.textSize=+d.k;changed();break;
+  case 'jobBack':jobOpen=null;renderAll();break;
+  case 'jobStage':jobStage=d.k;renderPanel();break;
+  case 'jobClear':jobStage='all';jobQ='';renderPanel();break;
+  case 'jobView':try{localStorage.setItem('fence-jobview',d.k)}catch(e){}renderPanel();break;
+  case 'jobNext':{const p=S.projects.find(x=>x.id===id),k=STAGES[STAGES.findIndex(s=>s[0]===(p?.stage||'bid'))+1]?.[0];if(p&&k){setStage(p,k);changed();toast(`${p.name} moved to ${stageName(k)}`)}break}
+  case 'jobSetStage':{const p=S.projects.find(x=>x.id===id);if(p){setStage(p,d.k);changed()}break}
+  case 'jobBill':S.cur=id;selLine=null;selNode=null;if(mode!=='idle')cancelDraw();gotoTab('est');changed();break;
+  case 'jobLog':{const p=S.projects.find(x=>x.id===id),t=$('#jobLogT')?.value.trim();if(p&&t){logJob(p,t);changed()}break}
+  case 'jobCopy':{const p=S.projects.find(x=>x.id===id);if(!p)break;const c=JSON.parse(JSON.stringify(p));Object.assign(c,{id:uid('p'),name:p.name+' (copy)',stage:'bid',paid:0,est:undefined,log:[]});for(const l of c.lines)l.id=uid('l');logJob(c,'Copied from '+p.name);S.projects.push(c);jobOpen=c.id;changed();toast('Copied. This is the new job.');break}
+  case 'jobDel':{const p=S.projects.find(x=>x.id===id);if(!p)break;if(S.projects.length<2)return toast('This is your only job');if(await ask('Delete the job "'+p.name+'" and its fence lines? This cannot be undone.')){S.projects=S.projects.filter(x=>x.id!==p.id);if(S.cur===p.id)S.cur=S.projects[0].id;jobOpen=null;selLine=null;selNode=null;changed()}break}
   case 'saveSeed':{if(!serverOK)return toast('This needs the Fence Builder server running');
     try{const r=await fetch('api/seed',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({materials:S.materials,fenceTypes:S.fenceTypes,braces:S.braces,settings:S.settings,drawType:S.drawType})});const j=await r.json();if(!r.ok)throw 0;
       toast(`Saved as the starting setup: ${j.fenceTypes} fence types, ${j.braces} braces, ${j.materials} materials`)}catch(e){toast('Could not save the starting setup')}break}
@@ -2377,6 +2564,7 @@ async function act(a,d){
   case 'fetchPrice':await fetchPrice(id);break;
   case 'fetchAll':autoPrices(true);break;
   case 'selFt':typeSel=id;renderPanel();$('#panel').scrollTop=0;break;
+  case 'typesBack':typeSel=null;renderPanel();$('#panel').scrollTop=0;break;
   case 'addFt':{const n=await askText('Name for the new fence type','New fence type');if(n===null)break;
     const t={...typeBase(),id:uid('ft'),name:n.trim()||'New fence type',color:'#'+Math.floor(Math.random()*0xffffff).toString(16).padStart(6,'0'),wires:[],_new:true};
     drafts.ft[t.id]=t;typeSel=t.id;if(S.tab!=='types')gotoTab('types');else renderPanel();toast('Set it up, then press Save.');break}
@@ -2385,13 +2573,13 @@ async function act(a,d){
   case 'discardFt':{const d=drafts.ft[id];delete drafts.ft[id];if(d?._new)typeSel=null;renderAll();toast('Changes thrown away');break}
   case 'saveKit':{const d=drafts.kit[id];if(!d)break;delete d._new;const ix=S.braces.findIndex(x=>x.id===id);if(ix>=0)S.braces[ix]=d;else S.braces.push(d);delete drafts.kit[id];changed();toast('Saved '+d.name);break}
   case 'discardKit':{delete drafts.kit[id];renderAll();toast('Changes thrown away');break}
-  case 'addFtw':draftFt(id).wires.push({m:S.materials[0]?.id,strands:1,roll:1320});renderPanel();break;
+  case 'addFtw':addWireDlg(id);break;
   case 'delFtw':draftFt(id).wires.splice(i,1);renderPanel();break;
   case 'ftwUp':case 'ftwDown':{const ws=draftFt(id).wires,j=a==='ftwUp'?i+1:i-1;if(j>=0&&j<ws.length){[ws[i],ws[j]]=[ws[j],ws[i]]}renderPanel();break}
   case 'ftwAltDel':{const w=draftFt(id).wires[i];w.alts=(w.alts||[]).filter(x=>x!==d.alt);renderPanel();break}
-  case 'addFto':{const t=draftFt(id);(t.posts=t.posts||[]).push({m:S.materials.find(m=>/wood/i.test(m.name)&&/post/i.test(m.name))?.id||S.materials[0]?.id,by:'nth',n:5});renderPanel();break}
+  case 'addFto':addPostDlg(id);break;
   case 'delFto':draftFt(id).posts.splice(i,1);renderPanel();break;
-  case 'addFte':draftFt(id).extras.push({m:S.materials[0]?.id,q:1,per:'ft'});renderPanel();break;
+  case 'addFte':addExtraDlg(id);break;
   case 'delFte':draftFt(id).extras.splice(i,1);renderPanel();break;
   case 'delFt':if(drafts.ft[id]?._new){delete drafts.ft[id];typeSel=null;renderPanel();break}
     if(S.fenceTypes.length<2)return toast('Keep at least one fence type');if(await ask('Delete this fence type? Lines using it switch to the first type.')){S.fenceTypes=S.fenceTypes.filter(t=>t.id!==id);delete drafts.ft[id];typeSel=null;for(const p of S.projects)for(const l of p.lines)if(l.type===id)l.type=S.fenceTypes[0].id;if(S.drawType===id)S.drawType=S.fenceTypes[0].id;for(const p of S.projects)if(p.drawType===id)delete p.drawType;changed()}break;
@@ -2663,7 +2851,7 @@ $('#importFile').onchange=async e=>{
   e.target.value='';
 };
 $('#proj').onchange=e=>{S.cur=e.target.value;selLine=null;selNode=null;cancelDraw();changed();fitProject()};
-$('#newProj').onclick=async()=>{const n=await askText('Name for the new job','Job '+(S.projects.length+1));if(n===null)return;const p={id:uid('p'),name:n.trim()||'New job',stage:'bid',lines:[]};S.projects.push(p);S.cur=p.id;selLine=null;selNode=null;if(mode!=='idle')cancelDraw();map.closePopup();S.tab='build';changed();toast('New job "'+p.name+'". Set up the fence, then draw it.')};
+$('#newProj').onclick=async()=>{const n=await askText('Name for the new job','Job '+(S.projects.length+1));if(n===null)return;const p={id:uid('p'),name:n.trim()||'New job',stage:'bid',lines:[]};logJob(p,'Job started');S.projects.push(p);S.cur=p.id;selLine=null;selNode=null;if(mode!=='idle')cancelDraw();map.closePopup();S.tab='build';changed();toast('New job "'+p.name+'". Set up the fence, then draw it.')};
 function fitProject(){const pts=P().lines.flatMap(l=>l.pts);if(pts.length)map.fitBounds(L.latLngBounds(pts.map(ll)),{padding:[40,40],maxZoom:19})}
 function changed(){save();renderAll();record();scheduleElev()}
 
