@@ -425,6 +425,19 @@ function wireSizes(w){
   for(const id of [w.m,...(w.alts||[])]){const m=matOf(id);if(!m||seen.has(id))continue;seen.add(id);const roll=rollOf({m:id});if(roll>0)out.push({m:id,roll,price:+m.price||0})}
   const main=out[0];return main?[main,...out.slice(1).sort((a,b)=>b.roll-a.roll)]:[];
 }
+// the rolls a wire is laid out from, in order: full rolls of the main size end to end (a roll carries on past braces),
+// then the cheapest mix of its sizes for what's left at the end. [{m, roll}]
+function rollPlan(w,need){
+  const sizes=wireSizes(w);if(!sizes.length||!(need>1e-6))return [];
+  const big=sizes[0],nb=Math.floor(need/big.roll+1e-9),rem=need-nb*big.roll,out=Array.from({length:nb},()=>big);
+  if(rem>1e-6){const c=sizes.length>1?coverRolls(rem,sizes):[Math.ceil(rem/big.roll-1e-9)];sizes.map((z,j)=>[z,c[j]||0]).sort((a,b)=>b[0].roll-a[0].roll).forEach(([z,n])=>{for(let k=0;k<n;k++)out.push(z)})}
+  return out;
+}
+// where each roll of the main wire (one strand) ends, in feet of fence along all fence of this type
+function rollEnds(t){
+  const w=(t.wires||[]).find(w=>rollOf(w)>0);if(!w)return [];
+  const W=1+(+t.waste||0)/100;let a=0;return rollPlan(w,totalOfType(t)*W).map(z=>({roll:z.roll,end:(a+=z.roll)/W}));
+}
 // cheapest set of rolls that covers `need` feet in one piece of fence; ties go to fewer rolls
 function coverRolls(need,sizes){
   const order=sizes.map((z,i)=>({...z,i})).sort((a,b)=>b.roll-a.roll),best={cost:Infinity,n:Infinity,cnt:null};
@@ -792,12 +805,11 @@ function analyze(proj){
     const t=T.t,W=1+(+t.waste||0)/100,q={wires:[],left:[],extras:[],items:[]};T.q=q;
     for(const w of t.wires||[]){
       const sizes=wireSizes(w);
-      if(sizes.length>1&&T.parts.length){
-        // other roll sizes of this wire are set: cut each stretch from the cheapest mix of rolls
-        const cnt=sizes.map(()=>0),st=Math.max(0,Math.round(+w.strands||0));
-        for(const pl of T.parts)for(let k=0;k<st;k++){const plan=coverRolls(pl*W,sizes);plan.forEach((c,j)=>cnt[j]+=c)}
-        const used=T.parts.reduce((a,pl)=>a+pl*W,0)*st,bought=sizes.reduce((a,z,j)=>a+cnt[j]*z.roll,0),left=Math.max(0,bought-used);
-        sizes.forEach((z,j)=>{if(cnt[j])add(z.m,cnt[j],t.name,`${fmtQ(z.roll)} ft rolls for ${st} strand${st===1?'':'s'}, best mix for each of ${T.parts.length} stretch${T.parts.length===1?'':'es'}${j===cnt.findIndex(c=>c>0)?leftNote(left):''}`)});
+      if(sizes.length>1){
+        // other roll sizes of this wire are set: full rolls of the main size, then the cheapest way to finish
+        const st=Math.max(0,Math.round(+w.strands||0)),used=T.L*W*st,plan=rollPlan(w,used),cnt=sizes.map(z=>plan.filter(x=>x.m===z.m).length);
+        const bought=plan.reduce((a,z)=>a+z.roll,0),left=Math.max(0,bought-used),first=cnt.findIndex(c=>c>0);
+        sizes.forEach((z,j)=>{if(cnt[j])add(z.m,cnt[j],t.name,`${fmtQ(z.roll)} ft rolls ${j===0?'laid end to end':'to finish the end'} for ${st} strand${st===1?'':'s'} along ${fmtFt(T.L)} (${fmtQ(Math.round(used))} ft of wire with extra${j===first?leftNote(left):''})`)});
         q.wires.push(cnt[0]);q.left.push({m:w.m,used,bought,left,roll:sizes[0].roll,mix:sizes.map((z,j)=>cnt[j]?`${cnt[j]} × ${fmtQ(z.roll)} ft`:'').filter(Boolean).join(' + ')});continue;
       }
       const ft=T.L*(+w.strands||0)*W,rl=rollOf(w),n=rl>0?Math.ceil(ft/rl-1e-9):ft,left=rl>0?Math.max(0,n*rl-ft):0;add(w.m,n,t.name,`${+w.strands||0} strand${+w.strands===1?'':'s'} along ${fmtFt(T.L)}${rl>0?` (${fmtQ(Math.round(ft))} ft of wire with extra, ${fmtQ(rl)} ft rolls${leftNote(left)})`:''}`);q.wires.push(n);q.left.push(rl>0?{m:w.m,used:ft,bought:n*rl,left,roll:rl}:null)}
@@ -913,7 +925,8 @@ $('#bDims').onclick=()=>{showDims=!showDims;try{localStorage.setItem('fence-dims
 
 /* ---------- fence lines on the map ---------- */
 let A=null;
-function drawMap(){
+let rollEndsBy={};   // roll layout per fence type, worked out once per map drawing
+function drawMap(){rollEndsBy={};
   layer.clearLayers();
   for(const l of P().lines){
     if(l.pts.length<2)continue;
@@ -1020,20 +1033,21 @@ function drawDims(l,r){
         label(midOf(off),'dimlab',fmtFt(flen));
       }
       // the rolls of the main wire, laid end to end along the other side of the fence: one band per roll
-      const Rl=mainRoll(r.t);
-      if(showRolls&&Rl>0){
+      const ends=showRolls?(rollEndsBy[r.t.id]??=rollEnds(r.t)):[];
+      if(ends.length){
         // a roll carries on past a brace into the next stretch until it runs out (in fence feet, with the sag and splice extra)
-        const W=1+(+r.t.waste||0)/100,Rf=Rl/W;let pos=0;
+        const W=1+(+r.t.waste||0)/100,mixed=new Set(ends.map(e=>e.roll)).size>1;let pos=0;
         while(pos<flen-1e-6){
-          const abs=at0+pos,q=Math.floor(abs/Rf+1e-9),take=Math.min(flen-pos,(q+1)*Rf-abs);
+          const abs=at0+pos;let q=ends.findIndex(e=>abs<e.end-1e-6);if(q<0)break;
+          const Rl=ends[q].roll,take=Math.min(flen-pos,ends[q].end-abs);
           const seg=cut(part,plen*pos/flen,plen*Math.min(1,(pos+take)/flen));
           if(seg.length>=2){
             const band=side(seg,-13),col=q%2?'#ffb454':'#58b0ff';
             for(let i=1;i<band.length;i++){ln(band[i-1],band[i],8,'#000',.5);ln(band[i-1],band[i],5,col,1)}
             if(pos>0){const a=seg[0],b=band[0],nx=(b.x-a.x)/13,ny=(b.y-a.y)/13;stroke(L.point(a.x-nx*4,a.y-ny*4),L.point(a.x+nx*20,a.y+ny*20))}   // where two rolls join
             // "Roll 1 · 284 ft, 376 left" / "Rest of roll 1 · 357 ft" / last roll: what's spare
-            const endAt=(abs+take)*W,left=(q+1)*Rl-endAt,cont=abs*W>q*Rl+0.5,lastRoll=Math.ceil(totalOfType(r.t)*W/Rl-1e-9)-1===q;
-            const txt=`${cont?'Rest of roll':'Roll'} ${q+1} · ${fmtFt(take)}`+(left>0.5?(lastRoll&&pos+take>=flen-1e-6&&isLastPiece(r,k,p)?`, ${fmtFt(left)} spare`:`, ${fmtFt(left/W)} left`):'');
+            const start=ends[q].end-Rl/W,left=(ends[q].end-(abs+take))*W,cont=abs>start+0.5/W,lastRoll=q===ends.length-1;
+            const txt=`${cont?'Rest of roll':'Roll'} ${q+1}${mixed?` (${fmtQ(Rl)} ft)`:''} · ${fmtFt(take)}`+(left>0.5?(lastRoll&&pos+take>=flen-1e-6&&isLastPiece(r,k,p)?`, ${fmtFt(left)} spare`:`, ${fmtFt(left/W)} left`):'');
             if(plenOf(band)>=58)label(midOf(band),'rolllab r'+(q%2),txt);
           }
           pos+=Math.max(take,1e-3);
@@ -1071,12 +1085,14 @@ function snap(latlng){
   for(const q of cand){const d=map.latLngToContainerPoint(ll(q)).distanceTo(p);if(d<bd){bd=d;best=q}}
   return best?{lat:best.lat,lng:best.lng}:{lat:latlng.lat,lng:latlng.lng};
 }
+let gateA=null;   // the first gate post clicked in gate mode, waiting for the other side
+const gateMark=L.circleMarker([0,0],{radius:6,color:'#17191b',weight:2,fillColor:'#ffd21f',fillOpacity:1,interactive:false});
 function setMode(m){
-  mode=m;$('#map').classList.toggle('drawing',m!=='idle');
+  mode=m;$('#map').classList.toggle('drawing',m!=='idle');gateA=null;gateMark.remove();
   $('#drawbar').hidden=m==='idle';$('#bUndo').hidden=$('#bFinish').hidden=m!=='draw';
   $('#bDraw').classList.toggle('on',m==='draw');$('#bGate').classList.toggle('on',m==='gate');$('#bBrace').classList.toggle('on',m==='brace');
   if(m==='draw')map.doubleClickZoom.disable();else map.doubleClickZoom.enable();
-  if(m==='gate')$('#drawMsg').textContent='Click a fence line where the gate goes';
+  if(m==='gate')$('#drawMsg').textContent='Click a fence line where the first gate post goes (one side of the road), then the other side';
   if(m==='brace')$('#drawMsg').textContent='Click a fence line or a point to put a brace there';
   if(m!=='draw')rubber.remove(),rubberLab.remove();
   if(m!=='idle')map.closePopup();
@@ -1128,6 +1144,13 @@ function drawDraft(){
 const rubber=L.polyline([],{weight:3,opacity:.75,interactive:false});
 const rubberLab=L.marker([0,0],{interactive:false,keyboard:false,icon:L.divIcon({className:'seglab',iconSize:[0,0],html:'<span></span>'})});
 map.on('mousemove',e=>{
+  if(mode==='gate'&&gateA){
+    // stretch the gate along its fence line to the mouse
+    const l=getLine(gateA.l);if(!l)return;const a=map.latLngToLayerPoint(ll(l.pts[gateA.i-1])),b=map.latLngToLayerPoint(ll(l.pts[gateA.i]));
+    const q=map.layerPointToLatLng(L.LineUtil.closestPointOnSegment(map.latLngToLayerPoint(e.latlng),a,b));
+    rubber.setStyle({color:'#ffd21f',dashArray:'6 6'}).setLatLngs([gateA.q,q]).addTo(map);
+    rubberLab.setLatLng([(gateA.q.lat+q.lat)/2,(gateA.q.lng+q.lng)/2]).addTo(map);rubberLab.getElement().firstChild.textContent='Gate '+fmtFt(gateA.q.distanceTo(q)*FT);return;
+  }
   if(mode!=='draw')return;const last=draftAll().slice(-1)[0];
   if(!last){rubber.remove();rubberLab.remove();return}
   const q=L.latLng(snap(e.latlng)),a=ll(last);
@@ -1251,7 +1274,17 @@ function addOnLine(latlng){
   }
   if(!best||best.d>30){toast('Click right on a fence line to place the '+(kind==='gate'?'gate':'brace'));return}
   const q=map.layerPointToLatLng(best.c),t=typeOfLine(best.l);
-  if(kind==='gate')best.l.pts.splice(best.i,0,{lat:q.lat,lng:q.lng,brace:'gate',gw:+t.gateW||16,gm:t.gateM});
+  if(kind==='gate'){
+    // a gate takes two clicks: one gate post on each side (of a road, say), and the gate fills the gap between them
+    if(!gateA){gateA={l:best.l.id,i:best.i,q};gateMark.setLatLng(q).addTo(map);$('#drawMsg').textContent='Now click where the other gate post goes, across the gap. Esc cancels.';return}
+    const a=gateA;gateA=null;gateMark.remove();rubber.remove();rubberLab.remove();
+    if(a.l!==best.l.id||a.i!==best.i){$('#drawMsg').textContent='Click a fence line where the first gate post goes';return toast('Put both gate posts on the same straight stretch of fence (between two corners). Click the first one again.')}
+    const w=Math.round(a.q.distanceTo(q)*FT);
+    if(w<1){$('#drawMsg').textContent='Click a fence line where the first gate post goes';return toast('Click the other side of the gap for the second gate post')}
+    const A0=ll(best.l.pts[best.i-1]),[n,f]=A0.distanceTo(a.q)<A0.distanceTo(q)?[a.q,q]:[q,a.q];   // nearer the start of the stretch first
+    best.l.pts.splice(best.i,0,{lat:n.lat,lng:n.lng,brace:'none'},{lat:(n.lat+f.lat)/2,lng:(n.lng+f.lng)/2,brace:'gate',gw:w,gm:t.gateM},{lat:f.lat,lng:f.lng,brace:'none'});
+    toast(`${w} ft gate`);return done(best.l,best.i+1);
+  }
   else{const id=braceFor(t);if(!id)return toast('Make a brace on the Braces tab first');best.l.pts.splice(best.i,0,{lat:q.lat,lng:q.lng,brace:id})}
   done(best.l,best.i);
 }
@@ -1717,7 +1750,7 @@ function lineView(){
   <label class="f">Fence type</label><select data-f="line.type" data-id="${l.id}">${S.fenceTypes.map(t=>opt(t.id,t.name,l.type)).join('')}</select>
   <p class="big" style="margin:14px 0 2px">${fmtFt(r.len)}</p><p class="small mut" style="margin:0">of wire run${r.gateW?`, after ${fmtFt(r.gateW)} of gate openings`:''}. ${postText(r)}${r.pulls?`, ${r.pulls} pull braces`:''}.</p>
   <p class="small" style="margin:4px 0 0">${gapText(r)}</p>
-  ${(()=>{const ps=stretchParts(r);return ps.length?`<div class="box" style="margin-top:10px"><table class="strs"><thead><tr><th>Stretch</th><th class="num">Length</th><th>Uses roll</th><th>Stretched</th></tr></thead><tbody>${ps.map((q,i)=>`<tr><td>${i+1}</td><td class="num">${fmtFt(q.len)}</td><td>${q.on?(q.on.q1>q.on.q0?`Rolls ${q.on.q0+1}–${q.on.q1+1}`:`Roll ${q.on.q0+1}`)+` <span class="mut">(${fmtQ(mainRoll(r.t))} ft)</span>`:'–'}</td><td>${q.split?'Into the pull brace':'From the end brace'}</td></tr>`).join('')}</tbody></table></div>`:''})()}
+  ${(()=>{const ps=stretchParts(r);return ps.length?`<div class="box" style="margin-top:10px"><table class="strs"><thead><tr><th>Stretch</th><th class="num">Length</th><th>Uses roll</th><th>Stretched</th></tr></thead><tbody>${ps.map((q,i)=>`<tr><td>${i+1}</td><td class="num">${fmtFt(q.len)}</td><td>${q.on?(q.on.q1>q.on.q0?`Rolls ${q.on.q0+1}–${q.on.q1+1}`:`Roll ${q.on.q0+1}`)+` <span class="mut">(${q.on.sizes.map(fmtQ).join(' + ')} ft)</span>`:'–'}</td><td>${q.split?'Into the pull brace':'From the end brace'}</td></tr>`).join('')}</tbody></table></div>`:''})()}
   <p class="small mut" style="margin:4px 0 0">Zoom in on the map to drag any post or pull brace along the fence, or click one to change it, delete it or add another.</p>
   ${r.stretches.some(x=>x.custom)?`<button class="btn sm" data-act="resetCust" data-id="${l.id}" style="margin-top:6px">Put all posts back to automatic</button>`:''}
   ${evh}
@@ -1880,14 +1913,15 @@ function totalOfType(t){let a=0;for(const r2 of A.lines)if(r2.t?.id===t?.id&&!r2
 function isLastPiece(r,k,p){const same=A.lines.filter(r2=>r2.t?.id===r.t?.id&&!r2.manual);if(same[same.length-1]!==r)return false;const st=r.stretches||[];if(k!==st.length)return false;return p===st[k-1].items.filter(x=>x.k==='p').length}
 function lineStartFt(r){let a=0;for(const r2 of A.lines){if(r2===r)break;if(r2.t?.id===r.t?.id&&!r2.manual)for(const s of r2.stretches||[])a+=s.len}return a}
 // which rolls of the main wire a piece of fence from a to b feet (along all fence of its type) uses
-function rollsAt(t,a,b){const R=mainRoll(t),W=1+(+t.waste||0)/100;if(!R||b<=a)return null;const q0=Math.floor(a*W/R+1e-9),q1=Math.max(q0,Math.ceil(b*W/R-1e-9)-1);return {q0,q1}}
+function rollsAt(t,a,b,ends){ends=ends||rollEnds(t);if(!ends.length||b<=a)return null;const at=x=>{const i=ends.findIndex(e=>x<e.end-1e-6);return i<0?ends.length-1:i};
+  const q0=at(a),q1=Math.max(q0,at(b-1e-6));return {q0,q1,sizes:[...new Set(ends.slice(q0,q1+1).map(e=>e.roll))]}}
 function stretchParts(r){
-  const R=mainRoll(r.t),W=1+(+r.t.waste||0)/100,out=[];let at=lineStartFt(r);
+  const ends=rollEnds(r.t),out=[];let at=lineStartFt(r);
   (r.stretches||[]).forEach((s,si)=>{const bs=[0,...s.items.filter(x=>x.k==='p').map(x=>x.f),1];
-    for(let q=0;q<bs.length-1;q++){const len=s.len*(bs[q+1]-bs[q]);if(len<=0)continue;out.push({si,f0:bs[q],f1:bs[q+1],len,on:rollsAt(r.t,at,at+len),split:bs.length>2});at+=len}});
+    for(let q=0;q<bs.length-1;q++){const len=s.len*(bs[q+1]-bs[q]);if(len<=0)continue;out.push({si,f0:bs[q],f1:bs[q+1],len,on:rollsAt(r.t,at,at+len,ends),split:bs.length>2});at+=len}});
   return out;
 }
-// every roll size a wire comes in, with its price and cost per foot; each stretch uses the cheapest mix
+// every roll size a wire comes in, with its price and cost per foot
 function rollSizes(t,w,i){
   const d=`data-id="${t.id}"`,main=matOf(w.m);if(!main)return '';
   const row=(id,isMain)=>{const m=matOf(id);if(!m)return '';const r=rollOf({m:id}),pr=+m.price||0;
@@ -1897,7 +1931,7 @@ function rollSizes(t,w,i){
       <td>${isMain?'':`<button class="btn x" data-act="ftwAltDel" ${d} data-i="${i}" data-alt="${id}" title="Stop using this roll size">×</button>`}</td></tr>`};
   const alts=(w.alts||[]).filter(id=>matOf(id));
   const pick=S.materials.filter(m=>m.id!==w.m&&!alts.includes(m.id)&&(m.kind==='wire'||rollOf({m:m.id})>0));
-  return `<div class="rollbox"><div class="small mut">Roll sizes of this wire${alts.length?' · each stretch gets the cheapest mix of these':''}</div>
+  return `<div class="rollbox"><div class="small mut">Roll sizes of this wire${alts.length?' · full rolls of the main size, then the cheapest of these to finish the end':''}</div>
     <table class="rollsz"><tbody>${row(w.m,true)}${alts.map(id=>row(id,false)).join('')}</tbody></table>
     <select data-f="ftwalt.add" ${d} data-i="${i}" aria-label="Add another roll size of this wire" class="altpick"><option value="">+ Add another roll size of this wire…</option>${pick.map(m=>opt(m.id,(rollOf({m:m.id})?fmtQ(rollOf({m:m.id}))+' ft · ':'')+money(+m.price||0)+' · '+m.name,'')).join('')}</select></div>`;
 }
@@ -1955,7 +1989,7 @@ function typeEditor(t){
     <table class="ed"><thead><tr><th></th><th>Wire, from the bottom of the fence up</th><th class="num">Strands</th><th class="num" title="Inches above the ground for this wire's lowest strand, or the bottom of the woven wire">Starts at, in</th><th class="num" title="Inches between this wire's strands">Apart, in</th><th>3D look</th><th></th></tr></thead><tbody>${wires||'<tr><td colspan="7" class="mut">No wire yet.</td></tr>'}</tbody></table>
     <div class="row" style="margin-top:8px"><button class="btn sm" data-act="addFtw" ${d}>Add wire</button><span class="grow"></span>
       <label class="lbl">Extra wire for sag and splices % <input type="number" min="0" step="0.5" value="${n(t.waste)}" data-f="ft.waste" ${d} style="width:70px"></label></div>
-    <p class="small mut" style="margin:6px 0 0">The list runs from the top of the fence down, so use ▲ ▼ to put your wires in order. "Starts at" sets how high a wire's lowest strand (or the bottom of woven wire) is, and "Apart" the gap between its strands, both in inches. Leave them on auto to space them evenly. Under each wire, "Roll sizes" lists every roll it comes in with its price. Add a shorter or longer roll there, and each stretch gets the cheapest mix of rolls that covers it, so short stretches use shorter rolls. Click a price to change it. Woven wire or mesh is 1 layer. Barbed or smooth wire is one line per strand. Set roll length to 0 if you buy it by the foot.</p></div>
+    <p class="small mut" style="margin:6px 0 0">The list runs from the top of the fence down, so use ▲ ▼ to put your wires in order. "Starts at" sets how high a wire's lowest strand (or the bottom of woven wire) is, and "Apart" the gap between its strands, both in inches. Leave them on auto to space them evenly. Under each wire, "Roll sizes" lists every roll it comes in with its price. Add a shorter roll there, and the wire is laid in full rolls of the main size (a roll carries on past braces), with the end finished by the cheapest mix of the other sizes. Click a price to change it. Woven wire or mesh is 1 layer. Barbed or smooth wire is one line per strand. Set roll length to 0 if you buy it by the foot.</p></div>
   <div class="sec"><h3>Posts</h3>${postsEditor(t)}<div class="g3" style="margin-top:8px">
     <div><label class="f">Clips or insulators <span class="r">$ each</span></label><div class="pick"><select data-f="ft.clipM" ${d}>${matOpts(t.clipM,true,'None')}</select>${priceIn(t.clipM)}</div></div>
     <div><label class="f">Clips per normal line post</label>${inp('clipsPer',t.clipsPer)}</div>
@@ -2124,7 +2158,7 @@ function setupView(){
     <label class="mini">${matOf(w.m)?`${matLink(w.m,fmtQ(rollOf(w)))}`:''}<span>ft on a roll</span></label>
     <button class="btn x" data-act="delFtw" ${d} data-i="${i}" title="Remove">×</button>
     <label class="mini"><span>$</span>${priceIn(w.m)}<span>per ${esc(u)}</span></label>
-    <span class="small mut need">${lo?.mix?`This job needs ${esc(lo.mix)} rolls. `:need!=null?`This job needs ${fmtQ(roundQ(need,u)||0)} ${esc(u)}${u==="roll"&&roundQ(need,u)!==1?"s":""}. `:''}${lo&&lo.bought>0?`<b class="left">${lo.left>=1?`About ${fmtQ(Math.round(lo.left))} ft left over`:'No wire left over'}</b>${lo.left>=1?lo.mix?' (the ends of the rolls, stretch by stretch)':lo.left<lo.roll?` (${Math.round(lo.left/lo.roll*100)}% of a ${fmtQ(lo.roll)} ft roll)`:'':''}. `:''}${matOf(w.m)?`<button class="lnk" data-act="matInfo" data-id="${w.m}">Details</button>`:''}</span></div>`}).join('');
+    <span class="small mut need">${lo?.mix?`This job needs ${esc(lo.mix)} rolls. `:need!=null?`This job needs ${fmtQ(roundQ(need,u)||0)} ${esc(u)}${u==="roll"&&roundQ(need,u)!==1?"s":""}. `:''}${lo&&lo.bought>0?`<b class="left">${lo.left>=1?`About ${fmtQ(Math.round(lo.left))} ft left over`:'No wire left over'}</b>${lo.left>=1?lo.mix?' on the last roll':lo.left<lo.roll?` (${Math.round(lo.left/lo.roll*100)}% of a ${fmtQ(lo.roll)} ft roll)`:'':''}. `:''}${matOf(w.m)?`<button class="lnk" data-act="matInfo" data-id="${w.m}">Details</button>`:''}</span></div>`}).join('');
   return `<h2>1. Set up the fence</h2>${saveBar('Ft',t.id)}
   <div class="pick"><select data-f="ui.drawType" aria-label="Fence type">${typeOpts(t.id)}</select><button class="btn sm" data-act="addFt">New</button></div>
   ${(()=>{const n=P().lines.filter(l=>l.type!==t.id).length;return n?`<button class="btn sm" data-act="applyType" data-id="${t.id}" style="margin-top:8px;width:100%;white-space:normal;min-height:0;padding:6px 10px">Switch the ${n===P().lines.length?'whole fence':n+' other line'+(n>1?'s':'')} in this job to ${esc(t.name)}</button>`:''})()}
