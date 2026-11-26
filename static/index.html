@@ -417,6 +417,8 @@ function postRule(t,j,gap,n){
   }
   return -1;
 }
+// wire left on the rolls once the job is built (after the extra for sag and splices)
+const leftNote=left=>left>=1?`, about ${fmtQ(Math.round(left))} ft left over`:', no wire left over';
 // a wire and the other roll sizes it comes in, biggest first: [{m, roll, price}]
 function wireSizes(w){
   const out=[],seen=new Set();
@@ -787,17 +789,18 @@ function analyze(proj){
   // what each fence type takes
   const bad={};let labor=0;
   for(const T of Object.values(types)){
-    const t=T.t,W=1+(+t.waste||0)/100,q={wires:[],extras:[],items:[]};T.q=q;
+    const t=T.t,W=1+(+t.waste||0)/100,q={wires:[],left:[],extras:[],items:[]};T.q=q;
     for(const w of t.wires||[]){
       const sizes=wireSizes(w);
       if(sizes.length>1&&T.parts.length){
         // other roll sizes of this wire are set: cut each stretch from the cheapest mix of rolls
         const cnt=sizes.map(()=>0),st=Math.max(0,Math.round(+w.strands||0));
         for(const pl of T.parts)for(let k=0;k<st;k++){const plan=coverRolls(pl*W,sizes);plan.forEach((c,j)=>cnt[j]+=c)}
-        sizes.forEach((z,j)=>{if(cnt[j])add(z.m,cnt[j],t.name,`${fmtQ(z.roll)} ft rolls for ${st} strand${st===1?'':'s'}, best mix for each of ${T.parts.length} stretch${T.parts.length===1?'':'es'}`)});
-        q.wires.push(cnt[0]);continue;
+        const used=T.parts.reduce((a,pl)=>a+pl*W,0)*st,bought=sizes.reduce((a,z,j)=>a+cnt[j]*z.roll,0),left=Math.max(0,bought-used);
+        sizes.forEach((z,j)=>{if(cnt[j])add(z.m,cnt[j],t.name,`${fmtQ(z.roll)} ft rolls for ${st} strand${st===1?'':'s'}, best mix for each of ${T.parts.length} stretch${T.parts.length===1?'':'es'}${j===cnt.findIndex(c=>c>0)?leftNote(left):''}`)});
+        q.wires.push(cnt[0]);q.left.push({m:w.m,used,bought,left,roll:sizes[0].roll,mix:sizes.map((z,j)=>cnt[j]?`${cnt[j]} × ${fmtQ(z.roll)} ft`:'').filter(Boolean).join(' + ')});continue;
       }
-      const ft=T.L*(+w.strands||0)*W,rl=rollOf(w),n=rl>0?Math.ceil(ft/rl-1e-9):ft;add(w.m,n,t.name,`${+w.strands||0} strand${+w.strands===1?'':'s'} along ${fmtFt(T.L)}${rl>0?` (${fmtQ(Math.round(ft))} ft of wire with extra, ${fmtQ(rl)} ft rolls)`:''}`);q.wires.push(n)}
+      const ft=T.L*(+w.strands||0)*W,rl=rollOf(w),n=rl>0?Math.ceil(ft/rl-1e-9):ft,left=rl>0?Math.max(0,n*rl-ft):0;add(w.m,n,t.name,`${+w.strands||0} strand${+w.strands===1?'':'s'} along ${fmtFt(T.L)}${rl>0?` (${fmtQ(Math.round(ft))} ft of wire with extra, ${fmtQ(rl)} ft rolls${leftNote(left)})`:''}`);q.wires.push(n);q.left.push(rl>0?{m:w.m,used:ft,bought:n*rl,left,roll:rl}:null)}
     add(t.postM,T.tposts,t.name,`line posts every ${+t.spacing||12} ft`);(t.posts||[]).forEach((r,i)=>add(r.m,T.other[i]||0,t.name,`every ${+r.n||0} ${r.by==='ft'?'ft':'posts'} in place of a line post`));
     q.clips=T.tposts*(+t.clipsPer||0);add(t.clipM,q.clips,t.name,`${+t.clipsPer||0} per line post`);
     const per={ft:T.L,post:T.posts,tpost:T.tposts,woodpost:T.wood,stretch:T.sections,brace:T.kits,gate:T.gates,line:T.lines,job:1};
@@ -980,7 +983,7 @@ function openTypePicker(lid){
     <div class="tplist">${S.fenceTypes.map(t=>`<button class="tli${t.id===l.type?' on':''}" data-t="${t.id}"><span class="dot" style="background:${esc(t.color)}"></span><span class="grow"><b>${esc(t.name)}</b></span></button>`).join('')}</div>
     <label class="f">Name</label><input type="text" value="${esc(l.name)}" aria-label="Line name">`;
   const nameIn=el.querySelector('input');
-  el.addEventListener('click',e=>{const b=e.target.closest('[data-t]');if(!b)return;l.type=b.dataset.t;S.drawType=l.type;l.name=nameIn.value.trim()||l.name;map.closePopup();changed()});
+  el.addEventListener('click',e=>{const b=e.target.closest('[data-t]');if(!b)return;l.type=b.dataset.t;setDrawType(l.type);l.name=nameIn.value.trim()||l.name;map.closePopup();changed()});
   nameIn.addEventListener('keydown',e=>{if(e.key==='Enter'){l.name=nameIn.value.trim()||l.name;map.closePopup();changed()}});
   L.popup({minWidth:240,maxWidth:300,autoPanPadding:[30,30]}).setLatLng(ll(l.pts[l.pts.length-1])).setContent(el).openOn(map);
 }
@@ -1079,7 +1082,7 @@ function setMode(m){
   if(m!=='idle')map.closePopup();
   if(A){drawMap();if(S.tab==='build'&&!selLine)renderPanel()}
 }
-const draftType=()=>S.fenceTypes.find(x=>x.id===(draft?.appendTo?getLine(draft.appendTo)?.type:S.drawType))||S.fenceTypes[0];
+const draftType=()=>S.fenceTypes.find(x=>x.id===(draft?.appendTo?getLine(draft.appendTo)?.type:drawTypeId()))||S.fenceTypes[0];
 const draftAll=()=>[...(draft.appendTo?getLine(draft.appendTo).pts.slice(-1):[]),...draft.pts];
 function startDraw(appendTo){selNode=null;map.closePopup();draft={pts:[],appendTo:appendTo||null};if(appendTo)selLine=appendTo;setMode('draw');drawDraft();drawMap()}
 function addDraftPoint(p){
@@ -1137,7 +1140,7 @@ function finishDraw(){
   if(mode!=='draw')return;
   if(draft.appendTo){const l=getLine(draft.appendTo);if(draft.pts.length){l.pts.push(...draft.pts)}selLine=l.id}
   else if(draft.pts.length>=2){
-    const l={id:uid('l'),name:'Fence '+(P().lines.length+1),type:S.drawType||S.fenceTypes[0]?.id,pts:draft.pts};
+    const l={id:uid('l'),name:'Fence '+(P().lines.length+1),type:drawTypeId(),pts:draft.pts};
     P().lines.push(l);selLine=l.id;var picked=l.id;
   }else if(draft.pts.length)toast('A fence needs at least two points');
   const done=selLine;
@@ -1842,6 +1845,15 @@ const priceOf=id=>+(S.materials.find(m=>m.id===id)||{}).price||0;
 // Edits to a fence type or a brace go into a draft copy. Nothing in your jobs changes until you press Save.
 const drafts={ft:{},kit:{}};
 const TYP=id=>drafts.ft[id]||S.fenceTypes.find(x=>x.id===id);
+// the fence type you draw with is kept on each job (another window or computer can't change it under you):
+// the job's own pick, else the type of its last line, else the last one picked anywhere
+function drawTypeId(){
+  const ok=id=>id&&S.fenceTypes.some(t=>t.id===id),p=P();
+  if(ok(p?.drawType))return p.drawType;
+  const last=[...(p?.lines||[])].reverse().find(l=>ok(l.type));if(last)return last.type;
+  return ok(S.drawType)?S.drawType:S.fenceTypes[0]?.id;
+}
+function setDrawType(id){S.drawType=id;if(P())P().drawType=id}
 const KIT=id=>drafts.kit[id]||S.braces.find(x=>x.id===id);
 const draftFt=id=>drafts.ft[id]||(drafts.ft[id]=JSON.parse(JSON.stringify(S.fenceTypes.find(x=>x.id===id))));
 const draftKit=id=>drafts.kit[id]||(drafts.kit[id]=JSON.parse(JSON.stringify(S.braces.find(x=>x.id===id))));
@@ -2101,18 +2113,18 @@ function sideView(){
   return head+(sel?lineView():setupView())+list;
 }
 function setupView(){
-  const t=TYP(S.drawType)||TYP(S.fenceTypes[0]?.id);if(!t)return '<p class="mut">Make a fence type first.</p>';
+  const t=TYP(drawTypeId())||TYP(S.fenceTypes[0]?.id);if(!t)return '<p class="mut">Make a fence type first.</p>';
   const d=`data-id="${t.id}"`,n=v=>+v||0;
   const num=(f,v)=>`<input type="number" min="0" step="any" value="${n(v)}" data-f="ft.${f}" ${d}>`;
   const kitSel=f=>`<select data-f="ft.${f}" ${d}>${kitOpts(t[f])}${opt('none','No brace',t[f])}</select>`;
   const q=A.types[t.id]?.q;
-  const wires=(t.wires||[]).map((w,i)=>{const u=unitOf(w.m)||'each',need=q?.wires[i];
+  const wires=(t.wires||[]).map((w,i)=>{const u=unitOf(w.m)||'each',need=q?.wires[i],lo=q?.left?.[i];
     return `<div class="wr"><select data-f="ftw.m" ${d} data-i="${i}" aria-label="Wire product">${matOpts(w.m,true)}</select>
     <label class="mini"><input type="number" min="0" step="1" value="${n(w.strands)}" data-f="ftw.strands" ${d} data-i="${i}" aria-label="Strands"><span>${n(w.strands)===1?'strand':'strands'}</span></label>
     <label class="mini">${matOf(w.m)?`${matLink(w.m,fmtQ(rollOf(w)))}`:''}<span>ft on a roll</span></label>
     <button class="btn x" data-act="delFtw" ${d} data-i="${i}" title="Remove">×</button>
     <label class="mini"><span>$</span>${priceIn(w.m)}<span>per ${esc(u)}</span></label>
-    <span class="small mut need">${need!=null?`This job needs ${fmtQ(roundQ(need,u))} ${esc(u)}${u==="roll"&&roundQ(need,u)!==1?"s":""}. `:''}${matOf(w.m)?`<button class="lnk" data-act="matInfo" data-id="${w.m}">Details</button>`:''}</span></div>`}).join('');
+    <span class="small mut need">${lo?.mix?`This job needs ${esc(lo.mix)} rolls. `:need!=null?`This job needs ${fmtQ(roundQ(need,u)||0)} ${esc(u)}${u==="roll"&&roundQ(need,u)!==1?"s":""}. `:''}${lo&&lo.bought>0?`<b class="left">${lo.left>=1?`About ${fmtQ(Math.round(lo.left))} ft left over`:'No wire left over'}</b>${lo.left>=1?lo.mix?' (the ends of the rolls, stretch by stretch)':lo.left<lo.roll?` (${Math.round(lo.left/lo.roll*100)}% of a ${fmtQ(lo.roll)} ft roll)`:'':''}. `:''}${matOf(w.m)?`<button class="lnk" data-act="matInfo" data-id="${w.m}">Details</button>`:''}</span></div>`}).join('');
   return `<h2>1. Set up the fence</h2>${saveBar('Ft',t.id)}
   <div class="pick"><select data-f="ui.drawType" aria-label="Fence type">${typeOpts(t.id)}</select><button class="btn sm" data-act="addFt">New</button></div>
   ${(()=>{const n=P().lines.filter(l=>l.type!==t.id).length;return n?`<button class="btn sm" data-act="applyType" data-id="${t.id}" style="margin-top:8px;width:100%;white-space:normal;min-height:0;padding:6px 10px">Switch the ${n===P().lines.length?'whole fence':n+' other line'+(n>1?'s':'')} in this job to ${esc(t.name)}</button>`:''})()}
@@ -2260,7 +2272,7 @@ async function setField(t){
   else if(sc==='fee'){const p=P();if(p.fees?.[i])p.fees[i][k]=v}
   else if(sc==='crew'){if(S.settings.crew?.[i])S.settings.crew[i][k]=v}
   else if(sc==='jobcrew'){const p=P(),all=(S.settings.crew||[]).map(c=>c.id);let cur=Array.isArray(p.crew)?p.crew.filter(x=>all.includes(x)):all.slice();cur=t.checked?[...new Set([...cur,id])]:cur.filter(x=>x!==id);p.crew=cur.length===all.length?undefined:cur}
-  else if(sc==='ui')S[k]=v;
+  else if(sc==='ui'){if(k==='drawType')setDrawType(v);else S[k]=v}
   else if(sc==='jobp'){const p=P(),base=+(matOf(id)?.price)||0;p.prices=p.prices||{};if(t.value===''||+t.value===base)delete p.prices[id];else p.prices[id]=Math.max(0,+t.value||0)}
   else if(sc==='line'){if(k==='type')retype(getLine(id),v);else getLine(id)[k]=v}
   else if(sc==='proj'){if(k==='laborTotal'&&t.value==='')delete P().laborTotal;else P()[k]=v}
@@ -2318,7 +2330,7 @@ async function act(a,d){
   case 'view3d':open3D(id);break;
   case 'rev':{const l=getLine(id);l.pts.reverse();flipCust(l);selNode=null;changed();break}
   case 'resetCust':delete getLine(id).cust;map.closePopup();changed();break;
-  case 'addRun':{const l={id:uid('l'),name:'Run '+(P().lines.length+1),type:S.drawType||S.fenceTypes[0]?.id,manual:true,len:0,corners:0,gates:0,closed:false,pts:[]};P().lines.push(l);selLine=null;changed();
+  case 'addRun':{const l={id:uid('l'),name:'Run '+(P().lines.length+1),type:drawTypeId(),manual:true,len:0,corners:0,gates:0,closed:false,pts:[]};P().lines.push(l);selLine=null;changed();
     const el=$('#body').querySelector(`[data-f="line.len"][data-id="${l.id}"]`);if(el){el.focus();el.select()}break}
   case 'showMap':setMap(true);break;
   case 'delLine':if(getLine(id).manual||await ask('Delete this fence line?')){P().lines=P().lines.filter(l=>l.id!==id);selLine=null;selNode=null;changed()}break;
@@ -2348,7 +2360,7 @@ async function act(a,d){
   case 'addFte':draftFt(id).extras.push({m:S.materials[0]?.id,q:1,per:'ft'});renderPanel();break;
   case 'delFte':draftFt(id).extras.splice(i,1);renderPanel();break;
   case 'delFt':if(drafts.ft[id]?._new){delete drafts.ft[id];typeSel=null;renderPanel();break}
-    if(S.fenceTypes.length<2)return toast('Keep at least one fence type');if(await ask('Delete this fence type? Lines using it switch to the first type.')){S.fenceTypes=S.fenceTypes.filter(t=>t.id!==id);delete drafts.ft[id];typeSel=null;for(const p of S.projects)for(const l of p.lines)if(l.type===id)l.type=S.fenceTypes[0].id;if(S.drawType===id)S.drawType=S.fenceTypes[0].id;changed()}break;
+    if(S.fenceTypes.length<2)return toast('Keep at least one fence type');if(await ask('Delete this fence type? Lines using it switch to the first type.')){S.fenceTypes=S.fenceTypes.filter(t=>t.id!==id);delete drafts.ft[id];typeSel=null;for(const p of S.projects)for(const l of p.lines)if(l.type===id)l.type=S.fenceTypes[0].id;if(S.drawType===id)S.drawType=S.fenceTypes[0].id;for(const p of S.projects)if(p.drawType===id)delete p.drawType;changed()}break;
   case 'addFti':draftFt(id).items.push({m:S.materials[0]?.id,q:'1'});renderPanel();break;
   case 'delFti':draftFt(id).items.splice(i,1);renderPanel();break;
   case 'addKit':{const n=await askText('Name for the new brace','New brace');if(n===null)break;const b={id:uid('b'),name:n.trim()||'New brace',items:[],_new:true};drafts.kit[b.id]=b;renderPanel();toast('Set it up, then press Save.');break}
