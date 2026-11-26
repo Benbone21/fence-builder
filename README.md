@@ -89,9 +89,27 @@ Set `FENCE_PASS` to require a login (user name `fence`) before opening it to oth
 
 ## LiDAR map layers and 3D
 
-- Layers: satellite, streets, LiDAR bare earth, topo, contour lines, slope.
+- Layers: satellite, USGS aerial photo, streets, LiDAR bare earth, topo, contour lines, slope.
+- **Property lines** (zoom in close): county parcel maps for Gem, Canyon, Valley and Ada counties and
+  the State of Idaho parcel layer (Ada, Boise, Washington and others), elsewhere Regrid's free
+  nationwide lines. Click a line for its parcel number and acres. While drawing, fence points snap to
+  property corners and lines. They are approximate, from county records: for reference only, not a
+  survey. Owner names are never downloaded. **Section lines** show the BLM land survey.
 - 3D view shows the terrain with the satellite photo, every post, wire, brace and gate at
   real size, and nearby buildings. Move with W A S D or the arrow keys.
+
+## Offline maps
+
+On the Builder map, press **Save area for offline**, click two corners of the area, name it and
+press **Download**. Fence Builder saves, from USGS (public domain): the aerial photo (NAIP, about
+1 ft per pixel), the LiDAR bare-earth map, and the LiDAR ground heights (about 1 m apart). With no
+internet the map switches to the saved aerial photo on its own, and slope footage and the 3D view
+use the saved ground heights. Esri's satellite photo can't be saved for offline use under Esri's
+terms, so offline you see the USGS photo instead.
+
+Saved areas are listed in **Settings → Offline maps** (show, finish a stopped download, delete).
+They are kept in an `offline` folder next to the data file: `%LOCALAPPDATA%\Fence Builder\data\offline`
+for the app, `data/offline` for the web server. About 4 MB per 50 acres at full detail.
 
 ## Making a release
 

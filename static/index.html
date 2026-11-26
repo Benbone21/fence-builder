@@ -103,6 +103,9 @@ a.btn{text-decoration:none;color:var(--ink);display:inline-flex;align-items:cent
 .tfacts{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;margin:10px 0;font-size:14px}.tfacts dt{color:var(--mut)}.tfacts dd{margin:0;overflow-wrap:anywhere}
 .dot.big{width:16px;height:16px;vertical-align:middle}
 .fdlg label.f{font-size:14px;margin-top:12px}.fdlg select,.fdlg input{min-height:40px;font-size:15px}.fdlg input[type=number]{text-align:left}
+#drawbar [hidden]{display:none!important}
+#offbar{position:absolute;left:10px;bottom:34px;z-index:900;background:var(--pan);border:1px solid var(--line);border-radius:6px;padding:6px 12px;font-size:13px;box-shadow:0 2px 8px #0006}
+.offrow{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}.offrow:last-child{border-bottom:0}
 .jobtools{display:flex;gap:10px;align-items:center;margin:0 0 12px;flex-wrap:wrap}
 .jobtools input[type=search]{flex:1;min-width:260px;min-height:44px;font-size:15px}
 .seg{display:flex}.seg .btn{min-height:44px;padding:0 16px;font-size:15px;border-radius:0}.seg .btn:first-child{border-radius:6px 0 0 6px}.seg .btn:last-child{border-radius:0 6px 6px 0}
@@ -136,7 +139,7 @@ table.mini2 td{padding:6px 4px;font-size:14px}table.mini2 tfoot td{border-top:1p
 .joblog{list-style:none;padding:0;margin:10px 0 0}.joblog li{padding:6px 0;border-bottom:1px solid var(--line);font-size:14px}.joblog li .mut{display:inline-block;min-width:110px}
 @media print{.jobcols{display:block}.jobcols .card{border:0;padding:0;margin-bottom:12px}}
 /* text size (Settings): everything but the map itself */
-header,#panel,#side,dialog,#drawbar{zoom:var(--tz,1)}
+header,#panel,#side,dialog,#drawbar,#mapbar,#toast{zoom:var(--tz,1)}
 .board{display:grid;grid-template-columns:repeat(4,minmax(230px,1fr));gap:12px;align-items:start;overflow-x:auto}
 .col{background:var(--pan2);border:1px solid var(--line);border-radius:6px;padding:8px;min-height:240px}
 .col.over{outline:2px solid var(--acc)}
@@ -347,6 +350,51 @@ details summary{cursor:pointer;font-weight:500}
 #v3d kbd{background:#2a2e33;border-color:#3a4047;color:#c9ccd1}
 #v3d .btn.on{background:#e4e6e8;color:#1b1e22}
 #v3d .v3counts{color:#98a0a8}
+/* ---- easier to read and to click: bigger text, darker grey, bigger buttons ---- */
+:root{--mut:light-dark(#4f5760,#b0b7be)}
+body{font-size:15px}
+.small{font-size:13.5px}
+.err{font-size:14px}
+label.f{font-size:14px;color:var(--ink);font-weight:500;margin:10px 0 4px}
+.jobcols label.f{font-size:14px}
+th{font-size:13.5px}
+.lbl{font-size:14px;color:var(--ink)}
+.mini{font-size:13.5px}
+.tag{font-size:12.5px}
+tr.grp td{font-size:14px;color:var(--ink);padding:7px 8px}
+h2{font-size:18px;font-weight:700}
+h3{font-size:16px;font-weight:650}
+.phead{align-items:center}
+.phead h1{font-size:24px;font-weight:700}
+.phead p{font-size:15px;margin-top:4px}
+.btn{min-height:38px;padding:0 14px;border-radius:6px}
+.btn.sm{min-height:34px;padding:0 10px;font-size:14px}
+.btn.x{min-height:34px;width:34px;font-size:20px}
+.btn.big{margin:0}
+td.ord .btn{height:28px;min-height:28px;width:34px;font-size:12px}
+.btn kbd{display:none}
+input[type=text],input[type=number],input[type=url],input[type=search],input[type=tel],input[type=email],input[type=date],select,textarea{min-height:38px}
+.runs input,.runs select,.altpick{min-height:36px!important}
+label.row{flex-wrap:nowrap;align-items:flex-start;gap:10px}label.row input[type=checkbox]{flex:none;margin-top:2px}
+.sum span{font-size:13.5px}
+.sum .tot{background:light-dark(#e8f0fb,#1d2836)}.sum .tot b{font-size:22px}
+.step span,.stagechip span{font-size:14px}
+#keys td{font-size:14px}
+#toast{font-size:16px;padding:12px 20px;border-radius:6px;bottom:32px;box-shadow:0 4px 16px #0006}
+#mapbar .btn.sm{min-height:36px}
+.maplbl{font-size:13.5px;color:var(--mut);font-weight:600;margin-left:4px}
+details.help{margin:8px 0 0}details.help summary{color:var(--acc);font-size:14px;font-weight:600;padding:6px 0}details.help p{margin:4px 0 0}
+details.more>summary{padding:4px 0}
+.stp{display:flex;align-items:center;gap:10px;font-size:18px;margin:22px 0 10px}
+.stpn{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:var(--acc);color:var(--accInk);font-size:16px;flex:none}
+#side .sum b{font-size:20px}
+.savebar .btn{min-height:38px}.savebar>.grow{flex:1 1 240px}
+.tcard .bsvg{max-height:130px;margin:0 0 6px}
+.leaflet-popup-content{font-size:14.5px}.ptpop select,.ptpop input,.ptpop .btn{min-height:36px}
+.po{grid-template-columns:minmax(0,1fr) auto 72px 210px 96px 34px}#side .po{grid-template-columns:auto 72px minmax(0,1fr) auto 34px}
+.pick input[type=url]{flex:1 1 auto;width:auto;min-width:0}
+table.ed td.ord{width:1%}table.ed td select[data-f="ftw.look"]{min-width:150px}
+.bedit{background:var(--pan);border:1px solid var(--line);border-radius:6px;padding:14px 16px}
 @media print{header,#mapwrap,nav.tabs,.noprint,#toast{display:none!important}body,main,#panel{display:block;overflow:visible;height:auto;background:#fff;color:#000}.runs input,.runs select{border:0;padding:0;appearance:none}}
 </style>
 </head>
@@ -381,16 +429,18 @@ details summary{cursor:pointer;font-weight:500}
       <button class="btn sm" id="bHU" title="Undo (Ctrl+Z)" disabled>Undo</button>
       <button class="btn sm" id="bHR" title="Redo (Ctrl+Y)" disabled>Redo</button>
       <button class="btn sm" id="bRefresh" title="Recalculate with your latest prices, materials and fence types">Refresh</button>
-      <button class="btn sm" id="bRolls" title="Show each roll of the main wire laid along the fence, using the roll length set on the fence type">Rolls</button>
+      <span class="maplbl">Show:</span><button class="btn sm" id="bRolls" title="Show each roll of the main wire laid along the fence, using the roll length set on the fence type">Rolls</button>
       <button class="btn sm" id="bDims" title="Show the length of each stretch between braces, like dimensions on a drawing">Dimensions</button>
       <button class="btn sm del" id="bClear" title="Remove every fence line drawn on the map for this job">Clear map</button>
       <button class="btn sm" id="bLoc" title="Go to my location">My location</button>
+      <button class="btn sm" id="bOff" title="Save the map, aerial photo and LiDAR for an area, to use with no internet">Save area for offline</button>
     </div>
     <div id="mapbox">
       <div id="map"></div>
       <div id="mapsum"></div>
+      <div id="offbar" hidden></div>
       <button class="btn" id="b3dMap" title="See the fence in 3D on the real ground">3D view</button>
-      <div id="drawbar" hidden><span id="drawMsg"></span><button class="btn sm" id="bUndo">Undo point</button><button class="btn sm pri" id="bFinish">Finish</button><button class="btn sm" id="bCancel">Cancel</button></div>
+      <div id="drawbar" hidden><span id="drawMsg"></span><button class="btn" id="bUndo">Undo last point</button><button class="btn pri" id="bFinish">Finish line</button><button class="btn" id="bCancel">Cancel</button></div>
     </div>
   </aside>
 </main>
@@ -700,7 +750,7 @@ setInterval(checkLatest,4000);
 const setStatus=t=>{$('#status').textContent=t};
 function ask(msg){return new Promise(res=>{
   const d=$('#askDlg'),verb=(msg.match(/(Delete|Remove)(?![a-z])/)||[])[1];
-  d.innerHTML=`<p style="margin:0 0 16px;white-space:pre-line">${esc(msg)}</p><div class="row" style="justify-content:flex-end"><button class="btn" data-a="0">Cancel</button><button class="btn ${verb?'del':'pri'}" data-a="1">${verb||'OK'}</button></div>`;
+  d.innerHTML=`<p style="margin:0 0 18px;white-space:pre-line;font-size:16px">${esc(msg)}</p><div class="row" style="justify-content:flex-end"><button class="btn big" data-a="0">Cancel</button><button class="btn big ${verb?'del':'pri'}" data-a="1">${verb||'OK'}</button></div>`;
   let done=false;const fin=v=>{if(done)return;done=true;d.close();res(v)};
   d.onclick=e=>{const b=e.target.closest('[data-a]');if(b)fin(b.dataset.a==='1');else if(e.target===d)fin(false)};
   d.oncancel=e=>{e.preventDefault();fin(false)};
@@ -744,7 +794,7 @@ async function addPostDlg(id){
   (t.posts=t.posts||[]).push({m:v.m,by:v.by,n:v.by==='between'?Math.max(1,Math.round(v.nb||1)):v.by==='nth'?Math.max(2,Math.round(v.nn||5)):Math.max(1,v.nf||100)});renderPanel();toast('Post added. Press Save to keep it.');
 }
 async function addExtraDlg(id){
-  const v=await formDlg('Add an extra',`${prodSelect('m',m=>!isWire(m)&&!isPost(m),{},'What is it')}
+  const v=await formDlg('Add something else to buy',`${prodSelect('m',m=>!isWire(m)&&!isPost(m),{},'What is it')}
     <div class="g2"><div><label class="f">How many</label><input type="number" name="q" min="0" step="any" value="1"></div>
     <div><label class="f">For each</label><select name="per">${PER.map(([k,l])=>opt(k,l,'ft')).join('')}</select></div></div>
     <p class="small mut">For example 1 per line post for a clip, or 1 once per job for delivery.</p>`,'Add extra');
@@ -752,7 +802,7 @@ async function addExtraDlg(id){
 }
 function askText(msg,def=''){return new Promise(res=>{
   const d=$('#askDlg');
-  d.innerHTML=`<label style="display:block;margin:0 0 8px;white-space:pre-line">${esc(msg)}</label><input type="text" value="${esc(def)}"><div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn" data-a="0">Cancel</button><button class="btn pri" data-a="1">OK</button></div>`;
+  d.innerHTML=`<label style="display:block;margin:0 0 10px;white-space:pre-line;font-size:16px;font-weight:600">${esc(msg)}</label><input type="text" value="${esc(def)}" style="font-size:16px;min-height:44px"><div class="row" style="justify-content:flex-end;margin-top:16px"><button class="btn big" data-a="0">Cancel</button><button class="btn pri big" data-a="1">OK</button></div>`;
   const inp=d.querySelector('input');let done=false;const fin=v=>{if(done)return;done=true;d.close();res(v)};
   d.onclick=e=>{const b=e.target.closest('[data-a]');if(b)fin(b.dataset.a==='1'?inp.value:null);else if(e.target===d)fin(null)};
   d.oncancel=e=>{e.preventDefault();fin(null)};
@@ -813,8 +863,10 @@ function analyze(proj){
   }
   const types={},lines=[];
   const TT=t=>types[t.id]||(types[t.id]={t,L:0,posts:0,wood:0,tposts:0,sections:0,pulls:0,lines:0,kits:0,gates:0,kitBy:{},parts:[],other:(t.posts||[]).map(()=>0)});
-  // how far a brace reaches into the fence from its main post: its outer post is where the line posts start counting
-  const reachOf=id=>{const b=kitById[id];if(!b)return 0;const sh=braceShape(b);if(sh.style==='single')return 0;const bays=sh.style==='a'||sh.style==='aa'?1:Math.max(1,Math.round(+sh.bays||1));return Math.max(1,+sh.span||8)*bays};
+  // how far a brace reaches into the fence from its main post: its outer post is where the line posts start counting.
+  // A Rance brace ends in a short ground post that doesn't hold the wire, so its line posts
+  // count from the main post, the same as a single post.
+  const reachOf=id=>{const b=kitById[id];if(!b)return 0;const sh=braceShape(b);if(['single','a','aa'].includes(sh.style))return 0;return Math.max(1,+sh.span||8)*Math.max(1,Math.round(+sh.bays||1))};
   const endKit=(k,t)=>{const b=nodes.get(k)?.brace;return b==='gate'?t.braceGate:b&&b!=='none'?b:null};
   // how many line posts fit in a gap: closest to the spacing, never wider than it, or never closer than it
   const postsIn=(len,sp,fit)=>Math.max(0,(fit==='tight'?Math.ceil(len/sp-1e-9):fit==='wide'?Math.floor(len/sp+1e-9):Math.round(len/sp))-1);
@@ -957,16 +1009,98 @@ const R3857=20037508.342789244;
 const Usgs=L.TileLayer.extend({getTileUrl(c){const n=2**c.z,sz=2*R3857/n,x0=-R3857+c.x*sz,y1=R3857-c.y*sz;
   return USGS+'/exportImage?bbox='+[x0,y1-sz,x0+sz,y1].map(v=>v.toFixed(2)).join(',')+'&bboxSR=3857&imageSR=3857&size=256,256&format=png32&interpolation=RSP_BilinearInterpolation&renderingRule='+encodeURIComponent(JSON.stringify({rasterFunction:this.options.fn}))+'&f=image'}});
 const usgs=(fn,o)=>new Usgs('',{fn,maxZoom:21,attribution:'Elevation: USGS 3DEP',...o});
-const hill=usgs('Hillshade Multidirectional',{opacity:.55}),hillBase=usgs('Hillshade Gray',{}),cont2=usgs('Preset 2ft Contour Interval',{minZoom:15}),cont10=usgs('Preset 10ft Contour Interval',{minZoom:13}),slope=usgs('Slope Map',{opacity:.5});
-const BASE={'Satellite':sat,'Streets (house numbers when zoomed in)':streets,'LiDAR bare earth (no trees or buildings)':hillBase,'Topo with contour lines':topo};
-const OVL={'Roads and street names':roads,'State lines and place names':labels,'LiDAR shading over the photo':hill,'2 ft contour lines (zoomed in)':cont2,'10 ft contour lines':cont10,'Slope map':slope};
+// saved for working offline: these come through Fence Builder, which answers from the saved copy first (USGS, public domain)
+const aerial=L.tileLayer('api/off/tile/naip/{z}/{x}/{y}',{maxZoom:21,maxNativeZoom:19,attribution:'Aerial photo: USGS NAIP'});
+const hillBase=L.tileLayer('api/off/tile/hill/{z}/{x}/{y}',{maxZoom:21,maxNativeZoom:18,attribution:'Elevation: USGS 3DEP'});
+const offAreas=L.layerGroup();
+/* ---------- property lines: county parcel maps, approximate, for reference only ----------
+   Each county's own public map (only the parcel number and acres are asked for, never owner names). Where no
+   county map answers, Regrid's free nationwide lines show instead (a picture only, online only). */
+const PARCEL_SOURCES=[
+  {name:'Gem County',url:'https://services7.arcgis.com/IG8lUXQpcTiHlZLc/arcgis/rest/services/Parcels_Public_view/FeatureServer/0',id:'PIN'},
+  {name:'Canyon County',url:'https://maps.canyoncounty.id.gov/arcgisserver/rest/services/General/Canyon_County_Public_Tax_Parcels/FeatureServer/0',id:'PIN',acres:'ACRES'},
+  {name:'Valley County',url:'https://services6.arcgis.com/ikurHvtarxfN6u3u/arcgis/rest/services/Valley_County_Parcels_Open_Data/FeatureServer/0',id:'PARCELNO',acres:'LegalAc'},
+  {name:'Ada County Assessor',url:'https://services2.arcgis.com/dgGjZc6xAH5m5JyP/arcgis/rest/services/Parcels/FeatureServer/5',id:'PARCEL',acres:'ACRES'},
+  {name:'State of Idaho',url:'https://services1.arcgis.com/CNPdEkvnGl65jCX8/arcgis/rest/services/Public_Idaho_Parcels_/FeatureServer/7',id:'PARCEL_ID',acres:'ASR_ACRES',county:'County'}];
+const parcelLines=L.layerGroup(),parcels=L.layerGroup([parcelLines]);
+const regrid=L.tileLayer('https://tiles.arcgis.com/tiles/KzeiCaQsMoeCfoCq/arcgis/rest/services/Regrid_Nationwide_Parcel_Boundaries_v1/MapServer/tile/{z}/{y}/{x}',{minZoom:15,maxNativeZoom:17,maxZoom:22,attribution:'Parcels &copy; Regrid'});
+const Plss=L.TileLayer.extend({getTileUrl(c){const n=2**c.z,sz=2*R3857/n,x0=-R3857+c.x*sz,y1=R3857-c.y*sz;
+  return 'https://gis.blm.gov/arcgis/rest/services/Cadastral/BLM_Natl_PLSS_CadNSDI/MapServer/export?bbox='+[x0,y1-sz,x0+sz,y1].map(v=>v.toFixed(2)).join(',')+'&bboxSR=3857&imageSR=3857&size=256,256&format=png32&transparent=true&layers=show:1,2,3&f=image'}});
+const plss=new Plss('',{minZoom:11,maxZoom:22,opacity:.85,attribution:'Sections: BLM'});
+let parcelFeats=[],parcelSeen=new Set(),parcelTiles=new Map(),parcelT=0,parcelNote=false;
+const PARCEL_Z=15,tileOf=(lat,lng,z)=>{const n=2**z;return [Math.floor((lng+180)/360*n),Math.floor((1-Math.log(Math.tan(lat*Math.PI/180)+1/Math.cos(lat*Math.PI/180))/Math.PI)/2*n)]};
+const tileBox=(x,y,z)=>{const n=2**z,lng=v=>v/n*360-180,lat=v=>{const k=Math.PI-2*Math.PI*v/n;return 180/Math.PI*Math.atan(.5*(Math.exp(k)-Math.exp(-k)))};return [lng(x),lat(y+1),lng(x+1),lat(y)]};
+// acres of a parcel outline (when the county map doesn't say)
+function ringAcres(g){const rings=g.type==='Polygon'?[g.coordinates]:g.type==='MultiPolygon'?g.coordinates:[];let m2=0;
+  for(const poly of rings)poly.forEach((r,ri)=>{const lat0=r[0][1]*Math.PI/180,kx=111320*Math.cos(lat0),ky=110574;let a=0;for(let i=0;i<r.length;i++){const p=r[i],q=r[(i+1)%r.length];a+=(p[0]*kx)*(q[1]*ky)-(q[0]*kx)*(p[1]*ky)}m2+=(ri?-1:1)*Math.abs(a/2)});
+  return m2/4046.86}
+async function parcelTile(x,y){
+  const [w,s2,e,n]=tileBox(x,y,PARCEL_Z),bb=[w,s2,e,n].map(v=>v.toFixed(6)).join(','),out=[];
+  let online=false;
+  await Promise.all(PARCEL_SOURCES.map(async src=>{
+    const f=[src.id,src.acres,src.county].filter(Boolean).join(',');
+    for(let off=0,pg=0;pg<10;pg++){
+      const q=`where=1%3D1&geometry=${bb}&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&outSR=4326&outFields=${f}&returnGeometry=true&geometryPrecision=6&f=geojson&resultRecordCount=2000&resultOffset=${off}`;
+      let j;try{const r=await fetchT(src.url+'/query?'+q,{},20000);if(!r.ok)return;j=await r.json();online=true}catch(e){return}
+      for(const ft of j.features||[]){const pr=ft.properties||{};if(!ft.geometry)continue;
+        out.push({type:'Feature',geometry:ft.geometry,properties:{pid:String(pr[src.id]??'').trim(),acres:src.acres&&typeof pr[src.acres]==='number'?pr[src.acres]:null,county:String(pr[src.county]??'').trim()||src.name.replace(' Assessor',''),src:src.name}})}
+      if(!(j.exceededTransferLimit||j.properties?.exceededTransferLimit)||!(j.features||[]).length)break;off+=j.features.length}
+  }));
+  if(!online&&serverOK)try{const j=await (await fetchT('api/off/parcels?bbox='+bb,{},15000)).json();out.push(...(j.features||[]))}catch(e){}   // no internet: the lines saved with offline areas
+  return out;
+}
+function drawParcels(){
+  parcelLines.clearLayers();
+  if(!parcelFeats.length)return;
+  L.geoJSON({type:'FeatureCollection',features:parcelFeats},{style:{color:'#ff4fd8',weight:2,opacity:.95,fill:false},
+    onEachFeature:(ft,l)=>{const p=ft.properties,ac=p.acres??ringAcres(ft.geometry);
+      // while drawing, a click on a property line goes to the map (a fence point there); otherwise it shows the parcel
+      const html=`<div class="small mut">Property line</div><b>Parcel ${esc(p.pid||'(no number)')}</b><div>${fmtQ(Math.round(ac*100)/100)} acres · ${esc(p.county||'')}</div><div class="small mut" style="margin-top:6px;max-width:240px">Approximate, from ${esc(p.src)} records. For reference only, not a survey. Check corners against a recorded survey before building on a property line.</div>`;
+      l.on('click',e=>{if(mode!=='idle')return;L.DomEvent.stop(e);L.popup({maxWidth:280}).setLatLng(e.latlng).setContent(html).openOn(map)})}}).addTo(parcelLines);
+}
+async function loadParcels(){
+  if(!map.hasLayer(parcels))return;
+  if(map.getZoom()<PARCEL_Z){parcelLines.clearLayers();parcels.removeLayer(regrid);return}
+  const b=map.getBounds(),[x0,y0]=tileOf(b.getNorth(),b.getWest(),PARCEL_Z),[x1,y1]=tileOf(b.getSouth(),b.getEast(),PARCEL_Z);
+  if((x1-x0+1)*(y1-y0+1)>30)return;
+  const want=[];for(let x=x0;x<=x1;x++)for(let y=y0;y<=y1;y++)if(!parcelTiles.has(x+'/'+y))want.push([x,y]);
+  const res=await Promise.all(want.map(([x,y])=>parcelTile(x,y).then(f=>{parcelTiles.set(x+'/'+y,f.length);return f})));
+  for(const f of res.flat()){const k=f.properties.county+'|'+(f.properties.pid||JSON.stringify(f.geometry).slice(0,80));if(parcelSeen.has(k))continue;parcelSeen.add(k);parcelFeats.push(f)}
+  if(want.length)drawParcels();
+  // no county map here: Regrid's nationwide lines (online only)
+  let any=false;for(let x=x0;x<=x1;x++)for(let y=y0;y<=y1;y++)if(parcelTiles.get(x+'/'+y))any=true;
+  if(!any&&navigator.onLine!==false){if(!parcels.hasLayer(regrid))parcels.addLayer(regrid)}else parcels.removeLayer(regrid);
+}
+map.on('moveend',()=>{clearTimeout(parcelT);parcelT=setTimeout(loadParcels,400)});
+parcels.on('add',async()=>{
+  if(!parcelNote){parcelNote=true;let seen=false;try{seen=localStorage.getItem('fence-parcel-note')==='1'}catch(e){}
+    if(!seen){toast('Property lines are approximate, from county records. For reference only, not a survey.');try{localStorage.setItem('fence-parcel-note','1')}catch(e){}}}
+  if(map.getZoom()<PARCEL_Z)toast('Zoom in closer to see property lines.');
+  loadParcels()});
+const hill=usgs('Hillshade Multidirectional',{opacity:.55}),cont2=usgs('Preset 2ft Contour Interval',{minZoom:15}),cont10=usgs('Preset 10ft Contour Interval',{minZoom:13}),slope=usgs('Slope Map',{opacity:.5});
+const BASE={'Satellite':sat,'Aerial photo (USGS, works offline when saved)':aerial,'Streets (house numbers when zoomed in)':streets,'LiDAR bare earth (no trees or buildings, works offline when saved)':hillBase,'Topo with contour lines':topo};
+const OVL={'Property lines (approximate, not a survey)':parcels,'Section lines (BLM survey)':plss,'Areas saved for offline':offAreas,'Roads and street names':roads,'State lines and place names':labels,'LiDAR shading over the photo':hill,'2 ft contour lines (zoomed in)':cont2,'10 ft contour lines':cont10,'Slope map':slope};
 L.control.layers(BASE,OVL,{position:'topright'}).addTo(map);
 /* remember which layers are on; roads and state lines start on */
-const lay={base:'Satellite',on:['Roads and street names','State lines and place names']};
+const lay={base:'Satellite',on:['Roads and street names','State lines and place names','Areas saved for offline']};
 try{Object.assign(lay,JSON.parse(localStorage.getItem('fence-layers')))}catch(e){}
 (BASE[lay.base]||sat).addTo(map);for(const n of lay.on)OVL[n]?.addTo(map);
 const saveLay=()=>{try{localStorage.setItem('fence-layers',JSON.stringify(lay))}catch(e){}};
-map.on('baselayerchange',e=>{lay.base=e.name;saveLay()});
+map.on('baselayerchange',e=>{if(!offSwitching){lay.base=e.name;saveLay()}});
+/* ---------- no internet: the saved aerial photo takes over from the satellite photo, and back again ---------- */
+let offSwitching=false,offShown=false,tileErrs=[];
+function useOffline(on){
+  if(on===offShown)return;offShown=on;
+  const want=on?(lay.base.startsWith('LiDAR')?hillBase:aerial):(BASE[lay.base]||sat);
+  offSwitching=true;for(const l of Object.values(BASE))if(l!==want&&map.hasLayer(l))map.removeLayer(l);if(!map.hasLayer(want))want.addTo(map);offSwitching=false;
+  toast(on?'No internet: showing the map areas you saved for offline.':'Back online.');
+}
+addEventListener('offline',()=>useOffline(true));addEventListener('online',()=>useOffline(false));
+if(navigator.onLine===false)setTimeout(()=>useOffline(true),500);
+// lots of satellite tiles failing at once means the internet is down even if Windows hasn't noticed yet
+sat.on('tileerror',async()=>{const now=Date.now();tileErrs=tileErrs.filter(t=>now-t<8000);tileErrs.push(now);
+  if(tileErrs.length===8&&!offShown){try{await fetchT('https://server.arcgisonline.com/ArcGIS/rest/info?f=json',{mode:'no-cors',cache:'no-store'},5000)}catch(e){useOffline(true)}}});
+sat.on('tileload',()=>{tileErrs=[]});
 map.on('overlayadd overlayremove',()=>{lay.on=Object.keys(OVL).filter(n=>map.hasLayer(OVL[n]));saveLay()});
 
 /* click the map (when not drawing) to see the nearest address */
@@ -1183,8 +1317,21 @@ function snap(latlng){
   const p=map.latLngToContainerPoint(latlng);let best=null,bd=18;
   const cand=[...P().lines.flatMap(l=>l.pts),...(draft&&draft.pts.length>2?[draft.pts[0]]:[])];
   for(const q of cand){const d=map.latLngToContainerPoint(ll(q)).distanceTo(p);if(d<bd){bd=d;best=q}}
-  return best?{lat:best.lat,lng:best.lng}:{lat:latlng.lat,lng:latlng.lng};
+  if(best)return {lat:best.lat,lng:best.lng};
+  // property lines on: snap to a property corner, or onto a property line
+  if(map.hasLayer(parcels)&&parcelFeats.length){
+    let corner=null,cd=14,edge=null,ed=9;const vb=map.getBounds().pad(0.1);
+    for(const ft of parcelFeats){const g=ft.geometry,rings=g.type==='Polygon'?g.coordinates:g.type==='MultiPolygon'?g.coordinates.flat():[];
+      for(const r of rings){if(!r.some(c=>vb.contains([c[1],c[0]])))continue;
+        for(let i=0;i<r.length;i++){const a=map.latLngToContainerPoint([r[i][1],r[i][0]]),d=a.distanceTo(p);if(d<cd){cd=d;corner=[r[i][1],r[i][0]]}
+          if(i){const b=map.latLngToContainerPoint([r[i-1][1],r[i-1][0]]),c=L.LineUtil.closestPointOnSegment(p,a,b),d2=c.distanceTo(p);if(d2<ed){ed=d2;edge=map.containerPointToLatLng(c)}}}}}
+    if(corner)return {lat:corner[0],lng:corner[1]};
+    if(edge)return {lat:edge.lat,lng:edge.lng};
+  }
+  return {lat:latlng.lat,lng:latlng.lng};
 }
+let offA=null,offList=[],offPoll=null;
+const offRect=L.rectangle([[0,0],[0,0]],{color:'#ffd21f',weight:2,dashArray:'6 6',fillOpacity:.08,interactive:false});
 let gateA=null;   // the first gate post clicked in gate mode, waiting for the other side
 const gateMark=L.circleMarker([0,0],{radius:6,color:'#17191b',weight:2,fillColor:'#ffd21f',fillOpacity:1,interactive:false});
 function setMode(m){
@@ -1194,6 +1341,8 @@ function setMode(m){
   if(m==='draw')map.doubleClickZoom.disable();else map.doubleClickZoom.enable();
   if(m==='gate')$('#drawMsg').textContent='Click a fence line where the first gate post goes (one side of the road), then the other side';
   if(m==='brace')$('#drawMsg').textContent='Click a fence line or a point to put a brace there';
+  if(m==='offsel')$('#drawMsg').textContent='Click one corner of the area to save, then the opposite corner. Press Cancel to stop.';
+  if(m!=='offsel'){offA=null;offRect.remove()}$('#bOff').classList.toggle('on',m==='offsel');
   if(m!=='draw')rubber.remove(),rubberLab.remove();
   if(m!=='idle')map.closePopup();
   if(A){drawMap();if(S.tab==='build'&&!selLine)renderPanel()}
@@ -1238,7 +1387,7 @@ function drawDraft(){
   rubber.setStyle(draft.gate?{color:'#ffd21f',dashArray:'6 6'}:{color:col,dashArray:null});
   $('#bGate').classList.toggle('on',!!draft.gate);
   if(draft.gate){$('#drawMsg').textContent='Gate: click where the other gate post goes. Press F to go back to fence.';return}
-  $('#drawMsg').textContent=all.length>1?fmtFt(flatLen(all))+' so far. Click to add corners, press Esc or double-click to end here':all.length?'Click the next corner':'Click the map where the fence starts';
+  $('#drawMsg').textContent=all.length>1?fmtFt(flatLen(all))+' so far. Click to add corners. Press Finish line at the end.':all.length?'Click the next corner':'Click the map where the fence starts';
 }
 // the side you're about to place follows the mouse, with its length
 const rubber=L.polyline([],{weight:3,opacity:.75,interactive:false});
@@ -1376,7 +1525,7 @@ function addOnLine(latlng){
   const q=map.layerPointToLatLng(best.c),t=typeOfLine(best.l);
   if(kind==='gate'){
     // a gate takes two clicks: one gate post on each side (of a road, say), and the gate fills the gap between them
-    if(!gateA){gateA={l:best.l.id,i:best.i,q};gateMark.setLatLng(q).addTo(map);$('#drawMsg').textContent='Now click where the other gate post goes, across the gap. Esc cancels.';return}
+    if(!gateA){gateA={l:best.l.id,i:best.i,q};gateMark.setLatLng(q).addTo(map);$('#drawMsg').textContent='Now click where the other gate post goes, across the gap. Press Cancel to stop.';return}
     const a=gateA;gateA=null;gateMark.remove();rubber.remove();rubberLab.remove();
     if(a.l!==best.l.id||a.i!==best.i){$('#drawMsg').textContent='Click a fence line where the first gate post goes';return toast('Put both gate posts on the same straight stretch of fence (between two corners). Click the first one again.')}
     const w=Math.round(a.q.distanceTo(q)*FT);
@@ -1396,12 +1545,49 @@ function toggleMode(m){
   setMode(m);
 }
 map.on('click',e=>{
+  if(mode==='offsel')return offClick(e.latlng);
   if(mode==='draw')addDraftPoint(snap(e.latlng));
   else if(mode==='gate'||mode==='brace')addOnLine(e.latlng);
   else if(selLine){selLine=null;selNode=null;renderAll()}
   else addressAt(e.latlng);
 });
 map.on('dblclick',e=>{if(mode==='draw'){L.DomEvent.stop(e);finishDraw()}});
+/* ---------- save an area for offline: two corners, then it downloads in the background ---------- */
+const offLab=L.marker([0,0],{interactive:false,keyboard:false,icon:L.divIcon({className:'seglab',iconSize:[0,0],html:'<span></span>'})});
+const kmOf=b=>{const lat=(b.getNorth()+b.getSouth())/2;return ((b.getEast()-b.getWest())*111.32*Math.cos(lat*Math.PI/180))*((b.getNorth()-b.getSouth())*110.57)};
+const acresOf=km2=>km2*247.105;
+map.on('mousemove',e=>{if(mode!=='offsel'||!offA)return;const b=L.latLngBounds(offA,e.latlng);offRect.setBounds(b).addTo(map);
+  offLab.setLatLng(b.getCenter()).addTo(map);offLab.getElement().firstChild.textContent=fmtQ(Math.round(acresOf(kmOf(b))))+' acres'});
+function startOffSel(){if(mode==='draw')cancelDraw();if(!UI.map)gotoTab('build');setMode(mode==='offsel'?'idle':'offsel')}
+$('#bOff').onclick=startOffSel;
+async function offClick(ll){
+  if(!offA){offA=ll;offRect.setBounds(L.latLngBounds(ll,ll)).addTo(map);return}
+  const b=L.latLngBounds(offA,ll);offA=null;offLab.remove();
+  if(b.getNorth()-b.getSouth()<1e-4||b.getEast()-b.getWest()<1e-4){offRect.remove();return toast('That area is too small. Click two corners farther apart.')}
+  const bbox=[b.getWest(),b.getSouth(),b.getEast(),b.getNorth()].map(v=>+v.toFixed(6));
+  let est={};try{est=await (await fetchT('api/off/estimate?bbox='+bbox.join(','),{},15000)).json()}catch(e){}
+  const mb=z=>est[z]?Math.max(1,Math.round(est[z]*0.02+kmOf(b)*4)):null,too=z=>est[z]>60000;
+  const lvl=(z,name)=>opt(String(z),`${name}${mb(z)?`, about ${fmtQ(mb(z))} MB`:''}${too(z)?' (too big)':''}`,est[19]&&!too(19)?'19':est[18]&&!too(18)?'18':'17');
+  const v=await formDlg('Save this area for offline',`<p style="margin:0">${fmtQ(Math.round(acresOf(kmOf(b))))} acres. Fence Builder downloads the USGS aerial photo, the LiDAR bare-earth map and the LiDAR ground heights for it, so the map, slope footage and 3D view work here with no internet.</p>
+    <label class="f">Name</label><input type="text" name="name" value="${esc(P()?.name||'Saved area')}">
+    <label class="f">Detail</label><select name="maxz">${lvl(19,'Sharpest, zoom in all the way')}${lvl(18,'Sharp')}${lvl(17,'Less detail, smaller download')}</select>
+    <p class="small mut">It downloads in the background. You can keep working, and see how it's going in Settings → Offline maps.</p>`,'Download');
+  offRect.remove();setMode('idle');
+  if(!v)return;
+  try{const r=await fetchT('api/off/areas',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:v.name,bbox,maxz:+v.maxz})},20000);const j=await r.json();if(!r.ok)throw Error(j.error||'');toast('Saving "'+j.area.name+'" for offline…');loadOffAreas()}
+  catch(e){toast(e.message||'Could not start the download. Is Fence Builder running?')}
+}
+async function loadOffAreas(){
+  if(!serverOK)return;
+  try{offList=(await (await fetchT('api/off/areas',{cache:'no-store'},10000)).json()).areas||[]}catch(e){return}
+  offAreas.clearLayers();
+  for(const a of offList){const [w,s2,e,n]=a.bbox;L.rectangle([[s2,w],[n,e]],{color:'#ffd21f',weight:1.5,dashArray:'4 6',fill:false,interactive:false}).bindTooltip(a.name,{permanent:false}).addTo(offAreas)}
+  const busy=offList.filter(a=>a.status==='downloading');
+  const bar=$('#offbar');
+  if(busy.length){const d=busy.reduce((x,a)=>x+a.done,0),t=busy.reduce((x,a)=>x+a.total,0);bar.hidden=false;bar.innerHTML=`Saving for offline: <b>${esc(busy[0].name)}</b>${busy.length>1?` and ${busy.length-1} more`:''} · ${t?Math.floor(d/t*100):0}%`}else bar.hidden=true;
+  clearTimeout(offPoll);if(busy.length)offPoll=setTimeout(loadOffAreas,2000);
+  if(S?.tab==='settings')renderPanel();
+}
 $('#bDraw').onclick=()=>mode==='draw'?finishDraw():startDraw();
 $('#bGate').onclick=()=>mode==='draw'?draftGate(!draft.gate):toggleMode('gate');
 $('#bBrace').onclick=()=>toggleMode('brace');
@@ -1542,6 +1728,7 @@ function movAvg(D,v,h){
 }
 // straight-line in-between of (X,Y) at each x in xs (X sorted)
 function interp(X,Y,xs){let j=0;return xs.map(x=>{while(j<X.length-2&&X[j+1]<x)j++;const x0=X[j],x1=X[Math.min(j+1,X.length-1)];if(x1===x0)return Y[j];const t=Math.max(0,Math.min(1,(x-x0)/(x1-x0)));return Y[j]+(Y[Math.min(j+1,Y.length-1)]-Y[j])*t})}
+const DEM_SAVED_RES=1;
 async function usgsSamples(pts){
   const z=new Array(pts.length).fill(null),res=new Array(pts.length).fill(null),srcs={};let ok=0;
   for(let i=0;i<pts.length;i+=1000){
@@ -1549,8 +1736,12 @@ async function usgsSamples(pts){
     const body=()=>new URLSearchParams({geometry:JSON.stringify({points:ch.map(p=>[+p.lng.toFixed(7),+p.lat.toFixed(7)]),spatialReference:{wkid:4326}}),
       geometryType:'esriGeometryMultipoint',returnFirstValueOnly:'true',interpolation:'RSP_BilinearInterpolation',outFields:'Name,AcquisitionDate',f:'json'});
     let j=null;
-    for(let t=0;t<2&&!j;t++){try{const r=await fetchT(USGS+'/getSamples',{method:'POST',body:body()});const x=await r.json();if(Array.isArray(x.samples))j=x}catch(e){}}
-    if(!j)continue;   // this batch failed twice: its points stay empty and are filled in below
+    for(let t=0;t<(navigator.onLine===false?0:2)&&!j;t++){try{const r=await fetchT(USGS+'/getSamples',{method:'POST',body:body()});const x=await r.json();if(Array.isArray(x.samples))j=x}catch(e){}}
+    if(!j){   // USGS not answering (no internet?): the LiDAR saved for offline, if this spot is in a saved area
+      try{const r=await fetchT('api/off/elev',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pts:ch.map(p=>[p.lat,p.lng])})},20000);const x=await r.json();
+        if(Array.isArray(x.z)&&x.z.some(v=>v!=null)){ok++;x.z.forEach((v,k)=>{if(okZ(v)){z[i+k]=v;res[i+k]=DEM_SAVED_RES}});srcs['saved for offline']=srcs['saved for offline']||{res:DEM_SAVED_RES,year:null}}}catch(e){}
+      continue;   // still nothing: its points stay empty and are filled in below
+    }
     ok++;
     for(const sm of j.samples){
       const id=sm.locationId,v=parseFloat(sm.value);   // USGS 3DEP heights are in meters
@@ -1799,14 +1990,14 @@ function estView(){
       <td><button class="btn x" data-act="delLine" data-id="${l.id}" aria-label="Remove run" title="Remove">×</button></td></tr>`}
     const nodes=l.pts.map(q=>A.nodes.get(key(q))),corners=nodes.filter(o=>o.role==='Corner').length,gates=l.pts.filter(q=>q.brace==='gate').length;
     sumLen+=r.len+r.gateW;sumGates+=gates;
-    return `<tr class="drawn"><td class="name" data-act="sel" data-id="${l.id}" title="Open this line"><span class="dot" style="background:${esc(r.t.color)}"></span><b>${esc(l.name)}</b> <span class="small mut">map</span></td>
+    return `<tr class="drawn"><td class="name" data-act="sel" data-id="${l.id}" title="Open this line"><span class="dot" style="background:${esc(r.t.color)}"></span><b>${esc(l.name)}</b> <span class="small mut">drawn on map</span></td>
       <td><select data-f="line.type" data-id="${l.id}" aria-label="Fence type">${typeOpts(l.type)}</select></td>
       <td class="num">${fmtFt(r.len+r.gateW)}</td><td class="num">${corners}</td><td class="num">${gates}</td><td style="text-align:center" class="mut">${nodes[0]===nodes[nodes.length-1]?'yes':''}</td>
       <td class="num">${fmtFt(r.len)}</td>
       <td><button class="btn x" data-act="delLine" data-id="${l.id}" aria-label="Delete line" title="Delete">×</button></td></tr>`}).join('');
-  const runs=rows?`<div class="box scroll"><table class="runs"><thead><tr><th>Name</th><th>Fence type</th><th class="num">Length ft</th><th class="num">Corners</th><th class="num">Gates</th><th>Loop</th><th class="num">Wire run</th><th></th></tr></thead>
+  const runs=rows?`<div class="box scroll"><table class="runs"><thead><tr><th>Name</th><th>Fence type</th><th class="num">Length, ft</th><th class="num">Corners</th><th class="num">Gates</th><th>Closed loop</th><th class="num">Without gates</th><th></th></tr></thead>
     <tbody>${rows}</tbody><tfoot><tr><td colspan="2">Total</td><td class="num">${fmtFt(sumLen)}</td><td></td><td class="num">${sumGates}</td><td></td><td class="num">${fmtFt(A.totalFt)}</td><td></td></tr></tfoot></table></div>`
-    :`<div class="note">No fence yet. Add a run and type its length, or draw lines on the map.</div>`;
+    :`<div class="note">No fence yet. Draw it on the map with <b>Fence map</b>, or press <b>+ Add a fence run by length</b> and type how long it is.</div>`;
   let g='',body='';
   const hd=p.headache||{};
   for(const r of A.rows){if(r.grp!==g){g=r.grp;body+=`<tr class="grp"><td colspan="6">${esc(g)}</td></tr>`}
@@ -1822,40 +2013,41 @@ function estView(){
   const types=Object.values(A.types).filter(T=>T.L>0).map(T=>`${esc(T.t.name)}: ${fmtFt(T.L)}, ${postText(T)}${T.pulls?`, ${T.pulls} pull braces`:''}`).join('<br>');
   const bill=A.rows.length?`<p class="small mut" style="margin:0 0 8px">${types}${kits?`<br>Braces: ${kits}`:''}</p>
     ${nCustom?`<div class="note warnbox">${nCustom} material${nCustom>1?'s use':' uses'} a custom price on this job, not your normal price. <button class="lnk" data-act="jobPriceResetAll">Put them all back to normal</button></div>`:''}
-    <div class="box scroll"><table class="bill final"><thead><tr><th>Material and what it is for</th><th class="num">Qty to buy</th><th class="num">Each (this job)</th><th class="num">Headache each</th><th class="num">Total</th><th>Store</th></tr></thead><tbody>${body}</tbody>
+    <div class="box scroll"><table class="bill final"><thead><tr><th>Material and what it is for</th><th class="num">How many to buy</th><th class="num">Price each, this job</th><th class="num">Headache $ each</th><th class="num">Total</th><th>Store</th></tr></thead><tbody>${body}</tbody>
     <tfoot><tr><td colspan="4">Materials</td><td class="num">${money(A.sub)}</td><td></td></tr>
     <tr><td colspan="4">Sales tax ${+st.tax||0}%</td><td class="num">${money(A.tax)}</td><td></td></tr>
     ${laborFoot().replace(/<td colspan="3">/g,'<td colspan="4">').replace(/<\/td><\/tr>/g,'</td><td></td></tr>')}
     <tr class="tot"><td colspan="4">Total</td><td class="num">${money(A.total)}</td><td></td></tr></tfoot></table></div>
 `
     :`<p class="mut">Once there is some fence, the list of what to buy shows up here.</p>`;
-  return `<div class="phead"><div><h1>Final bill</h1><p>${esc(p.name)}${p.customer?' · '+esc(p.customer):''}</p></div><div class="row noprint"><button class="btn" data-act="copyBill">Copy list</button><button class="btn" data-act="print">Print</button><button class="btn pri" data-act="showMap">Open the builder</button></div></div>
-  <div class="est"><div class="sum"><div><span>Wire run</span><b>${fmtFt(A.totalFt)}</b></div><div><span>Brace assemblies</span><b>${braces}</b></div><div><span>Gates</span><b>${A.gates}</b></div>
+  return `<div class="phead"><div><h1>Final bill: ${esc(p.name)}</h1><p>${p.customer?esc(p.customer)+'. ':''}What to buy and what to charge for this job. A price you change here is for this job only.</p></div><div class="row noprint"><button class="btn big" data-act="jobPage" data-id="${p.id}">Job details</button><button class="btn big" data-act="showMap">Fence map</button><button class="btn big" data-act="copyBill">Copy list</button><button class="btn pri big" data-act="print">Print</button></div></div>
+  <div class="est"><div class="sum"><div><span>Fence length</span><b>${fmtFt(A.totalFt)}</b></div><div><span>Braces</span><b>${braces}</b></div><div><span>Gates</span><b>${A.gates}</b></div>
     <div><span>Materials</span><b>${money(A.sub)}</b></div><div><span>Labor</span><b>${money(A.lab.cost)}</b></div><div><span>Headache and fees</span><b>${money(A.lab.matHead+A.lab.feeTotal)}</b></div><div class="tot"><span>Total</span><b>${money(A.total)}</b></div></div>
-  <div><h2>Fence runs</h2>${runs}
-  <div class="row noprint" style="margin-top:8px"><button class="btn pri" data-act="addRun">Add run</button>
-    <span class="small mut">Ends, corners and both sides of each gate get braces (set per fence type).<button class="btn sm" data-act="showMap">Open the builder</button> to draw lines on the map.</span></div>
+  <div><h2>The fence</h2>${runs}
+  <div class="row noprint" style="margin-top:8px"><button class="btn" data-act="addRun">+ Add a fence run by length</button>
+    <span class="small mut">For fence you measured yourself. Ends, corners and both sides of each gate get braces, as set on its fence type.</span></div>
   </div><div>${laborView()}</div><div class="wide"><h2>Materials to buy</h2>${bill}</div></div>`;
 }
 function lineView(){
   const l=getLine(selLine),r=A.lines.find(x=>x.l===l);if(!r)return estView();
   const evh=elevView(l);
   const nodes=l.pts.map((p,i)=>{const o=A.nodes.get(key(p));const on=selNode&&selNode.l===l.id&&selNode.i===i;
-    const autoLbl='Auto ('+kitName(o.auto)+')',cur=p.brace??'';
+    const autoLbl='Automatic ('+kitName(o.auto)+')',cur=p.brace??'';
     const sel=`<select data-f="node.brace" data-id="${l.id}" data-i="${i}" aria-label="Brace at point ${i+1}">${opt('',autoLbl,cur)}${S.braces.map(b=>opt(b.id,b.name,cur)).join('')}${opt('none','No brace (line post)',cur)}${opt('gate','Gate opening',cur)}</select>`;
     const gate=o.brace==='gate'&&p.brace==='gate'?`<div class="g2" style="margin-top:6px"><label class="small mut">Width ft<input type="number" min="1" step="1" value="${+p.gw||0}" data-f="node.gw" data-id="${l.id}" data-i="${i}"></label><label class="small mut">Gate<select data-f="node.gm" data-id="${l.id}" data-i="${i}">${matOpts(p.gm)}</select></label></div>`:'';
     return `<tr class="${on?'on':''}"><td class="num">${i+1}</td><td>${o.role}${o.refs.length>1?'<br><span class="small mut">shared</span>':''}</td><td>${sel}${gate}</td><td><button class="btn x" data-act="delPt" data-id="${l.id}" data-i="${i}" aria-label="Remove point ${i+1}" title="Remove">×</button></td></tr>`}).join('');
-  return `<div class="row noprint"><button class="btn sm" data-act="back">Done</button><button class="btn sm" data-act="zoom" data-id="${l.id}">Zoom to it</button><button class="btn sm" data-act="view3d" data-id="${l.id}">3D view</button></div>
-  <label class="f">Name</label><input type="text" value="${esc(l.name)}" data-f="line.name" data-id="${l.id}">
+  return `<div class="jobtop" style="margin-top:14px"><button class="btn big" data-act="back">← Back to fence setup</button></div>
+  <h2 style="margin:0 0 8px">One fence line</h2><div class="row noprint"><button class="btn" data-act="zoom" data-id="${l.id}">Zoom to it</button><button class="btn" data-act="view3d" data-id="${l.id}">See it in 3D</button></div>
+  <label class="f">Line name</label><input type="text" value="${esc(l.name)}" data-f="line.name" data-id="${l.id}">
   <label class="f">Fence type</label><select data-f="line.type" data-id="${l.id}">${S.fenceTypes.map(t=>opt(t.id,t.name,l.type)).join('')}</select>
   <p class="big" style="margin:14px 0 2px">${fmtFt(r.len)}</p><p class="small mut" style="margin:0">of wire run${r.gateW?`, after ${fmtFt(r.gateW)} of gate openings`:''}. ${postText(r)}${r.pulls?`, ${r.pulls} pull braces`:''}.</p>
   <p class="small" style="margin:4px 0 0">${gapText(r)}</p>
-  ${(()=>{const ps=stretchParts(r);return ps.length?`<div class="box" style="margin-top:10px"><table class="strs"><thead><tr><th>Stretch</th><th class="num">Length</th><th>Uses roll</th><th>Stretched</th></tr></thead><tbody>${ps.map((q,i)=>`<tr><td>${i+1}</td><td class="num">${fmtFt(q.len)}</td><td>${q.on?(q.on.q1>q.on.q0?`Rolls ${q.on.q0+1}–${q.on.q1+1}`:`Roll ${q.on.q0+1}`)+` <span class="mut">(${q.on.sizes.map(fmtQ).join(' + ')} ft)</span>`:'–'}</td><td>${q.split?'Into the pull brace':'From the end brace'}</td></tr>`).join('')}</tbody></table></div>`:''})()}
+  ${(()=>{const ps=stretchParts(r);return ps.length?`<div class="box" style="margin-top:10px"><table class="strs"><thead><tr><th>Section</th><th class="num">Length</th><th>Which roll</th><th>Wire pulled</th></tr></thead><tbody>${ps.map((q,i)=>`<tr><td>${i+1}</td><td class="num">${fmtFt(q.len)}</td><td>${q.on?(q.on.q1>q.on.q0?`Rolls ${q.on.q0+1}–${q.on.q1+1}`:`Roll ${q.on.q0+1}`)+` <span class="mut">(${q.on.sizes.map(fmtQ).join(' + ')} ft)</span>`:'–'}</td><td>${q.split?'Into the pull brace':'From the end brace'}</td></tr>`).join('')}</tbody></table></div>`:''})()}
   <p class="small mut" style="margin:4px 0 0">Zoom in on the map to drag any post or pull brace along the fence, or click one to change it, delete it or add another.</p>
   ${r.stretches.some(x=>x.custom)?`<button class="btn sm" data-act="resetCust" data-id="${l.id}" style="margin-top:6px">Put all posts back to automatic</button>`:''}
   ${evh}
   <h3>Points, braces and gates</h3>
-  <div class="box"><table class="nodes"><thead><tr><th>#</th><th>Spot</th><th>Brace</th><th></th></tr></thead><tbody>${nodes}</tbody></table></div>
+  <div class="box"><table class="nodes"><thead><tr><th>#</th><th>Spot</th><th>What goes here</th><th></th></tr></thead><tbody>${nodes}</tbody></table></div>
   <div class="row" style="margin-top:12px"><button class="btn" data-act="cont" data-id="${l.id}">Keep drawing from the end</button><button class="btn" data-act="rev" data-id="${l.id}">Flip direction</button><button class="btn" data-act="cross" data-id="${l.id}" title="Put a gate where it crosses a road and braces on both banks of a river or creek">Find roads and rivers</button><button class="btn del" data-act="delLine" data-id="${l.id}">Delete line</button></div>
   <p class="small mut">Drag points on the map to move them. A point shared with another line counts as one corner.</p>`;
 }
@@ -1914,10 +2106,10 @@ function openMatDlg(id,preset){return new Promise(res=>{
       <div class="g3"><div><label class="f">Kind</label><select data-k="kind">${KINDS.map(([k,l])=>opt(k,l,kind)).join('')}</select></div>
         ${num('price','Price $','0.01')}${txt('unit','Sold by','each, roll, ft')}</div>
       ${by[kind]||''}
-      <label class="f">Store link (optional)</label><div class="pick"><input type="url" value="${esc(m.url)}" data-k="url" placeholder="https://kencove.com/products/…"><button class="btn sm" data-x="price"${busyNow?' disabled':''}>${busyNow?'Reading…':'Get price and details'}</button></div>
+      <label class="f">Store link (optional)</label><div class="pick"><input type="url" value="${esc(m.url)}" data-k="url" placeholder="https://kencove.com/products/…"><button class="btn" data-x="price"${busyNow?' disabled':''}>${busyNow?'Reading…':'Get price and details'}</button></div>
       ${err?`<div class="err">${esc(err)}</div>`:m.checked?`<div class="small okc">Price read ${new Date(m.checked).toLocaleDateString()} from ${esc(m.src)}</div>`:''}
       <label class="f">Notes</label><textarea rows="2" data-k="notes">${esc(m.notes)}</textarea>
-      <div class="row" style="justify-content:flex-end;margin-top:14px"><span class="small mut grow">${isNew?'It is added when you press Save.':'Changes apply everywhere this material is used, when you press Save.'}</span><button class="btn" data-x="cancel">Cancel</button><button class="btn pri" data-x="save">Save</button></div>`;
+      <div class="row" style="justify-content:flex-end;margin-top:14px"><span class="small mut grow">${isNew?'It is added when you press Save.':'Changes apply everywhere this material is used, when you press Save.'}</span><button class="btn big" data-x="cancel">Cancel</button><button class="btn pri big" data-x="save">Save</button></div>`;
   };
   dlg.onchange=e=>{const t=e.target,k=t.dataset.k;if(!k)return;m[k]=t.dataset.n?(t.value===''?null:+t.value):t.value;if(k==='price')m.price=+t.value||0;if(k==='kind'||k==='image')draw()};
   dlg.oncancel=e=>{e.preventDefault();fin(null)};
@@ -1958,15 +2150,16 @@ function pricesView(){
       <td class="small mut" style="white-space:nowrap">${when?new Date(when).toLocaleDateString():'–'}${m.checked&&m.src?`<br>${esc(m.src)}`:''}${m.prevPrice!=null&&Date.now()-Date.parse(m.priceMoved||0)<14*86400e3?`<br><span class="${m.price>m.prevPrice?'up':'down'}">${m.price>m.prevPrice?'▲ up':'▼ down'} from ${money(m.prevPrice)}</span>`:''}</td>
       <td><button class="btn x" data-act="delMat" data-id="${m.id}" aria-label="Remove ${esc(m.name)}" title="Remove">×</button></td></tr>`;
   }
-  return `<div class="phead"><div><h1>Materials</h1><p>Every product, its details and what you pay for it. Click Edit to change one. Nothing changes until you press Save in its box.</p></div>
-    <div class="row"><input type="search" id="matQ" placeholder="Find a material" aria-label="Find a material" style="width:220px"><button class="btn" data-act="fetchAll"${autoBusy?' disabled':''}>${autoBusy?'Checking prices…':'Update linked prices now'}</button><button class="btn" data-act="addFromLink">Add from a link</button><button class="btn" data-act="shop">Find at Kencove or D&amp;B</button><button class="btn pri" data-act="addMat">Add material</button></div></div>
+  return `<div class="phead"><div><h1>Materials</h1><p>Everything you buy, with its price. Press <b>Edit</b> to change one: nothing changes until you press Save in its window.</p></div><button class="btn pri big" data-act="addMat">+ Add material</button></div>
+  <div class="jobtools"><input type="search" id="matQ" placeholder="Find a material by name or fence type" aria-label="Find a material">
+    <button class="btn big" data-act="addFromLink">Add from a store link</button><button class="btn big" data-act="shop">Find at Kencove or D&amp;B</button><button class="btn big" data-act="fetchAll"${autoBusy?' disabled':''}>${autoBusy?'Checking prices…':'Update store prices now'}</button></div>
   <details class="note grab"><summary><b>Add from Premier 1 or any store page</b> <span class="small mut">with a bookmark</span></summary>
     <p class="small" style="margin:8px 0">Some stores, like Premier 1 Supplies, only let people see their pages, so the app cannot read them on its own. This bookmark reads the page you have open instead: name, price, SKU and the specifications table, and sends it here.</p>
     <ol class="small" style="margin:0 0 8px;padding-left:18px"><li>Drag this button to your bookmarks bar: <a class="btn sm pri" href="${grabHref()}" onclick="event.preventDefault();toast('Drag it to your bookmarks bar, then click it on a store page.')">Add to Fence Builder</a></li>
       <li>Open a product on the store, pick the size you want, and click the bookmark.</li>
       <li>This app opens with the product filled in. Check it and press Save. If you already have that product, its new price is filled in for you to save.</li></ol>
     <p class="small mut" style="margin:0">Use it again on the same page any time to update that price.</p></details>
-  <div class="box scroll"><table class="mats"><thead><tr><th>Material</th><th>Details</th><th>Sold by</th><th class="num">Price</th><th>Used by</th><th>Store link</th><th>Price set</th><th></th></tr></thead><tbody>${body}</tbody></table></div>
+  <div class="box scroll"><table class="mats"><thead><tr><th>Material</th><th>Details</th><th>Sold by</th><th class="num">Price</th><th>Used in</th><th>Store link</th><th>Price checked</th><th></th></tr></thead><tbody>${body}</tbody></table></div>
   <p class="small mut">${autoLine()} Get price reads the price off the store page. Kencove and other Shopify stores are read directly and also fill in roll length, gauge and height when the page has them. Some big stores block this, so a typed price always works.</p>`;
 }
 let typeSel=null;
@@ -1990,7 +2183,7 @@ function setDrawType(id){S.drawType=id;if(P())P().drawType=id}
 const KIT=id=>drafts.kit[id]||S.braces.find(x=>x.id===id);
 const draftFt=id=>drafts.ft[id]||(drafts.ft[id]=JSON.parse(JSON.stringify(S.fenceTypes.find(x=>x.id===id))));
 const draftKit=id=>drafts.kit[id]||(drafts.kit[id]=JSON.parse(JSON.stringify(S.braces.find(x=>x.id===id))));
-const saveBar=(kind,id)=>drafts[kind==='Ft'?'ft':'kit'][id]?`<div class="savebar"><b>Not saved yet</b><span class="small grow">Nothing changes until you press Save.</span><button class="btn sm" data-act="discard${kind}" data-id="${id}">Discard</button><button class="btn sm pri" data-act="save${kind}" data-id="${id}">Save</button></div>`:'';
+const saveBar=(kind,id)=>drafts[kind==='Ft'?'ft':'kit'][id]?`<div class="savebar"><span class="grow"><b>Not saved yet.</b> Nothing changes until you press Save.</span><button class="btn" data-act="discard${kind}" data-id="${id}">Throw away changes</button><button class="btn pri big" data-act="save${kind}" data-id="${id}">Save</button></div>`:'';
 addEventListener('beforeunload',e=>{if(Object.keys(drafts.ft).length||Object.keys(drafts.kit).length){e.preventDefault();e.returnValue=''}});
 // a material's price, unit or roll length shown where it is used: click it to edit the material (with its own Save)
 const matLink=(id,text)=>`<button class="lnk" data-act="matInfo" data-id="${id}" title="Edit this material">${text}</button>`;
@@ -2002,9 +2195,9 @@ const LOOKS=[['','Auto'],['mesh','Woven or mesh'],['barbed','Barbed strands'],['
 const PER=[['ft','per ft of fence'],['post','per line post'],['tpost','per normal line post'],['woodpost','per added post'],['stretch','per stretch between braces'],['brace','per brace assembly'],['gate','per gate'],['line','per fence line'],['job','once per job']];
 function stretchFields(t){
   const d=`data-id="${t.id}"`,by=t.pullBy||'auto',r2=2*mainRoll(t),au=autoPull(t);
-  return `<div><label class="f">Longest stretch without a brace</label><div class="pick"><select data-f="ft.pullBy" ${d}>${opt('auto','Automatic, from the wire'+(au?' ('+fmtQ(au)+' ft)':''),by)}${opt('ft','A set length, ft',by)}${opt('roll2','Two rolls joined'+(r2?' ('+fmtQ(r2)+' ft)':''),by)}</select>${by==='ft'?`<input type="number" class="pr" min="0" step="any" value="${+t.pullEvery||0}" data-f="ft.pullEvery" ${d} aria-label="Longest stretch in feet">`:''}</div></div>
-    <div><label class="f">It can run over by %</label><input type="number" min="0" step="1" value="${t.pullSlack==null?15:+t.pullSlack||0}" data-f="ft.pullSlack" ${d}></div>
-    <div><label class="f">When a run is longer than that</label><select data-f="ft.pullMode" ${d}>${opt('even','Split it into equal stretches',t.pullMode||'even')}${opt('full','Full stretches first, leftover at the end',t.pullMode||'even')}</select></div>`;
+  return `<div><label class="f">Longest pull of wire between braces</label><div class="pick"><select data-f="ft.pullBy" ${d}>${opt('auto','Automatic, from the wire'+(au?' ('+fmtQ(au)+' ft)':''),by)}${opt('ft','A set length, ft',by)}${opt('roll2','Two rolls joined'+(r2?' ('+fmtQ(r2)+' ft)':''),by)}</select>${by==='ft'?`<input type="number" class="pr" min="0" step="any" value="${+t.pullEvery||0}" data-f="ft.pullEvery" ${d} aria-label="Longest stretch in feet">`:''}</div></div>
+    <div><label class="f">It may go over that by %</label><input type="number" min="0" step="1" value="${t.pullSlack==null?15:+t.pullSlack||0}" data-f="ft.pullSlack" ${d}></div>
+    <div><label class="f">When the fence is longer than that</label><select data-f="ft.pullMode" ${d}>${opt('even','Split it into equal pulls',t.pullMode||'even')}${opt('full','Full-length pulls first, leftover at the end',t.pullMode||'even')}</select></div>`;
 }
 // each stretch of wire on a line (brace to brace or pull brace): its length, rolls, and where to stretch it from
 // how many feet of fence of the same type come before this line: rolls carry on from one line to the next
@@ -2045,11 +2238,11 @@ function postsEditor(t){
   return `<div class="po head small mut"><span>Post</span><span></span><span>How often</span><span></span><span>$ each</span><span></span></div>
     <div class="po"><select data-f="ft.postM" ${d} aria-label="Normal line post">${matOpts(t.postM,true,'None')}</select><span class="mut small">every</span>
       <input type="number" min="1" step="any" value="${n(t.spacing)}" data-f="ft.spacing" ${d} aria-label="Post spacing in feet"><span class="small">ft</span><span class="mini"><span>$</span>${priceIn(t.postM)}</span><span></span></div>
-    <label class="small" style="display:flex;gap:8px;align-items:center;margin:2px 0 8px">When a stretch doesn't divide evenly
+    <label class="small" style="display:flex;gap:8px;align-items:center;margin:2px 0 8px">When the posts don't fit evenly
       <select data-f="ft.postFit" ${d} style="width:auto">${opt('closest','Space them closest to '+n(t.spacing)+' ft',t.postFit||'closest')}${opt('wide','Never closer than '+n(t.spacing)+' ft (a bit wider)',t.postFit||'closest')}${opt('tight','Never wider than '+n(t.spacing)+' ft (a bit closer)',t.postFit||'closest')}</select></label>
     ${rows}
     <button class="btn sm" data-act="addFto" ${d}>Add another post</button>
-    <p class="small mut" style="margin:6px 0 0">The first row is your normal line post and its spacing. A post you add either takes the place of a normal one ("every 5 posts" or "every 100 ft"), or goes in between each post ("1 in between each post" puts one in every gap, so a 20 ft spacing gets a post every 10 ft). Ones that take a normal post's place are centered in each stretch, with the leftover split evenly at both ends, so the fence is mirrored.</p>`;
+    <details class="help"><summary>How does this work?</summary><p class="small mut">The first row is your normal line post and its spacing. A post you add either takes the place of a normal one ("every 5 posts" or "every 100 ft"), or goes in between each post ("1 in between each post" puts one in every gap, so a 20 ft spacing gets a post every 10 ft). Ones that take a normal post's place are centered in each stretch, with the leftover split evenly at both ends, so the fence is mirrored.</p></details>`;
 }
 function typesView(){
   const all=[...S.fenceTypes.map(x=>TYP(x.id)),...Object.values(drafts.ft).filter(x=>x._new)];
@@ -2098,12 +2291,12 @@ function typeEditor(t){
       <button class="btn x" data-act="delFti" ${d} data-i="${i}" aria-label="Remove item" title="Remove">×</button></div>`).join('');
   return `${saveBar('Ft',t.id)}<div class="row" style="margin-bottom:12px"><input type="color" value="${esc(t.color)}" data-f="ft.color" ${d} aria-label="Line color on the map" title="Line color on the map">
     <input type="text" class="grow tname" style="width:auto" value="${esc(t.name)}" data-f="ft.name" ${d} aria-label="Fence type name">
-    <button class="btn sm" data-act="dupFt" ${d}>Duplicate</button><button class="btn sm del" data-act="delFt" ${d}>Delete</button></div>
-  <div class="sec"><h3>Wire and strands</h3>
+    <button class="btn" data-act="dupFt" ${d}>Make a copy</button><button class="btn del" data-act="delFt" ${d}>Delete this fence type</button></div>
+  <div class="sec"><h3>Wire</h3>
     <table class="ed"><thead><tr><th></th><th>Wire, from the bottom of the fence up</th><th class="num">Strands</th><th class="num" title="Inches above the ground for this wire's lowest strand, or the bottom of the woven wire">Starts at, in</th><th class="num" title="Inches between this wire's strands">Apart, in</th><th>3D look</th><th></th></tr></thead><tbody>${wires||'<tr><td colspan="7" class="mut">No wire yet.</td></tr>'}</tbody></table>
     <div class="row" style="margin-top:8px"><button class="btn sm" data-act="addFtw" ${d}>Add wire</button><span class="grow"></span>
       <label class="lbl">Extra wire for sag and splices % <input type="number" min="0" step="0.5" value="${n(t.waste)}" data-f="ft.waste" ${d} style="width:70px"></label></div>
-    <p class="small mut" style="margin:6px 0 0">The list runs from the top of the fence down, so use ▲ ▼ to put your wires in order. "Starts at" sets how high a wire's lowest strand (or the bottom of woven wire) is, and "Apart" the gap between its strands, both in inches. Leave them on auto to space them evenly. Under each wire, "Roll sizes" lists every roll it comes in with its price. Add a shorter roll there, and the wire is laid in full rolls of the main size (a roll carries on past braces), with the end finished by the cheapest mix of the other sizes. Click a price to change it. Woven wire or mesh is 1 layer. Barbed or smooth wire is one line per strand. Set roll length to 0 if you buy it by the foot.</p></div>
+    <details class="help"><summary>How does this work?</summary><p class="small mut">The list runs from the top of the fence down, so use ▲ ▼ to put your wires in order. "Starts at" sets how high a wire's lowest strand (or the bottom of woven wire) is, and "Apart" the gap between its strands, both in inches. Leave them on auto to space them evenly. Under each wire, "Roll sizes" lists every roll it comes in with its price. Add a shorter roll there, and the wire is laid in full rolls of the main size (a roll carries on past braces), with the end finished by the cheapest mix of the other sizes. Click a price to change it. Woven wire or mesh is 1 layer. Barbed or smooth wire is one line per strand. Set roll length to 0 if you buy it by the foot.</p></details></div>
   <div class="sec"><h3>Posts</h3>${postsEditor(t)}<div class="g3" style="margin-top:8px">
     <div><label class="f">Clips or insulators <span class="r">$ each</span></label><div class="pick"><select data-f="ft.clipM" ${d}>${matOpts(t.clipM,true,'None')}</select>${priceIn(t.clipM)}</div></div>
     <div><label class="f">Clips per normal line post</label>${inp('clipsPer',t.clipsPer)}</div>
@@ -2115,7 +2308,7 @@ function typeEditor(t){
     <div><label class="f">Each side of a gate</label>${kitSel('braceGate')}</div>
     <div><label class="f">Pull spots on long stretches</label>${kitSel('bracePull')}</div>
     ${stretchFields(t)}</div>
-    <p class="small mut" style="margin:8px 0 0">A run up to that length (plus the run-over) is stretched from its end brace in one pull. A longer run gets a pull brace in between to stretch into. Automatic uses the wire: 660 ft for woven wire, 1,320 ft for barbed, 2,640 ft for smooth, or the wire's own number from Materials.</p>
+    <details class="help"><summary>How does the longest pull work?</summary><p class="small mut">A run up to that length (plus the run-over) is stretched from its end brace in one pull. A longer run gets a pull brace in between to stretch into. Automatic uses the wire: 660 ft for woven wire, 1,320 ft for barbed, 2,640 ft for smooth, or the wire's own number from Materials.</p></details>
     <p class="small mut" style="margin:8px 0 0">What goes into each brace is set on the Braces tab. You can still change any single point on the map.</p></div>
   <div class="sec"><h3>Gates</h3><div class="g3">
     <div><label class="f">Gate panel <span class="r">$ each</span></label><div class="pick"><select data-f="ft.gateM" ${d}>${matOpts(t.gateM,true,'None')}</select>${priceIn(t.gateM)}</div></div>
@@ -2125,9 +2318,9 @@ function typeEditor(t){
   <div class="sec"><h3>Labor</h3>
     <div class="g3"><div><label class="f">Labor $ per foot of fence</label>${inp('labor',t.labor)}</div></div>
     <p class="small mut" style="margin:6px 0 0">The Final bill charges this for every foot of this fence. Site difficulty, headache charges and other fees are added there, per job.</p></div>
-  <div class="sec"><h3>Extras</h3>
+  <div class="sec"><h3>Other things to buy</h3>
     <table class="ed"><thead><tr><th>Product</th><th class="num">Qty</th><th>Counted</th><th class="num">$ each</th><th></th></tr></thead><tbody>${extras||'<tr><td colspan="5" class="mut">Nothing extra. Add staples, tension springs, delivery, rentals, or anything else.</td></tr>'}</tbody></table>
-    <div class="row" style="margin-top:8px"><button class="btn sm" data-act="addFte" ${d}>Add extra</button><span class="grow"></span>
+    <div class="row" style="margin-top:8px"><button class="btn sm" data-act="addFte" ${d}>Add something else</button><span class="grow"></span>
 </div>
 </div>
   <details class="sec"${items?' open':''}><summary><b>Custom formula items</b> <span class="small mut">(advanced)</span></summary>
@@ -2135,10 +2328,10 @@ function typeEditor(t){
     ${items}<button class="btn sm" data-act="addFti" ${d}>Add formula item</button></details>`;
 }
 /* what a brace looks like: style and real measurements (feet, thickness in inches) */
-const BSTYLES=[['h','H-brace: level rail between two posts'],['a','A brace: rail down to a short post'],['aa','Double A brace: a short post and rail on both sides'],['n','N-brace: diagonal rail between two posts'],['single','Single post, no rail']];
+const BSTYLES=[['h','H-brace: level rail between two posts'],['a','Rance brace: rail down to a short ground post'],['aa','Double Rance brace: a short ground post and rail on both sides'],['n','N-brace: diagonal rail between two posts'],['single','Single post, no rail']];
 function braceShape(b){
   const nm=b.name||'',sh=b.shape||{};
-  const style=sh.style||(/single|no brace/i.test(nm)?'single':/double\s*a\b|(^|\s)2\s*a\b/i.test(nm)?'aa':/(^|\s)a[- ]?(brace|frame)|kicker/i.test(nm)?'a':/n[- ]brace|diagonal/i.test(nm)?'n':'h');
+  const style=sh.style||(/single|no brace/i.test(nm)?'single':/double\s*(a|rance)\b|(^|\s)2\s*a\b/i.test(nm)?'aa':/(^|\s)a[- ]?(brace|frame)|rance|kicker/i.test(nm)?'a':/n[- ]brace|diagonal/i.test(nm)?'n':'h');
   const pipe=(b.items||[]).some(it=>/pipe|steel/i.test(matName(it.m)));
   return {span:8,h1:style==='a'||style==='aa'?4.5:4.75,bury1:3.5,h2:1,bury2:3.5,dia:pipe?2.875:6,rail:pipe?2.375:4,bays:/double/i.test(nm)?2:1,wire:style==='h',steel:pipe,...sh,style};
 }
@@ -2189,37 +2382,61 @@ function shapeEditor(b){
   </div></div>
   <p class="small mut" style="margin:6px 0 0">This only changes the drawing and the 3D view, plus where the line posts start (the distance between posts). What you pay for it is the list above.</p>`;
 }
+let braceSel=null;   // the brace that's open on the Braces page
 function bracesView(){
   const usedBy=id=>S.fenceTypes.filter(t=>['braceEnd','braceCorner','bracePull','braceGate'].some(k=>t[k]===id)).map(t=>t.name);
-  const kits=[...S.braces.map(b=>KIT(b.id)),...Object.values(drafts.kit).filter(b=>b._new)].map(b=>{const u=usedBy(b.id),n=A.kits[b.id]||0,cost=b.items.reduce((a,it)=>a+(+it.q||0)*priceOf(it.m),0);
-    return `<div class="card">${saveBar('Kit',b.id)}<div class="row"><input type="text" class="grow tname" style="width:auto" value="${esc(b.name)}" data-f="kit.name" data-id="${b.id}" aria-label="Brace name"><button class="btn sm" data-act="dupKit" data-id="${b.id}">Duplicate</button><button class="btn sm del" data-act="delKit" data-id="${b.id}">Delete</button></div>
-    <p class="small mut" style="margin:6px 0">${u.length?'Used by '+u.map(esc).join(', '):'Not used by any fence type'}</p>
-    <table class="ed kit"><thead><tr><th>What goes in it</th><th class="num">How many</th><th>Unit</th><th class="num">$ each</th><th class="num">Cost</th><th></th></tr></thead><tbody>
+  const all=[...S.braces.map(b=>KIT(b.id)),...Object.values(drafts.kit).filter(b=>b._new)];
+  const costOf=b=>b.items.reduce((a,it)=>a+(+it.q||0)*priceOf(it.m),0);
+  const b=all.find(x=>x.id===braceSel);
+  if(b){const u=usedBy(b.id),n=A.kits[b.id]||0,cost=costOf(b);
+    return `<div class="jobtop"><button class="btn big" data-act="kitsBack">← All braces</button></div>
+    <div class="phead"><div><h1>${esc(b.name)}</h1><p>Change anything below, then press <b>Save</b>. ${u.length?'Used by '+u.map(esc).join(', ')+'.':'Not used by any fence type yet.'}</p></div></div>
+    <div class="bedit">${saveBar('Kit',b.id)}<div class="row"><input type="text" class="grow tname" style="width:auto" value="${esc(b.name)}" data-f="kit.name" data-id="${b.id}" aria-label="Brace name"><button class="btn" data-act="dupKit" data-id="${b.id}">Make a copy</button><button class="btn del" data-act="delKit" data-id="${b.id}">Delete this brace</button></div>
+    <h3>What goes into one brace</h3>
+    <table class="ed kit"><thead><tr><th>Part</th><th class="num">How many</th><th>Unit</th><th class="num">$ each</th><th class="num">Cost</th><th></th></tr></thead><tbody>
     ${b.items.map((it,i)=>`<tr><td><select data-f="kiti.m" data-id="${b.id}" data-i="${i}" aria-label="Material">${matOpts(it.m,true)}</select></td>
       <td><input type="number" min="0" step="any" value="${+it.q}" data-f="kiti.q" data-id="${b.id}" data-i="${i}" aria-label="How many"></td>
       <td>${unitIn(it.m)}</td><td>${priceIn(it.m)}</td><td class="num">${money((+it.q||0)*priceOf(it.m))}</td>
       <td><button class="btn x" data-act="delKiti" data-id="${b.id}" data-i="${i}" aria-label="Remove item" title="Remove">×</button></td></tr>`).join('')||'<tr><td colspan="6" class="mut">Nothing in it yet.</td></tr>'}
-    </tbody><tfoot><tr><td colspan="4"><button class="btn sm" data-act="addKiti" data-id="${b.id}">Add item</button></td><td class="num"><b>${money(cost)}</b></td><td></td></tr></tfoot></table>
-    <p class="small mut" style="margin:4px 0 0">${money(cost)} for one of these, before tax.</p>
-    <div class="row" style="margin-top:10px"><label class="lbl">Labor $ per brace <input type="number" min="0" step="any" value="${+b.labor||0}" data-f="kit.labor" data-id="${b.id}" style="width:100px" aria-label="Labor charge for each brace"></label>
+    </tbody><tfoot><tr><td colspan="4"><button class="btn sm" data-act="addKiti" data-id="${b.id}">Add a part</button></td><td class="num"><b>${money(cost)}</b></td><td></td></tr></tfoot></table>
+    <p class="small mut" style="margin:4px 0 0">${money(cost)} for one of these, before tax. Click a price to change that material.</p>
+    <div class="row" style="margin-top:12px"><label class="lbl">Labor $ per brace <input type="number" min="0" step="any" value="${+b.labor||0}" data-f="kit.labor" data-id="${b.id}" style="width:100px" aria-label="Labor charge for each brace"></label>
       <span class="small mut">Charged on the Final bill for every one of these in a job${n?` (${fmtQ(n)} in this job: ${money(n*(+b.labor||0))})`:''}.</span></div>
-    ${shapeEditor(b)}</div>`}).join('');
-  return `<div class="phead"><div><h1>Braces</h1><p>Build each brace from whatever goes into it: pick a product (or make a new one), how many, and what it costs. Each fence type picks which brace goes where.</p></div><button class="btn pri" data-act="addKit">New brace</button></div>
-  <div class="cards wide">${kits}</div>`;
+    ${shapeEditor(b)}</div>`}
+  braceSel=null;
+  const cards=all.map(b=>{const u=usedBy(b.id),n=A.kits[b.id]||0;
+    return `<div class="tcard"><div class="tcbar" style="background:var(--acc)"></div>${braceSvg(b)}
+      <button class="jobname" data-act="selKit" data-id="${b.id}">${esc(b.name)}</button>${drafts.kit[b.id]?' <span class="tag warnt">not saved</span>':''}
+      <dl class="tfacts">
+        <dt>Parts</dt><dd>${b.items.filter(it=>matOf(it.m)).map(it=>`${fmtQ(+it.q||0)} × ${esc(matName(it.m))}`).join('<br>')||'<span class="mut">none yet</span>'}</dd>
+        <dt>Costs</dt><dd>${money(costOf(b))} each</dd>
+        <dt>Labor</dt><dd>${money(+b.labor||0)} each</dd>
+        <dt>Used by</dt><dd>${u.length?u.map(esc).join(', '):'<span class="mut">no fence type yet</span>'}</dd>
+      </dl>
+      <div class="small mut">${n?`${fmtQ(n)} in the open job`:'None in the open job'}</div>
+      <div class="jobbtns"><button class="btn pri" data-act="selKit" data-id="${b.id}">Open and change</button><button class="btn" data-act="dupKit" data-id="${b.id}">Make a copy</button></div></div>`}).join('');
+  return `<div class="phead"><div><h1>Braces</h1><p>What goes into each brace and what it costs. Each fence type picks which brace goes at its ends, corners, gates and long runs. Click one to open it and make changes.</p></div><button class="btn pri big" data-act="addKit">+ New brace</button></div>
+  ${cards?`<div class="jobgrid tgrid">${cards}</div>`:'<p class="mut">Make a brace to get started.</p>'}`;
 }
 function settingsView(){
   const s=S.settings;
-  return `<div class="phead"><div><h1>Settings</h1></div></div>
+  return `<div class="phead"><div><h1>Settings</h1><p>Choices for the whole app and every job. Changes save on their own.</p></div></div>
   <div class="cards">
   <div class="card"><h3 style="margin-top:0">Text size</h3>
   <p class="small mut" style="margin-top:0">Make the words and buttons bigger on this computer and every other one. The map stays the same.</p>
   <div class="seg" role="group" aria-label="Text size">${[['1','Normal'],['1.15','Large'],['1.3','Larger']].map(([v,n])=>`<button class="btn${String(+s.textSize||1)===v?' on':''}" data-act="textSize" data-k="${v}" style="font-size:${15*+v}px">${n}</button>`).join('')}</div></div>
   <div class="card"><h3 style="margin-top:0">Measuring</h3>
-  <p class="small mut" style="margin-top:0">Every point you click gets a brace: any bend or jog uses the corner brace, a point on a straight run uses the pull brace. Change a single point on the map if it needs something else.</p>
+  <p class="small mut" style="margin-top:0">Every spot you click on the map gets a brace: a bend gets the corner brace, a spot on a straight run gets the pull brace. You can change any single spot on the map afterwards.</p>
   <label class="row"><input type="checkbox" ${s.useSurface?'checked':''} data-f="set.useSurface" style="width:18px;height:18px"> Measure along the ground slope when elevation is loaded</label>
   <label class="row"><input type="checkbox" ${s.autoCross!==false?'checked':''} data-f="set.autoCross" style="width:18px;height:18px"> When I finish a line, put a gate where it crosses a road and braces on both banks of a river or creek (from OpenStreetMap)</label></div>
   <div class="card"><h3 style="margin-top:0">Costs</h3><label class="f">Sales tax % (on materials)</label><input type="number" step="0.01" value="${+s.tax}" data-f="set.tax">
   <p class="small mut">Labor is a $ per foot on each fence type. Headache charges and fees are added on each job's Final bill.</p></div>
+  <div class="card"><h3 style="margin-top:0">Offline maps</h3>
+  <p class="small mut" style="margin-top:0">Areas saved on this computer to use with no internet: the USGS aerial photo, the LiDAR bare-earth map and the LiDAR ground heights. With no internet the map switches to them on its own.</p>
+  ${serverOK?(offList.length?offList.map(a=>{const pct=a.total?Math.floor(a.done/a.total*100):0,st=a.status==='downloading'?`Downloading, ${pct}%`:a.status==='done'?'Ready':a.status==='partly'?`Ready, ${a.failed} pieces missing`:a.status==='stopped'?`Stopped at ${pct}%`:'Did not finish';
+    return `<div class="offrow"><div><b>${esc(a.name)}</b><div class="small mut">${st} · ${fmtQ(Math.round((a.bytes||0)/1e6))} MB · ${new Date(a.created*1000).toLocaleDateString()}</div></div>
+      <div class="row" style="flex-wrap:nowrap">${['stopped','partly','error'].includes(a.status)?`<button class="btn sm" data-act="offResume" data-id="${a.id}">Finish it</button>`:''}<button class="btn sm" data-act="offShow" data-id="${a.id}">Show</button><button class="btn sm del" data-act="offDel" data-id="${a.id}">Delete</button></div></div>`}).join(''):'<p class="mut">None saved yet.</p>'):'<p class="mut">This needs the Fence Builder app or server.</p>'}
+  <button class="btn" data-act="offNew" style="margin-top:8px">Save an area for offline</button></div>
   <div class="card"><h3 style="margin-top:0">Version and updates</h3>
   <p style="margin:0 0 6px">You have <b>Fence Builder ${esc(upd?.version||'…')}</b>.${upd?.available?` <b>${esc(upd.latest)}</b> is out.`:upd&&!upd.reason?' It is the newest version.':''}</p>
   ${upd?.reason?`<p class="small mut">${esc(upd.reason)}</p>`:''}
@@ -2257,14 +2474,15 @@ function elevShort(l){
 }
 function sideView(){
   const sel=selLine&&getLine(selLine)&&A.lines.find(x=>x.l.id===selLine);
-  const head=`<div class="sum two"><div><span>Wire run</span><b>${fmtFt(A.totalFt)}</b></div><div class="tot"><span>Materials</span><b>${money(A.sub+A.tax)}</b></div></div>
-    <div class="row" style="margin-top:8px;flex-wrap:nowrap"><button class="btn pri grow" data-act="billDlg">Materials</button><button class="btn grow" data-act="tab" data-tab="est">Final bill</button><button class="btn grow" data-act="view3d" data-id="">3D view</button></div>`;
+  const head=`<div class="sum two"><div><span>Fence length</span><b>${fmtFt(A.totalFt)}</b></div><div class="tot"><span>Materials with tax</span><b>${money(A.sub+A.tax)}</b></div></div>
+    <div class="row" style="margin-top:8px;flex-wrap:nowrap"><button class="btn grow" data-act="billDlg">Shopping list</button><button class="btn grow" data-act="tab" data-tab="est">Final bill</button><button class="btn grow" data-act="view3d" data-id="">3D view</button></div>`;
   const drawn=A.lines.filter(r=>!r.manual);
-  const list=drawn.length?`<div class="row" style="justify-content:space-between;margin:18px 0 8px"><h2 style="margin:0">Lines in this job</h2><button class="btn sm del" data-act="clearLines">Clear map</button></div><div class="box">${drawn.map(r=>`<button class="tli${r.l.id===selLine?' on':''}" data-act="sel" data-id="${r.l.id}"><span class="dot" style="background:${esc(r.t.color)}"></span><span class="grow"><b>${esc(r.l.name)}</b><span class="small mut">${esc(r.t.name)}${elevShort(r.l)}</span></span><span class="num">${fmtFt(r.len)}</span></button>`).join('')}</div>`:'';
-  return head+(sel?lineView():setupView())+list;
+  const list=drawn.length?`<div class="row" style="justify-content:space-between;margin:18px 0 8px"><h2 style="margin:0">Fence lines in this job</h2><button class="btn sm del" data-act="clearLines">Clear map</button></div><p class="small mut" style="margin:-2px 0 8px">Click a line to see its posts, braces and gates.</p><div class="box">${drawn.map(r=>`<button class="tli${r.l.id===selLine?' on':''}" data-act="sel" data-id="${r.l.id}"><span class="dot" style="background:${esc(r.t.color)}"></span><span class="grow"><b>${esc(r.l.name)}</b><span class="small mut">${esc(r.t.name)}${elevShort(r.l)}</span></span><span class="num">${fmtFt(r.len)}</span></button>`).join('')}</div>`:'';
+  if(sel)return head+lineView()+list;
+  const [top,rest]=setupView();return head+top+list+rest;
 }
 function setupView(){
-  const t=TYP(drawTypeId())||TYP(S.fenceTypes[0]?.id);if(!t)return '<p class="mut">Make a fence type first.</p>';
+  const t=TYP(drawTypeId())||TYP(S.fenceTypes[0]?.id);if(!t)return ['<p class="mut">Make a fence type first, on the Fence types page.</p>',''];
   const d=`data-id="${t.id}"`,n=v=>+v||0;
   const num=(f,v)=>`<input type="number" min="0" step="any" value="${n(v)}" data-f="ft.${f}" ${d}>`;
   const kitSel=f=>`<select data-f="ft.${f}" ${d}>${kitOpts(t[f])}${opt('none','No brace',t[f])}</select>`;
@@ -2276,24 +2494,29 @@ function setupView(){
     <button class="btn x" data-act="delFtw" ${d} data-i="${i}" title="Remove">×</button>
     <label class="mini"><span>$</span>${priceIn(w.m)}<span>per ${esc(u)}</span></label>
     <span class="small mut need">${lo?.mix?`This job needs ${esc(lo.mix)} rolls. `:need!=null?`This job needs ${fmtQ(roundQ(need,u)||0)} ${esc(u)}${u==="roll"&&roundQ(need,u)!==1?"s":""}. `:''}${lo&&lo.bought>0?`<b class="left">${lo.left>=1?`About ${fmtQ(Math.round(lo.left))} ft left over`:'No wire left over'}</b>${lo.left>=1?lo.mix?' on the last roll':lo.left<lo.roll?` (${Math.round(lo.left/lo.roll*100)}% of a ${fmtQ(lo.roll)} ft roll)`:'':''}. `:''}${matOf(w.m)?`<button class="lnk" data-act="matInfo" data-id="${w.m}">Details</button>`:''}</span></div>`}).join('');
-  return `<h2>1. Set up the fence</h2>${saveBar('Ft',t.id)}
-  <div class="pick"><select data-f="ui.drawType" aria-label="Fence type">${typeOpts(t.id)}</select><button class="btn sm" data-act="addFt">New</button></div>
-  ${(()=>{const n=P().lines.filter(l=>l.type!==t.id).length;return n?`<button class="btn sm" data-act="applyType" data-id="${t.id}" style="margin-top:8px;width:100%;white-space:normal;min-height:0;padding:6px 10px">Switch the ${n===P().lines.length?'whole fence':n+' other line'+(n>1?'s':'')} in this job to ${esc(t.name)}</button>`:''})()}
-  <div class="sec" style="margin-top:10px"><h3>Wire</h3>${wires||'<p class="small mut" style="margin:0 0 6px">No wire yet.</p>'}
+  const apply=(()=>{const n=P().lines.filter(l=>l.type!==t.id).length;return n?`<button class="btn" data-act="applyType" data-id="${t.id}" style="margin-top:8px;width:100%;white-space:normal;padding:8px 12px">Switch the ${n===P().lines.length?'whole fence':n+' other line'+(n>1?'s':'')} in this job to ${esc(t.name)}</button>`:''})();
+  return [`<h2 class="stp"><span class="stpn">1</span>Pick the kind of fence</h2>
+  <div class="pick"><select data-f="ui.drawType" aria-label="Fence type">${typeOpts(t.id)}</select><button class="btn" data-act="addFt">New type</button></div>
+  ${apply}
+  <h2 class="stp"><span class="stpn">2</span>Draw it on the map</h2>
+  <div class="row"><button class="btn pri big" data-act="draw">${mode==='draw'?'Finish line':'Draw fence'}</button><button class="btn big" data-act="gate">Add gate</button><button class="btn big" data-act="brace">Add brace</button></div>
+  <p class="small mut">Press <b>Draw fence</b>, then click each corner on the map. Press <b>Finish line</b> at the end. Every spot you click gets a brace (a bend gets a corner brace), and the posts space themselves evenly in between. Zoom in to see every post.</p>`,
+  `<h2 class="stp"><span class="stpn">3</span>Check what goes into it</h2>
+  <p class="small mut" style="margin:0 0 8px">These are the settings of the fence type <b>${esc(t.name)}</b>. A change here counts for every job that uses it, once you press Save.</p>
+  ${saveBar('Ft',t.id)}
+  <div class="sec"><h3>Wire</h3>${wires||'<p class="small mut" style="margin:0 0 6px">No wire yet.</p>'}
     <button class="btn sm" data-act="addFtw" ${d}>Add wire</button>
     <p class="small mut" style="margin:6px 0 0">Strands is how many wires of that product run the length of the fence: 1 for a woven wire roll, 2 for two barbed wires on top, and so on.</p></div>
   <div class="sec"><h3>Posts</h3>
-    ${postsEditor(t)}
-    <div class="g2"><div><label class="f">Labor $ per foot</label>${num('labor',t.labor)}</div></div>
-    <div class="g2"><div><label class="f">Fence height ft</label>${num('height',t.height||4.5)}</div><div><label class="f">Clips per normal post</label>${num('clipsPer',t.clipsPer)}</div></div></div>
+    ${postsEditor(t)}</div>
   <div class="sec"><h3>Braces</h3><div class="g2">
     <div><label class="f">Ends</label>${kitSel('braceEnd')}</div><div><label class="f">Corners</label>${kitSel('braceCorner')}</div>
-    <div><label class="f">Each side of a gate</label>${kitSel('braceGate')}</div><div><label class="f">Pull spots</label>${kitSel('bracePull')}</div>
-    <div><label class="f">Gate width ft</label>${num('gateW',t.gateW)}</div></div><div class="g2">${stretchFields(t)}</div></div>
-  <button class="btn sm" data-act="editFt" ${d}>All options for this fence type</button>
-  <h2>2. Draw it</h2>
-  <div class="row"><button class="btn pri" data-act="draw">${mode==='draw'?'Finish line':'Draw fence'} <kbd>F</kbd></button><button class="btn" data-act="gate">Add gate <kbd>G</kbd></button><button class="btn" data-act="brace">Add brace <kbd>B</kbd></button></div>
-  <p class="small mut">Click each spot on the map. Every click is a brace (any bend is a corner brace), and the posts space themselves evenly in between, so the last gap is never a short one. Zoom in to see every post.</p>`;
+    <div><label class="f">Each side of a gate</label>${kitSel('braceGate')}</div><div><label class="f">Pull braces on long runs</label>${kitSel('bracePull')}</div></div></div>
+  <details class="sec more" data-keep="sideMore"${openKeep.sideMore?' open':''}><summary><b>More options</b> <span class="small mut">labor, height, clips, gate width, longest pull</span></summary>
+    <div class="g2"><div><label class="f">Labor $ per foot</label>${num('labor',t.labor)}</div><div><label class="f">Fence height ft</label>${num('height',t.height||4.5)}</div>
+    <div><label class="f">Clips per normal post</label>${num('clipsPer',t.clipsPer)}</div><div><label class="f">Gate width ft</label>${num('gateW',t.gateW)}</div></div>
+    <div>${stretchFields(t)}</div></details>
+  <button class="btn" data-act="editFt" ${d} style="width:100%;white-space:normal;padding:8px 12px">Open every option for ${esc(t.name)}</button>`];
 }
 
 /* where each line post sits, for the dots on the map (matches the counts in the estimate) */
@@ -2432,7 +2655,7 @@ function jobPage(p){
       <div class="g2">${field('bidDate','Bid sent','date')}${field('start','Start date','date')}</div>
       <div class="g2">${field('due','Finish by','date')}<div></div></div>
       ${overdue(p)?`<p class="warn">This job is past its finish date.</p>`:''}
-      ${crew.length?`<label class="f">Crew on this job</label><div class="crewpick">${crew.map(c=>`<label class="row"><input type="checkbox" ${mine.includes(c.id)?'checked':''} data-f="jcrew.on" data-id="${c.id}" data-job="${p.id}"> ${esc(c.name||'Crew member')}</label>`).join('')}</div>`:'<p class="small mut">Add your crew in Settings to pick who works on this job.</p>'}
+      ${crew.length?`<label class="f">Crew on this job</label><div class="crewpick">${crew.map(c=>`<label class="row"><input type="checkbox" ${mine.includes(c.id)?'checked':''} data-f="jcrew.on" data-id="${c.id}" data-job="${p.id}"> ${esc(c.name||'Crew member')}</label>`).join('')}</div>`:''}
     </div>
     <div class="card"><h2>Money</h2>
       <div class="money"><div><span>Job total</span><b>${money(a.total)}</b></div><div><span>Paid so far</span><b>${money(paid)}</b></div><div class="tot"><span>Still owed</span><b>${money(bal)}</b></div></div>
@@ -2507,8 +2730,13 @@ async function setField(t){
 for(const el of [$('#panel'),$('#side')])el.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(b)act(b.dataset.act,b.dataset)});
 $('#panel').addEventListener('input',e=>{if(e.target.id==='jobQ'){jobQ=e.target.value;const at=e.target.selectionStart;renderPanel();const q=$('#jobQ');if(q){q.focus();q.setSelectionRange(at,at)}return}});
 $('#panel').addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='jobLogT'){e.preventDefault();$('#panel').querySelector('[data-act="jobLog"]')?.click()}});
-$('#panel').addEventListener('input',e=>{if(e.target.id!=='matQ')return;const q=e.target.value.trim().toLowerCase();for(const tr of $('#panel').querySelectorAll('table.mats tbody tr[data-name]'))tr.hidden=!!q&&!tr.dataset.name.includes(q)});
-$('#tabs').addEventListener('click',e=>{const b=e.target.closest('[data-tab]');if(!b)return;if(b.dataset.tab==='jobs')jobOpen=null;if(b.dataset.tab==='types')typeSel=null;gotoTab(b.dataset.tab)});
+$('#panel').addEventListener('input',e=>{if(e.target.id!=='matQ')return;const q=e.target.value.trim().toLowerCase();for(const tr of $('#panel').querySelectorAll('table.mats tbody tr[data-name]'))tr.hidden=!!q&&!tr.dataset.name.includes(q);
+  // hide a group heading (Wire, Posts…) when none of its materials match
+  let g=null,any=false;for(const tr of $('#panel').querySelectorAll('table.mats tbody tr')){if(tr.classList.contains('grp')){if(g)g.hidden=!any;g=tr;any=false}else if(!tr.hidden)any=true}if(g)g.hidden=!any});
+$('#tabs').addEventListener('click',e=>{const b=e.target.closest('[data-tab]');if(!b)return;if(b.dataset.tab==='jobs')jobOpen=null;if(b.dataset.tab==='types')typeSel=null;if(b.dataset.tab==='braces')braceSel=null;gotoTab(b.dataset.tab)});
+// sections you opened (like "More options") stay open when the page redraws
+const openKeep={};
+for(const el of [$('#panel'),$('#side')])el.addEventListener('toggle',e=>{const k=e.target.dataset?.keep;if(k)openKeep[k]=e.target.open},true);
 async function act(a,d){
   const id=d.id,i=+d.i;
   switch(a){
@@ -2526,6 +2754,10 @@ async function act(a,d){
   case 'openJob':S.cur=id;selLine=null;selNode=null;if(mode!=='idle')cancelDraw();S.tab='build';changed();setTimeout(fitProject,50);break;
   case 'jobInfo':case 'jobPage':jobOpen=id;S.tab='jobs';renderAll();$('#panel').scrollTop=0;break;
   case 'textSize':S.settings.textSize=+d.k;changed();break;
+  case 'offNew':startOffSel();break;
+  case 'offShow':{const a=offList.find(x=>x.id===id);if(!a)break;gotoTab('build');const [w,s2,e,n]=a.bbox;setTimeout(()=>{map.fitBounds([[s2,w],[n,e]]);if(!map.hasLayer(offAreas))offAreas.addTo(map)},60);break}
+  case 'offDel':{const a=offList.find(x=>x.id===id);if(!a)break;if(await ask(`Delete the offline map "${a.name}" from this computer? You can download it again later.`)){try{await fetchT('api/off/areas/'+id+'/delete',{method:'POST'},20000)}catch(e){}loadOffAreas()}break}
+  case 'offResume':{try{await fetchT('api/off/areas/'+id+'/resume',{method:'POST'},20000)}catch(e){}loadOffAreas();break}
   case 'jobBack':jobOpen=null;renderAll();break;
   case 'jobStage':jobStage=d.k;renderPanel();break;
   case 'jobClear':jobStage='all';jobQ='';renderPanel();break;
@@ -2576,6 +2808,8 @@ async function act(a,d){
   case 'fetchAll':autoPrices(true);break;
   case 'selFt':typeSel=id;renderPanel();$('#panel').scrollTop=0;break;
   case 'typesBack':typeSel=null;renderPanel();$('#panel').scrollTop=0;break;
+  case 'selKit':braceSel=id;renderPanel();$('#panel').scrollTop=0;break;
+  case 'kitsBack':braceSel=null;renderPanel();$('#panel').scrollTop=0;break;
   case 'addFt':{const n=await askText('Name for the new fence type','New fence type');if(n===null)break;
     const t={...typeBase(),id:uid('ft'),name:n.trim()||'New fence type',color:'#'+Math.floor(Math.random()*0xffffff).toString(16).padStart(6,'0'),wires:[],_new:true};
     drafts.ft[t.id]=t;typeSel=t.id;if(S.tab!=='types')gotoTab('types');else renderPanel();toast('Set it up, then press Save.');break}
@@ -2583,7 +2817,7 @@ async function act(a,d){
   case 'saveFt':{const d=drafts.ft[id];if(!d)break;delete d._new;const ix=S.fenceTypes.findIndex(x=>x.id===id);if(ix>=0)S.fenceTypes[ix]=d;else S.fenceTypes.push(d);delete drafts.ft[id];changed();toast('Saved '+d.name);break}
   case 'discardFt':{const d=drafts.ft[id];delete drafts.ft[id];if(d?._new)typeSel=null;renderAll();toast('Changes thrown away');break}
   case 'saveKit':{const d=drafts.kit[id];if(!d)break;delete d._new;const ix=S.braces.findIndex(x=>x.id===id);if(ix>=0)S.braces[ix]=d;else S.braces.push(d);delete drafts.kit[id];changed();toast('Saved '+d.name);break}
-  case 'discardKit':{delete drafts.kit[id];renderAll();toast('Changes thrown away');break}
+  case 'discardKit':{const d=drafts.kit[id];delete drafts.kit[id];if(d?._new)braceSel=null;renderAll();toast('Changes thrown away');break}
   case 'addFtw':addWireDlg(id);break;
   case 'delFtw':draftFt(id).wires.splice(i,1);renderPanel();break;
   case 'ftwUp':case 'ftwDown':{const ws=draftFt(id).wires,j=a==='ftwUp'?i+1:i-1;if(j>=0&&j<ws.length){[ws[i],ws[j]]=[ws[j],ws[i]]}renderPanel();break}
@@ -2596,10 +2830,10 @@ async function act(a,d){
     if(S.fenceTypes.length<2)return toast('Keep at least one fence type');if(await ask('Delete this fence type? Lines using it switch to the first type.')){S.fenceTypes=S.fenceTypes.filter(t=>t.id!==id);delete drafts.ft[id];typeSel=null;for(const p of S.projects)for(const l of p.lines)if(l.type===id)l.type=S.fenceTypes[0].id;if(S.drawType===id)S.drawType=S.fenceTypes[0].id;for(const p of S.projects)if(p.drawType===id)delete p.drawType;changed()}break;
   case 'addFti':draftFt(id).items.push({m:S.materials[0]?.id,q:'1'});renderPanel();break;
   case 'delFti':draftFt(id).items.splice(i,1);renderPanel();break;
-  case 'addKit':{const n=await askText('Name for the new brace','New brace');if(n===null)break;const b={id:uid('b'),name:n.trim()||'New brace',items:[],_new:true};drafts.kit[b.id]=b;renderPanel();toast('Set it up, then press Save.');break}
-  case 'dupKit':{const b={...JSON.parse(JSON.stringify(KIT(id))),id:uid('b'),_new:true};b.name+=' (copy)';drafts.kit[b.id]=b;renderPanel();toast('Copied. Press Save to keep it.');break}
-  case 'delKit':if(drafts.kit[id]?._new){delete drafts.kit[id];renderPanel();break}
-    if(S.braces.length<2)return toast('Keep at least one brace');if(await ask('Remove this brace? Spots set to it go back to auto.')){S.braces=S.braces.filter(b=>b.id!==id);delete drafts.kit[id];const f=S.braces[0].id;for(const t of S.fenceTypes)for(const k of['braceEnd','braceCorner','bracePull','braceGate'])if(t[k]===id)t[k]=f;for(const p of S.projects)for(const l of p.lines)for(const pt of l.pts)if(pt.brace===id)pt.brace=null;changed()}break;
+  case 'addKit':{const n=await askText('Name for the new brace','New brace');if(n===null)break;const b={id:uid('b'),name:n.trim()||'New brace',items:[],_new:true};drafts.kit[b.id]=b;braceSel=b.id;renderPanel();$('#panel').scrollTop=0;toast('Set it up, then press Save.');break}
+  case 'dupKit':{const b={...JSON.parse(JSON.stringify(KIT(id))),id:uid('b'),_new:true};b.name+=' (copy)';drafts.kit[b.id]=b;braceSel=b.id;renderPanel();$('#panel').scrollTop=0;toast('Copied. Press Save to keep it.');break}
+  case 'delKit':if(drafts.kit[id]?._new){delete drafts.kit[id];braceSel=null;renderPanel();break}
+    if(S.braces.length<2)return toast('Keep at least one brace');if(await ask('Remove this brace? Spots set to it go back to automatic.')){braceSel=null;S.braces=S.braces.filter(b=>b.id!==id);delete drafts.kit[id];const f=S.braces[0].id;for(const t of S.fenceTypes)for(const k of['braceEnd','braceCorner','bracePull','braceGate'])if(t[k]===id)t[k]=f;for(const p of S.projects)for(const l of p.lines)for(const pt of l.pts)if(pt.brace===id)pt.brace=null;changed()}break;
   case 'addKiti':draftKit(id).items.push({m:S.materials[0]?.id,q:1});renderPanel();break;
   case 'delKiti':draftKit(id).items.splice(i,1);renderPanel();break;
   case 'delProj':if(S.projects.length<2)return toast('This is your only job');if(await ask('Delete the job "'+P().name+'" and its fence lines?')){S.projects=S.projects.filter(p=>p.id!==S.cur);S.cur=S.projects[0].id;selLine=null;changed();fitProject()}break;
@@ -2834,15 +3068,15 @@ function openBillDlg(){
   for(const r of A.rows){if(r.grp!==g){g=r.grp;body+=`<tr class="grp"><td colspan="4">${esc(g)}</td></tr>`}
     body+=`<tr class="${r.custom?'custp':''}"><td>${esc(r.m.name)}${r.custom?` <span class="tag warnt" title="Your normal price is ${money(r.base)}">custom price</span>`:''}</td><td class="num">${fmtQ(r.q)} <span class="small mut">${esc(r.m.unit)}</span></td><td class="num">${money(r.price)}</td><td class="num">${money(r.cost)}</td></tr>`}
   const braces=Object.values(A.kits).reduce((a,b)=>a+b,0);
-  dlg.innerHTML=`<div class="row" style="justify-content:space-between;margin-bottom:8px"><h2 style="margin:0">Materials: ${esc(p.name)}</h2><button class="btn sm" data-x="close">Close</button></div>
-    <div class="sum"><div><span>Wire run</span><b>${fmtFt(A.totalFt)}</b></div><div><span>Brace assemblies</span><b>${braces}</b></div><div><span>Gates</span><b>${A.gates}</b></div><div class="tot"><span>Materials with tax</span><b>${money(A.sub+A.tax)}</b></div></div>
+  dlg.innerHTML=`<div class="row" style="justify-content:space-between;margin-bottom:8px"><h2 style="margin:0">Shopping list: ${esc(p.name)}</h2><button class="btn big" data-x="close">Close</button></div>
+    <div class="sum"><div><span>Fence length</span><b>${fmtFt(A.totalFt)}</b></div><div><span>Braces</span><b>${braces}</b></div><div><span>Gates</span><b>${A.gates}</b></div><div class="tot"><span>Materials with tax</span><b>${money(A.sub+A.tax)}</b></div></div>
     ${A.rows.length?`<div class="box scroll" style="margin-top:10px;max-height:52vh;overflow:auto"><table class="bill"><thead><tr><th>Material</th><th class="num">Qty</th><th class="num">Each</th><th class="num">Total</th></tr></thead><tbody>${body}</tbody>
       <tfoot><tr><td colspan="3">Materials</td><td class="num">${money(A.sub)}</td></tr><tr><td colspan="3">Sales tax ${+st.tax||0}%</td><td class="num">${money(A.tax)}</td></tr>
       <tr class="tot"><td colspan="3">Materials with tax</td><td class="num">${money(A.sub+A.tax)}</td></tr></tfoot></table></div>
       <p class="small mut" style="margin:6px 0 0">Labor, headache charges and fees go on the Final bill, where the job total is ${money(A.total)}.</p>`
       :'<p class="mut">Draw a fence first and the list of what to buy shows up here.</p>'}
     <p class="small mut" style="margin:8px 0 0">${p.est?`Last saved to the jobs board ${new Date(p.est.at).toLocaleString()}: ${money(p.est.total)} for ${fmtFt(p.est.ft)}.`:'Not saved to the jobs board yet.'}</p>
-    <div class="row" style="margin-top:10px"><button class="btn pri" data-x="save"${A.rows.length?'':' disabled'}>Save estimate to the jobs board</button><button class="btn" data-x="copy">Copy list</button><button class="btn" data-x="est">Open the final bill</button><button class="btn" data-x="jobs">Go to jobs</button></div>`;
+    <div class="row" style="margin-top:10px"><button class="btn pri big" data-x="save"${A.rows.length?'':' disabled'}>Save estimate to the jobs board</button><button class="btn big" data-x="copy">Copy list</button><button class="btn big" data-x="est">Open the final bill</button><button class="btn big" data-x="jobs">Go to jobs</button></div>`;
   dlg.onclick=e=>{const k=e.target.closest('[data-x]')?.dataset.x;if(e.target===dlg||k==='close')return dlg.close();
     if(k==='copy')copyBill();
     if(k==='est'){dlg.close();gotoTab('est')}
@@ -2887,7 +3121,7 @@ load().then(s=>{
   adopt(s);
   setStatus(serverOK?'Saved':'Saving in this browser');
   renderAll();record();fitProject();scheduleElev();checkLatest();
-  takeGrab();setTimeout(()=>autoPrices(false),5000);
+  takeGrab();setTimeout(()=>autoPrices(false),5000);loadOffAreas();
   setTimeout(()=>checkUpdate(false),2500);setInterval(()=>checkUpdate(false),6*3600e3);setInterval(()=>autoPrices(false),3600e3);
 });
 }

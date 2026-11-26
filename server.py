@@ -19,6 +19,7 @@ import base64, glob, gzip, hashlib, hmac, io, ipaddress, json, os, re, shutil, s
 import urllib.error, urllib.parse, urllib.request
 from html import unescape
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+import offline
 
 FROZEN = bool(getattr(sys, "frozen", False))  # running as the installed FenceBuilder.exe
 # the app's own files (static/, VERSION, update.json); PyInstaller unpacks them into sys._MEIPASS
@@ -55,6 +56,7 @@ def data_dir():
 
 
 DATA = os.environ.get("FENCE_DATA") or os.path.join(data_dir(), "fence-data.json")
+offline.init(DATA)   # map areas saved for working with no internet live next to the data
 PORT = int(os.environ.get("PORT", "8787"))
 # the installed desktop app only needs to be reached from this computer (and so never trips the
 # Windows firewall prompt); set HOST=0.0.0.0 to open it to phones on the network
@@ -556,6 +558,8 @@ class Handler(BaseHTTPRequestHandler):
                     return self.send(400, {"error": "bad coordinates"})
                 body = fetch("https://api.open-meteo.com/v1/elevation?latitude=%s&longitude=%s" % (lat, lng), accept="application/json")
                 return self.send(200, body)
+            if api and api.startswith("off/") and offline.handle_get(self, api, q):
+                return
             if api == "geocode":
                 term = (q.get("q") or [""])[0][:200]
                 body = fetch("https://nominatim.openstreetmap.org/search?format=json&limit=5&q=" + urllib.parse.quote(term),
@@ -575,6 +579,15 @@ class Handler(BaseHTTPRequestHandler):
         if not self.authed():
             return
         _, api, _ = self.route()
+        if api and api.startswith("off/"):
+            try:
+                n = int(self.headers.get("Content-Length") or 0)
+                body = json.loads(self.rfile.read(n)) if 0 < n < 2_000_000 else {}
+                if offline.handle_post(self, api, body if isinstance(body, dict) else {}):
+                    return
+            except (ValueError, KeyError, TypeError) as e:
+                return self.send(400, {"error": str(e)})
+            return self.send(404, {"error": "not found"})
         if api != "update":
             return self.send(404, {"error": "not found"})
         try:

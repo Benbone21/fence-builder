@@ -113,7 +113,7 @@ export async function open3D({bounds, lines, types, nodes, key, focus, braces, m
     <button class="btn sm v3close">Close</button></div>
     <div class="v3c"></div>
     <div class="v3note v3src" hidden></div>
-    <div class="v3note">Move with <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> or the arrow keys, turn with <kbd>Q</kbd> <kbd>E</kbd>, up and down with <kbd>R</kbd> <kbd>F</kbd>, hold <kbd>Shift</kbd> to go faster. Drag to look around, right-drag to slide, scroll to zoom. Click a post to see what it is and the spacing.</div>`;
+    <div class="v3note">Drag to slide the ground. Right-drag (or <kbd>Ctrl</kbd>-drag) to turn and tilt. Scroll to zoom in where the mouse points. Keys: <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> or arrows to move, <kbd>Q</kbd> <kbd>E</kbd> to turn, <kbd>R</kbd> <kbd>F</kbd> up and down, hold <kbd>Shift</kbd> to go faster. Lost? Press Overview. Click a post to see what it is and the spacing.</div>`;
   document.body.appendChild(ov);
   const msg = ov.querySelector('.v3msg'), box = ov.querySelector('.v3c'), note = ov.querySelector('.v3note:not(.v3src)'), counts = ov.querySelector('.v3counts');
   let raf = 0, renderer, disposed = false;
@@ -173,7 +173,32 @@ export async function open3D({bounds, lines, types, nodes, key, focus, braces, m
       try { return await loadTex(url); }
       catch (e) { /* try smaller */ }
     }
-    return null;
+    return savedPhoto(maxPx);
+  }
+  // no internet: put the photo together from the aerial photo saved for offline (map pieces from Fence Builder)
+  async function savedPhoto(maxPx) {
+    try {
+      const R = 6378137, X = lng => R * lng * Math.PI / 180, Y = lat => R * Math.log(Math.tan(Math.PI / 4 + lat * Math.PI / 360));
+      let z = 19; for (; z > 12; z--) { const m = 2 * Math.PI * R / 2 ** z / 256; if (Math.max(X(e) - X(w), Y(n) - Y(s)) / m <= maxPx) break; }
+      const nT = 2 ** z, tx = lng => (lng + 180) / 360 * nT, ty = lat => (1 - Math.log(Math.tan(lat * Math.PI / 180) + 1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2 * nT;
+      const fx0 = tx(w), fx1 = tx(e), fy0 = ty(n), fy1 = ty(s), x0 = Math.floor(fx0), x1 = Math.floor(fx1), y0 = Math.floor(fy0), y1 = Math.floor(fy1);
+      if ((x1 - x0 + 1) * (y1 - y0 + 1) > 1200) return null;
+      const big = new OffscreenCanvas((x1 - x0 + 1) * 256, (y1 - y0 + 1) * 256), g = big.getContext('2d');
+      let got = 0; const jobs = [];
+      for (let x = x0; x <= x1; x++) for (let y = y0; y <= y1; y++)
+        jobs.push(fetch(`api/off/tile/naip/${z}/${x}/${y}`).then(r => { if (!r.ok) throw 0; return r.blob(); }).then(createImageBitmap).then(bm => { g.drawImage(bm, (x - x0) * 256, (y - y0) * 256); got++; }).catch(() => {}));
+      await Promise.all(jobs);
+      if (!got) return null;
+      // the photo is in map (Mercator) rows; the ground is in even latitude steps, so lay each row where it belongs
+      const W = Math.round((fx1 - fx0) * 256), H = Math.round((fy1 - fy0) * 256), out = document.createElement('canvas');
+      out.width = W; out.height = H; const o = out.getContext('2d'), rows = 64;
+      for (let k = 0; k < rows; k++) {
+        const la0 = n - (n - s) * k / rows, la1 = n - (n - s) * (k + 1) / rows;
+        const sy0 = (ty(la0) - y0) * 256, sy1 = (ty(la1) - y0) * 256;
+        o.drawImage(big, (fx0 - x0) * 256, sy0, (fx1 - fx0) * 256, sy1 - sy0, 0, H * k / rows, W, H / rows + 1);
+      }
+      const t = new THREE.CanvasTexture(out); t.colorSpace = THREE.SRGBColorSpace; return t;
+    } catch (e) { return null; }
   }
 
   // Elevation for the 3D ground: USGS 3DEP LiDAR first. When USGS is down or the spot is outside the
@@ -213,6 +238,11 @@ export async function open3D({bounds, lines, types, nodes, key, focus, braces, m
       cachePut(demUrl, {buf, at: Date.now()});   // only the USGS file is saved, never the AWS fill-in
       return d;
     } catch (e) {
+      // no internet? the LiDAR saved for offline, if this area was saved
+      try {
+        const r = await timeout(30000, fetch(`api/off/dem?bbox=${bbox}&w=${gw}&h=${gh}`));
+        if (r.ok) { const d = readTiff(await r.arrayBuffer()); d.offline = true; return d; }
+      } catch (e2) { /* not saved here */ }
       console.warn('USGS elevation not available, using AWS Terrain Tiles', e);
       return terrainTiles();
     }
@@ -261,8 +291,15 @@ export async function open3D({bounds, lines, types, nodes, key, focus, braces, m
   scene.fog = new THREE.Fog(0xb9cfe0, size * 2.2, size * 5);
   const camera = new THREE.PerspectiveCamera(45, 1, Math.max(0.5, size / 2000), size * 20);
   const controls = new OrbitControls(camera, renderer.domElement);
-  controls.enableDamping = true; controls.zoomToCursor = true; controls.maxPolarAngle = Math.PI * 0.48;
-  controls.minDistance = 1.2; controls.maxDistance = size * 4;
+  // the mouse works like a map: left-drag grabs the ground and slides it, right-drag (or Ctrl/Shift + drag) turns and tilts
+  // around the spot in the middle of the screen, the wheel zooms toward the mouse. OrbitControls only does the turning;
+  // sliding and zooming are done below ("flying over the map") so the ground stays under the mouse.
+  controls.enableDamping = true; controls.dampingFactor = 0.12; controls.rotateSpeed = 0.6;
+  controls.enablePan = false; controls.enableZoom = false; controls.screenSpacePanning = false;
+  controls.mouseButtons = {LEFT: THREE.MOUSE.PAN, MIDDLE: THREE.MOUSE.ROTATE, RIGHT: THREE.MOUSE.ROTATE};   // PAN + Ctrl/Shift = turn
+  controls.touches = {ONE: THREE.TOUCH.PAN, TWO: THREE.TOUCH.DOLLY_ROTATE};
+  controls.minPolarAngle = 0.03; controls.maxPolarAngle = Math.PI * 0.44;   // from straight down to a bit above the horizon, never upside down
+  controls.minDistance = 0.5; controls.maxDistance = Infinity;   // height limits are kept below
   scene.add(new THREE.AmbientLight(0xffffff, 1.6));
   const sun = new THREE.DirectionalLight(0xffffff, 1.6); sun.position.set(-size, size * 1.2, size * 0.6); scene.add(sun);
 
@@ -594,13 +631,6 @@ export async function open3D({bounds, lines, types, nodes, key, focus, braces, m
       ov.querySelector('.v3bldt').textContent = 'Buildings (' + (buildings.children.length / 2) + ')';
     }).catch(() => { ov.querySelector('.v3bldt').textContent = 'Buildings (none loaded)'; });
 
-  // start looking at the fences from the south, a bit above
-  const overview = () => {
-    const midY = (zmax - zmin) * ex / 2;
-    controls.target.set(0, midY, 0); camera.position.set(-size * 0.15, midY + size * 0.55, size * 0.8); controls.update();
-  };
-  overview();
-
   // ----- moving around: W A S D or arrows, Q E to turn, R F up and down, Shift to go faster -----
   const held = new Set(), MOVE = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyQ', 'KeyE', 'KeyR', 'KeyF', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'PageUp', 'PageDown'];
   // ----- walk mode: you, at eye level, like a first-person game. Mouse looks, W A S D walks, Shift runs, Space jumps -----
@@ -627,7 +657,7 @@ export async function open3D({bounds, lines, types, nodes, key, focus, braces, m
       grabMouse();   // the mouse steers your view right away, like a game
     } else {
       if (locked) document.exitPointerLock?.();
-      controls.minDistance = 1.2; controls.maxDistance = size * 4; controls.enableZoom = true; controls.maxPolarAngle = Math.PI * 0.48;
+      zoomLeft = 0; grab = null;
       controls.target.set(me.x, ground(me.x, me.z), me.z);
       const f = fwdOf(); camera.position.set(me.x - f.x * 40, controls.target.y + 35, me.z - f.z * 40);
       controls.update();
@@ -692,11 +722,94 @@ export async function open3D({bounds, lines, types, nodes, key, focus, braces, m
     camera.position.set(me.x, me.y + EYE + bob, me.z);
     camera.lookAt(camera.position.clone().add(dir));
   }
+  // ----- flying over the map (the overview camera) -----
+  // controls.target always sits ON THE GROUND at the middle of the screen, so turning, tilting and Q E all pivot around
+  // the spot you are looking at, and speeds follow your height above the ground.
+  const LOW = 2;                                          // closest the camera gets to the ground, m
+  const topY = () => (zmax - zmin) * ex + size * 2.5;     // highest it goes
+  const camH = () => camera.position.y - ground(camera.position.x, camera.position.z);
+  const look3 = new THREE.Vector3(), hitV = new THREE.Vector3(), zoomAt = new THREE.Vector3(), ray3 = new THREE.Raycaster(), ndc = new THREE.Vector2();
+  let zoomLeft = 0, grab = null;
+  const shift = (v) => { camera.position.add(v); controls.target.add(v); };   // slide the whole view, nothing turns
+  // where a line of sight first meets the ground, or null if it never does
+  function groundHit(o, d, out) {
+    if (d.y > -0.005) return null;
+    let t = 0, prev = 0; const far = size * 10;
+    for (let i = 0; i < 500 && t < far; i++) {
+      const h = o.y + d.y * t - ground(o.x + d.x * t, o.z + d.z * t);
+      if (h <= 0) {
+        let a = prev, b = t;   // narrow it down between the last point above the ground and this one
+        for (let k = 0; k < 14; k++) { const m = (a + b) / 2; if (o.y + d.y * m - ground(o.x + d.x * m, o.z + d.z * m) > 0) a = m; else b = m; }
+        return out.copy(d).multiplyScalar(b).add(o);
+      }
+      prev = t; t += Math.max(0.2, h * 0.5);
+    }
+    return null;
+  }
+  const cursorRay = ev => {
+    const rc = cvs.getBoundingClientRect();
+    ndc.set((ev.clientX - rc.left) / rc.width * 2 - 1, -(ev.clientY - rc.top) / rc.height * 2 + 1);
+    camera.updateMatrixWorld(); ray3.setFromCamera(ndc, camera); return ray3.ray;
+  };
+  // put the pivot back on the ground in the middle of the screen (the view itself doesn't change)
+  function anchor() {
+    look3.subVectors(controls.target, camera.position); const d = look3.length(); if (d < 1e-6) return;
+    look3.divideScalar(d);
+    if (groundHit(camera.position, look3, hitV) && Math.abs(hitV.distanceTo(camera.position) - d) > d * 0.0005) controls.target.copy(hitV);
+  }
+  // stay over the map, above the ground and not too high
+  function keepInRange() {
+    const c = camera.position;   // the camera may hang back past the edge of the map to look at it, but not wander off
+    mv.set(clamp(c.x, -Wm / 2 - size, Wm / 2 + size) - c.x, 0, clamp(c.z, -Hm / 2 - size, Hm / 2 + size) - c.z);
+    const floor = ground(camera.position.x, camera.position.z) + LOW, top = topY();
+    if (camera.position.y < floor) mv.y = floor - camera.position.y; else if (camera.position.y > top) mv.y = top - camera.position.y;
+    if (mv.lengthSq()) shift(mv);
+  }
+  // scroll: zoom toward the spot under the mouse, which stays under the mouse
+  cvs.addEventListener('wheel', ev => {
+    if (walking) return;
+    ev.preventDefault();
+    const r = cursorRay(ev);
+    if (!groundHit(r.origin, r.direction, zoomAt)) zoomAt.copy(controls.target);
+    const px = ev.deltaY * (ev.deltaMode === 1 ? 33 : ev.deltaMode === 2 ? 400 : 1);
+    zoomLeft = clamp(zoomLeft + clamp(px, -250, 250) * 0.0016, -3, 3);   // one wheel notch is about 15%
+  }, {passive: false});
+  function stepZoom(dt) {
+    if (!zoomLeft) return;
+    let k = zoomLeft * Math.min(1, dt * 14); if (Math.abs(zoomLeft) < 1e-3) k = zoomLeft;
+    zoomLeft -= k;
+    if (k > 0 && camera.position.y >= topY() - 1) { zoomLeft = 0; return; }
+    const d = camera.position.distanceTo(zoomAt), nd = clamp(d * Math.exp(k), LOW, size * 5);
+    shift(mv.subVectors(camera.position, zoomAt).multiplyScalar(nd / d - 1));
+  }
+  // left-drag: grab the ground and slide it, like a paper map (Ctrl/Shift + drag turns instead, see the controls setup)
+  const fingers = new Set();
+  cvs.addEventListener('pointerdown', ev => {
+    fingers.add(ev.pointerId);
+    if (walking || fingers.size > 1) { grab = null; return; }
+    if (ev.button !== 0 || ev.ctrlKey || ev.shiftKey || ev.metaKey) return;
+    const r = cursorRay(ev), p = new THREE.Vector3();
+    if (!groundHit(r.origin, r.direction, p)) return;
+    grab = {p, id: ev.pointerId}; zoomLeft = 0; cvs.style.cursor = 'grabbing';
+    try { cvs.setPointerCapture(ev.pointerId); } catch (e) {}
+  });
+  cvs.addEventListener('pointermove', ev => {
+    if (!grab || walking || ev.pointerId !== grab.id) return;
+    const r = cursorRay(ev);
+    if (r.direction.y > -0.02) return;   // pointing at the sky
+    const t = (grab.p.y - r.origin.y) / r.direction.y;
+    hitV.copy(r.direction).multiplyScalar(t).add(r.origin);
+    mv.set(grab.p.x - hitV.x, 0, grab.p.z - hitV.z);
+    const most = Math.max(5, camH() * 3); if (mv.length() > most) mv.setLength(most);   // no wild jumps near the horizon
+    shift(mv);
+  });
+  const letGo = ev => { fingers.delete(ev.pointerId); if (grab && ev.pointerId === grab.id) { grab = null; if (!walking) cvs.style.cursor = ''; } };
+  cvs.addEventListener('pointerup', letGo); cvs.addEventListener('pointercancel', letGo);
+
   function moveBy(dt) {
     if (walking) return stepWalk(dt);
     if (!held.size) return;
-    const dist = camera.position.distanceTo(controls.target), fast = held.has('Shift') ? 3 : 1;
-    const speed = Math.max(4, dist * 0.9) * fast;
+    const speed = Math.max(3, camH()) * (held.has('Shift') ? 3 : 1);   // about your own height above the ground each second
     fwd.subVectors(controls.target, camera.position); fwd.y = 0;
     if (fwd.lengthSq() < 1e-8) fwd.set(0, 0, -1); fwd.normalize(); right.crossVectors(fwd, yAxis);
     const f = (held.has('KeyW') || held.has('ArrowUp') ? 1 : 0) - (held.has('KeyS') || held.has('ArrowDown') ? 1 : 0);
@@ -704,13 +817,21 @@ export async function open3D({bounds, lines, types, nodes, key, focus, braces, m
     const u = (held.has('KeyR') || held.has('PageUp') ? 1 : 0) - (held.has('KeyF') || held.has('PageDown') ? 1 : 0);
     mv.set(0, 0, 0).addScaledVector(fwd, f).addScaledVector(right, r);
     if (mv.lengthSq()) mv.normalize().multiplyScalar(speed * dt);
-    mv.y = u * speed * dt * 0.6;
-    camera.position.add(mv); controls.target.add(mv);
+    mv.y = u * speed * dt * 0.7;
+    if (mv.lengthSq()) shift(mv);   // flat over the ground (or straight up and down), same tilt
+    // Q turns left, E turns right, around the spot in the middle of the screen (same way as in walk mode)
     const turn = (held.has('KeyQ') ? 1 : 0) - (held.has('KeyE') ? 1 : 0);
-    if (turn) camera.position.sub(controls.target).applyAxisAngle(yAxis, -turn * dt * 1.4).add(controls.target);
-    const floor = ground(clamp(camera.position.x, -Wm / 2, Wm / 2), clamp(camera.position.z, -Hm / 2, Hm / 2)) + 1; if (camera.position.y < floor) camera.position.y = floor;
+    if (turn) camera.position.sub(controls.target).applyAxisAngle(yAxis, turn * dt * 1.2).add(controls.target);
   }
-  onKeyDown = ev => {
+
+  // start looking at the fences from the south, a bit above
+  const overview = () => {
+    zoomLeft = 0; grab = null;
+    controls.enableDamping = false; controls.update(); controls.enableDamping = true;   // drop any leftover spin from a drag
+    const cy = ground(0, 0);
+    controls.target.set(0, cy, 0); camera.position.set(-size * 0.15, cy + size * 0.55, size * 0.8); controls.update();
+  };
+  overview();  onKeyDown = ev => {
     if (ev.target.closest?.('input,select,textarea')) return;
     if (ev.key === 'Escape') {
       // Esc first frees the mouse, then leaves walk mode, then closes the 3D view
@@ -754,10 +875,12 @@ export async function open3D({bounds, lines, types, nodes, key, focus, braces, m
   const loop = now => {
     const dt = Math.min(0.1, (now - last) / 1000 || 0); last = now;
     moveBy(dt);
-    // keep close-up posts from being clipped when you're right next to them
-    const near = clamp(camera.position.distanceTo(controls.target) / 100, 0.05, Math.max(0.5, size / 2000));
-    if (!walking && Math.abs(near - camera.near) / camera.near > 0.2) { camera.near = near; camera.updateProjectionMatrix(); }
-    if (!walking) controls.update();
+    if (!walking) {
+      stepZoom(dt); controls.update(); keepInRange(); anchor();
+      // keep close-up posts from being clipped when you're right next to them
+      const near = clamp(camera.position.distanceTo(controls.target) / 100, 0.05, Math.max(0.5, size / 2000));
+      if (Math.abs(near - camera.near) / camera.near > 0.2) { camera.near = near; camera.updateProjectionMatrix(); }
+    }
     renderer.render(scene, camera); raf = requestAnimationFrame(loop);
   };
   raf = requestAnimationFrame(loop);
