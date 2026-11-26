@@ -97,7 +97,7 @@ def native_window(url):
     os.makedirs(store, exist_ok=True)
     try:
         webview.create_window("Fence Builder", url, width=1600, height=1000, min_size=(1000, 640),
-                              text_select=True, background_color="#16181b")
+                              text_select=True, background_color="#16181b", maximized=True)  # fills the screen
         webview.start(gui="edgechromium", private_mode=False, storage_path=store)
         return True
     except Exception:
@@ -117,7 +117,7 @@ def browser_window(url, updated):
     lock = os.path.join(profile, "lockfile")
     if not (updated and os.path.exists(lock)):
         subprocess.Popen([browser, "--app=" + url, "--user-data-dir=" + profile, "--no-first-run",
-                          "--no-default-browser-check", "--window-size=1600,1000"]).wait()
+                          "--no-default-browser-check", "--start-maximized"]).wait()
     # Edge and Chrome hand the window to another process and return at once: wait on the lock file
     t0 = time.time()
     while not os.path.exists(lock) and time.time() - t0 < 20:

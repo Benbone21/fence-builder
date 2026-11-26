@@ -124,7 +124,12 @@ a.btn{text-decoration:none;color:var(--ink);display:inline-flex;align-items:cent
 @media (max-width:900px){.setwrap{grid-template-columns:1fr}.setmenu{position:static;flex-direction:row;flex-wrap:wrap}.setnav span{display:none}}
 /* Final bill: bigger and easier to read, with the count to buy up front */
 .est{font-size:15.5px}
-.est .sum b{font-size:24px}.est .sum span{font-size:14px}.est .sum .tot b{font-size:28px}
+.est .sum>div{padding:16px 20px}.est .sum b{font-size:32px;font-weight:700}.est .sum span{font-size:17px;margin-bottom:4px}.est .sum .tot b{font-size:46px}.est .sum .tot span{font-size:19px}
+.est .sum{grid-template-columns:repeat(3,minmax(0,1fr)) minmax(260px,1.2fr)}
+.est .sum>div:nth-child(4),.est .sum>div:nth-child(5),.est .sum>div:nth-child(6){border-top:1px solid var(--line)}
+.est .sum>div:nth-child(4){border-left:0}
+.est .sum .tot{grid-column:4;grid-row:1/span 2;display:flex;flex-direction:column;justify-content:center;border-left:1px solid var(--line)!important}
+@media (max-width:760px){.est .sum{grid-template-columns:1fr 1fr}.est .sum .tot{grid-column:1/-1;grid-row:auto}}
 .est h2{font-size:20px}
 .est table td,.est table th{padding:10px 10px;font-size:15px}
 .est table th{font-size:14px;color:var(--ink);font-weight:600}
@@ -143,6 +148,10 @@ a.btn{text-decoration:none;color:var(--ink);display:inline-flex;align-items:cent
 .bill.final tbody tr:not(.grp) td:nth-last-child(2){font-weight:700;font-size:16px}
 .est .btn.sm{min-height:38px;font-size:14px;padding:0 12px}
 @media print{.qbadge{border:2px solid #000;background:none}.qbadge b{color:#000}}
+.ctxpop .leaflet-popup-content{margin:10px}.ctxmenu{display:flex;flex-direction:column;gap:6px}
+.ctxhead{font-size:15px;font-weight:700;margin:0 0 2px}
+.ctxmenu .btn{display:flex;flex-direction:column;align-items:flex-start;text-align:left;min-height:48px;padding:6px 12px;width:100%;height:auto}
+.ctxmenu .btn b{font-size:15px}.ctxmenu .btn span{font-size:13px;color:var(--mut);font-weight:400}
 .jobtools{display:flex;gap:10px;align-items:center;margin:0 0 12px;flex-wrap:wrap}
 .jobtools input[type=search]{flex:1;min-width:260px;min-height:44px;font-size:15px}
 .seg{display:flex}.seg .btn{min-height:44px;padding:0 16px;font-size:15px;border-radius:0}.seg .btn:first-child{border-radius:6px 0 0 6px}.seg .btn:last-child{border-radius:0 6px 6px 0}
@@ -424,7 +433,8 @@ details.help{margin:8px 0 0}details.help summary{color:var(--acc);font-size:14px
 details.more>summary{padding:4px 0}
 .stp{display:flex;align-items:center;gap:10px;font-size:18px;margin:22px 0 10px}
 .stpn{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:var(--acc);color:var(--accInk);font-size:16px;flex:none}
-#side .sum b{font-size:20px}
+#side .sum>div{padding:14px 18px}#side .sum b{font-size:30px;font-weight:700}#side .sum span{font-size:17px;margin-bottom:4px}#side .sum .tot b{font-size:30px}
+#side .sumbtns .btn{min-height:50px;font-size:17px;font-weight:600}
 .savebar .btn{min-height:38px}.savebar>.grow{flex:1 1 240px}
 .tcard .bsvg{max-height:130px;margin:0 0 6px}
 .leaflet-popup-content{font-size:14.5px}.ptpop select,.ptpop input,.ptpop .btn{min-height:36px}
@@ -476,7 +486,6 @@ table.ed td.ord{width:1%}table.ed td select[data-f="ftw.look"]{min-width:150px}
       <div id="map"></div>
       <div id="mapsum"></div>
       <div id="offbar" hidden></div>
-      <button class="btn" id="b3dMap" title="See the fence in 3D on the real ground">3D view</button>
       <div id="drawbar" hidden><span id="drawMsg"></span><button class="btn" id="bUndo">Undo last point</button><button class="btn pri" id="bFinish">Finish line</button><button class="btn" id="bCancel">Cancel</button></div>
     </div>
   </aside>
@@ -1586,9 +1595,30 @@ map.on('click',e=>{
   if(mode==='draw')addDraftPoint(snap(e.latlng));
   else if(mode==='gate'||mode==='brace')addOnLine(e.latlng);
   else if(selLine){selLine=null;selNode=null;renderAll()}
-  else addressAt(e.latlng);
+  else map.closePopup();
 });
 map.on('dblclick',e=>{if(mode==='draw'){L.DomEvent.stop(e);finishDraw()}});
+/* right-click the map: a menu of what to put there */
+function nearLine(latlng,px=30){const pt=map.latLngToLayerPoint(latlng);let best=null;
+  for(const l of P().lines)for(let i=1;i<l.pts.length;i++){const a=map.latLngToLayerPoint(ll(l.pts[i-1])),b=map.latLngToLayerPoint(ll(l.pts[i])),d=L.LineUtil.closestPointOnSegment(pt,a,b).distanceTo(pt);if(d<px&&(!best||d<best.d))best={d,l}}
+  return best?.l||null}
+map.on('contextmenu',e=>{
+  L.DomEvent.preventDefault(e.originalEvent);
+  if(mode==='draw'){addDraftPoint(snap(e.latlng));return}   // while drawing, a right-click places a point too
+  if(mode!=='idle')setMode('idle');
+  const ll2=e.latlng,onLine=nearLine(ll2),el=document.createElement('div');el.className='ctxmenu';
+  const item=(k,label,help)=>`<button class="btn" data-k="${k}"><b>${label}</b>${help?`<span>${help}</span>`:''}</button>`;
+  el.innerHTML=`<div class="ctxhead">What goes here?</div>
+    ${item('fence','Start a fence line here','Then click each corner')}
+    ${onLine?item('gate','Gate here','Then click the other side of the gap'):''}
+    ${onLine?item('brace','Brace here','On '+esc(onLine.name)):''}
+    ${item('addr','Address of this spot','')}`;
+  el.onclick=ev=>{const k=ev.target.closest('[data-k]')?.dataset.k;if(!k)return;map.closePopup();
+    if(k==='fence'){startDraw();addDraftPoint(snap(ll2))}
+    else if(k==='gate'||k==='brace'){setMode(k);addOnLine(ll2)}
+    else if(k==='addr')addressAt(ll2)};
+  L.popup({maxWidth:300,minWidth:240,className:'ctxpop'}).setLatLng(ll2).setContent(el).openOn(map);
+});
 /* ---------- save an area for offline: two corners, then it downloads in the background ---------- */
 const offLab=L.marker([0,0],{interactive:false,keyboard:false,icon:L.divIcon({className:'seglab',iconSize:[0,0],html:'<span></span>'})});
 const kmOf=b=>{const lat=(b.getNorth()+b.getSouth())/2;return ((b.getEast()-b.getWest())*111.32*Math.cos(lat*Math.PI/180))*((b.getNorth()-b.getSouth())*110.57)};
@@ -1948,7 +1978,7 @@ async function open3D(lineId){
   try{const m=await import('./view3d.js');m.open3D({layoutOf:id=>A.lines.find(r=>r.l.id===id)?.stretches,postRule,bounds:a.bounds,lines:P().lines,types:S.fenceTypes,nodes:A.nodes,key,focus:lineId,braces:S.braces.map(b=>({...b,shape:braceShape(b)})),materials:S.materials})}
   catch(e){console.error(e);toast('3D view could not load')}
 }
-$('#b3d').onclick=()=>open3D(selLine);$('#b3dMap').onclick=()=>open3D(selLine);
+$('#b3d').onclick=()=>open3D(selLine);
 
 /* ---------- panel ---------- */
 const TABS=[['jobs','Jobs'],['build','Builder'],['est','Final bill'],['types','Fence types'],['braces','Braces'],['prices','Materials'],['settings','Settings']];
@@ -2074,7 +2104,7 @@ function lineView(){
     const gate=o.brace==='gate'&&p.brace==='gate'?`<div class="g2" style="margin-top:6px"><label class="small mut">Width ft<input type="number" min="1" step="1" value="${+p.gw||0}" data-f="node.gw" data-id="${l.id}" data-i="${i}"></label><label class="small mut">Gate<select data-f="node.gm" data-id="${l.id}" data-i="${i}">${matOpts(p.gm)}</select></label></div>`:'';
     return `<tr class="${on?'on':''}"><td class="num">${i+1}</td><td>${o.role}${o.refs.length>1?'<br><span class="small mut">shared</span>':''}</td><td>${sel}${gate}</td><td><button class="btn x" data-act="delPt" data-id="${l.id}" data-i="${i}" aria-label="Remove point ${i+1}" title="Remove">×</button></td></tr>`}).join('');
   return `<div class="jobtop" style="margin-top:14px"><button class="btn big" data-act="back">← Back to fence setup</button></div>
-  <h2 style="margin:0 0 8px">One fence line</h2><div class="row noprint"><button class="btn" data-act="zoom" data-id="${l.id}">Zoom to it</button><button class="btn" data-act="view3d" data-id="${l.id}">See it in 3D</button></div>
+  <h2 style="margin:0 0 8px">One fence line</h2><div class="row noprint"><button class="btn" data-act="zoom" data-id="${l.id}">Zoom to it</button></div>
   <label class="f">Line name</label><input type="text" value="${esc(l.name)}" data-f="line.name" data-id="${l.id}">
   <label class="f">Fence type</label><select data-f="line.type" data-id="${l.id}">${S.fenceTypes.map(t=>opt(t.id,t.name,l.type)).join('')}</select>
   <p class="big" style="margin:14px 0 2px">${fmtFt(r.len)}</p><p class="small mut" style="margin:0">of wire run${r.gateW?`, after ${fmtFt(r.gateW)} of gate openings`:''}. ${postText(r)}${r.pulls?`, ${r.pulls} pull braces`:''}.</p>
@@ -2520,7 +2550,7 @@ function elevShort(l){
 function sideView(){
   const sel=selLine&&getLine(selLine)&&A.lines.find(x=>x.l.id===selLine);
   const head=`<div class="sum two"><div><span>Fence length</span><b>${fmtFt(A.totalFt)}</b></div><div class="tot"><span>Materials with tax</span><b>${money(A.sub+A.tax)}</b></div></div>
-    <div class="row" style="margin-top:8px;flex-wrap:nowrap"><button class="btn grow" data-act="billDlg">Shopping list</button><button class="btn grow" data-act="tab" data-tab="est">Final bill</button><button class="btn grow" data-act="view3d" data-id="">3D view</button></div>`;
+    <div class="row sumbtns" style="margin-top:8px;flex-wrap:nowrap"><button class="btn grow" data-act="billDlg">Shopping list</button><button class="btn grow" data-act="tab" data-tab="est">Final bill</button></div>`;
   const drawn=A.lines.filter(r=>!r.manual);
   const list=drawn.length?`<div class="row" style="justify-content:space-between;margin:18px 0 8px"><h2 style="margin:0">Fence lines in this job</h2><button class="btn sm del" data-act="clearLines">Clear map</button></div><p class="small mut" style="margin:-2px 0 8px">Click a line to see its posts, braces and gates.</p><div class="box">${drawn.map(r=>`<button class="tli${r.l.id===selLine?' on':''}" data-act="sel" data-id="${r.l.id}"><span class="dot" style="background:${esc(r.t.color)}"></span><span class="grow"><b>${esc(r.l.name)}</b><span class="small mut">${esc(r.t.name)}${elevShort(r.l)}</span></span><span class="num">${fmtFt(r.len)}</span></button>`).join('')}</div>`:'';
   if(sel)return head+lineView()+list;
@@ -2545,7 +2575,7 @@ function setupView(){
   ${apply}
   <h2 class="stp"><span class="stpn">2</span>Draw it on the map</h2>
   <div class="row"><button class="btn pri big" data-act="draw">${mode==='draw'?'Finish line':'Draw fence'}</button><button class="btn big" data-act="gate">Add gate</button><button class="btn big" data-act="brace">Add brace</button></div>
-  <p class="small mut">Press <b>Draw fence</b>, then click each corner on the map. Press <b>Finish line</b> at the end. Every spot you click gets a brace (a bend gets a corner brace), and the posts space themselves evenly in between. Zoom in to see every post.</p>`,
+  <p class="small mut">Press <b>Draw fence</b>, then click each corner on the map. Press <b>Finish line</b> at the end. Every spot you click gets a brace (a bend gets a corner brace), and the posts space themselves evenly in between. Zoom in to see every post. You can also <b>right-click</b> the map to pick what goes there.</p>`,
   `<h2 class="stp"><span class="stpn">3</span>Check what goes into it</h2>
   <p class="small mut" style="margin:0 0 8px">These are the settings of the fence type <b>${esc(t.name)}</b>. A change here counts for every job that uses it, once you press Save.</p>
   ${saveBar('Ft',t.id)}
