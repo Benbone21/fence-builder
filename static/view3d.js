@@ -99,11 +99,28 @@ async function cachePut(url, value) {
 
 let open = null;
 
-export async function open3D({bounds, lines, types, nodes, key, focus, braces, materials, postRule, layoutOf}) {
+// looks for the building tools (Draw fence, Add brace, Add gate); added here so the 3D view carries its own
+const EDIT_CSS = `#v3d .v3tools{display:flex;gap:8px;flex-wrap:wrap}#v3d .v3tools[hidden]{display:none}
+#v3d .v3tool{font-size:15px;font-weight:600;padding:7px 14px}
+#v3d .v3tool.on{background:#ffd21f;border-color:#ffd21f;color:#1b1e22}
+#v3d .v3mode{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;padding:8px 12px;background:#3b3214;border-bottom:1px solid #6e5c1d;color:#fff4c7}
+#v3d .v3mode[hidden]{display:none}
+#v3d .v3help{flex:1 1 280px;font-size:16px;font-weight:600}
+#v3d .v3mode .btn{font-size:15px;padding:7px 14px}
+#v3d .v3mode .v3fin{background:#2f7d3b;border-color:#2f7d3b;color:#fff}
+#v3d .v3draw{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}`;
+
+export async function open3D({bounds, lines, types, nodes, key, focus, braces, materials, postRule, layoutOf, edit}) {
   if (open) open.close();
+  if (!document.getElementById('v3edit-css')) { const st = document.createElement('style'); st.id = 'v3edit-css'; st.textContent = EDIT_CSS; document.head.appendChild(st); }
   const ov = document.createElement('div');
   ov.id = 'v3d';
-  ov.innerHTML = `<div class="v3bar"><b>3D view</b><span class="v3msg">Loading LiDAR terrain…</span>
+  ov.innerHTML = `<div class="v3bar"><b>3D view</b>
+    <span class="v3tools"${edit ? '' : ' hidden'}>
+      <button class="btn v3tool v3t-draw" title="Click the ground to place each corner of a new fence">Draw fence</button>
+      <button class="btn v3tool v3t-brace" title="Click on a fence line to put a brace there">Add brace</button>
+      <button class="btn v3tool v3t-gate" title="Click one side of the gap, then the other">Add gate</button></span>
+    <span class="v3msg">Loading LiDAR terrain…</span>
     <label class="v3l">Height stretch <input type="range" min="1" max="4" step="0.25" value="1" aria-label="Height stretch"><output>1×</output></label>
     <label class="v3l"><input type="checkbox" class="v3fences" checked> Fences</label>
     <label class="v3l"><input type="checkbox" class="v3bld" checked> <span class="v3bldt">Buildings</span></label>
@@ -111,6 +128,10 @@ export async function open3D({bounds, lines, types, nodes, key, focus, braces, m
     <button class="btn sm v3walk" title="Stand at the start of the fence at eye level (V)">Walk the fence</button>
     <button class="btn sm v3over" title="Back to the view from above">Overview</button>
     <button class="btn sm v3close">Close</button></div>
+    <div class="v3mode" hidden><span class="v3help"></span>
+      <button class="btn v3fin">Finish line</button>
+      <button class="btn v3undo">Undo last point</button>
+      <button class="btn v3cancel">Cancel</button></div>
     <div class="v3c"></div>
     <div class="v3note v3src" hidden></div>
     <div class="v3note">Drag to slide the ground. Right-drag (or <kbd>Ctrl</kbd>-drag) to turn and tilt. Scroll to zoom in where the mouse points. Keys: <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> or arrows to move, <kbd>Q</kbd> <kbd>E</kbd> to turn, <kbd>R</kbd> <kbd>F</kbd> up and down, hold <kbd>Shift</kbd> to go faster. Lost? Press Overview. Click a post to see what it is and the spacing.</div>`;
@@ -645,6 +666,7 @@ export async function open3D({bounds, lines, types, nodes, key, focus, braces, m
   const NOTE_FLY = note.innerHTML;
   const NOTE_WALK = 'Move the mouse to look around (hold it near the edge to keep turning). <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> walk, <kbd>Shift</kbd> run, <kbd>Space</kbd> jump. <kbd>Esc</kbd> frees the mouse, <kbd>V</kbd> leaves walk mode. Click a post to see what it is.';
   function setWalk(on) {
+    if (on && tool) setTool(null);   // building tools work from above, not on foot
     walking = on; walkBtn.classList.toggle('on', on); walkBtn.textContent = on ? 'Leave walk mode' : 'Walk the fence';
     controls.enabled = !on; hud.hidden = !on; cvs.style.cursor = on ? 'none' : ''; note.innerHTML = on ? NOTE_WALK : NOTE_FLY;
     if (on) {
@@ -803,7 +825,7 @@ export async function open3D({bounds, lines, types, nodes, key, focus, braces, m
     const most = Math.max(5, camH() * 3); if (mv.length() > most) mv.setLength(most);   // no wild jumps near the horizon
     shift(mv);
   });
-  const letGo = ev => { fingers.delete(ev.pointerId); if (grab && ev.pointerId === grab.id) { grab = null; if (!walking) cvs.style.cursor = ''; } };
+  const letGo = ev => { fingers.delete(ev.pointerId); if (grab && ev.pointerId === grab.id) { grab = null; if (!walking) cvs.style.cursor = tool ? 'crosshair' : ''; } };
   cvs.addEventListener('pointerup', letGo); cvs.addEventListener('pointercancel', letGo);
 
   function moveBy(dt) {
@@ -833,6 +855,13 @@ export async function open3D({bounds, lines, types, nodes, key, focus, braces, m
   };
   overview();  onKeyDown = ev => {
     if (ev.target.closest?.('input,select,textarea')) return;
+    // while building: Esc stops, Enter finishes the line, Backspace (or Ctrl+Z) takes back the last point
+    if (tool && !walking) {
+      if (ev.key === 'Escape') { ev.preventDefault(); return cancelTool(); }
+      if (ev.key === 'Enter' && tool === 'draw') { ev.preventDefault(); return finishLine(); }
+      if (tool === 'draw' && (ev.key === 'Backspace' || ((ev.ctrlKey || ev.metaKey) && ev.code === 'KeyZ'))) { ev.preventDefault(); return undoPoint(); }
+      if (ev.code === 'KeyV') return;   // don't drop what you're building by walking off
+    }
     if (ev.key === 'Escape') {
       // Esc first frees the mouse, then leaves walk mode, then closes the 3D view
       if (locked || performance.now() - unlockedAt < 400) return;
@@ -850,6 +879,11 @@ export async function open3D({bounds, lines, types, nodes, key, focus, braces, m
   const ray = new THREE.Raycaster(), ptr = new THREE.Vector2(); let down = null;
   renderer.domElement.addEventListener('pointerdown', ev => { down = [ev.clientX, ev.clientY]; });
   renderer.domElement.addEventListener('pointerup', ev => {
+    // building: a plain click (no drag) places the point; a drag still slides the ground
+    if (tool && !walking) {
+      if (down && ev.button === 0 && !ev.ctrlKey && !ev.metaKey && !ev.shiftKey && Math.hypot(ev.clientX - down[0], ev.clientY - down[1]) <= 6) toolClick(ev);
+      down = null; return;
+    }
     if (walking && locked) { ptr.set(0, 0); }
     else {
       if (!down || Math.hypot(ev.clientX - down[0], ev.clientY - down[1]) > 5) return;
@@ -866,9 +900,202 @@ export async function open3D({bounds, lines, types, nodes, key, focus, braces, m
     msg.textContent = best ? best.text : `That spot is ${Math.round(hAt(lat, lng) * FT).toLocaleString()} ft above sea level`;
   });
 
+  // ----- building fence from in here: Draw fence, Add brace, Add gate -----
+  // The points go to the main app (edit.addLine and friends), which saves the job, recounts the bill and redraws the map,
+  // then hands back fresh lines to stand up here. Nothing in the terrain is reloaded.
+  const modeBar = ov.querySelector('.v3mode'), helpEl = ov.querySelector('.v3help');
+  const drawBtn = ov.querySelector('.v3t-draw'), braceBtn = ov.querySelector('.v3t-brace'), gateBtn = ov.querySelector('.v3t-gate');
+  const finBtn = ov.querySelector('.v3fin'), undoBtn = ov.querySelector('.v3undo'), cancelBtn = ov.querySelector('.v3cancel');
+  const dc = document.createElement('canvas'); dc.className = 'v3draw'; box.appendChild(dc);
+  const g2 = dc.getContext('2d');
+  let tool = null, draft = [], hover = null, gateA = null, drewLast = false;
+  const fmt = m => Math.round(m * FT).toLocaleString() + ' ft';
+  const draftLen = () => draft.reduce((a, p, i) => i ? a + Math.hypot(p.x - draft[i - 1].x, p.z - draft[i - 1].z) : 0, 0);
+  const lineXZ = l => l.pts.map(p => xz(p.lat, p.lng));
+  const drawColor = () => { try { return edit?.drawColor?.() || '#ffffff'; } catch (e) { return '#ffffff'; } };
+  function showHelp() {
+    if (!tool) return;
+    helpEl.textContent = tool === 'draw'
+      ? (draft.length === 0 ? 'Click the ground where the fence starts.'
+        : draft.length === 1 ? 'Now click the ground at the next corner.'
+        : `${fmt(draftLen())} so far. Click the ground to place each corner, then press Finish line (or Enter).` + (draft.length >= 3 ? ' Click the first point again to close a loop.' : ''))
+      : tool === 'brace' ? 'Click on a fence line where the brace goes, or click a corner to brace it. Press Done when you are finished.'
+      : gateA ? 'Now click where the other gate post goes, across the gap.'
+      : 'Click on a fence line where the first gate post goes.';
+    undoBtn.disabled = !draft.length;
+  }
+  function setTool(t) {
+    if (t && t !== 'draw' && !lines.some(l => l.pts.length > 1)) { msg.textContent = 'Draw a fence first, then you can add braces and gates to it.'; t = null; }
+    if (t && walking) setWalk(false);
+    tool = t; draft = []; gateA = null; hover = null;
+    for (const [b, k] of [[drawBtn, 'draw'], [braceBtn, 'brace'], [gateBtn, 'gate']]) b.classList.toggle('on', tool === k);
+    modeBar.hidden = !tool;
+    finBtn.style.display = undoBtn.style.display = tool === 'draw' ? '' : 'none';
+    cancelBtn.textContent = tool === 'draw' ? 'Cancel' : 'Done';
+    cvs.style.cursor = tool ? 'crosshair' : '';
+    showHelp();
+  }
+  function cancelTool() {
+    if (tool === 'draw' && draft.length >= 3 && !confirm(`Throw away the ${draft.length} points you placed?`)) return;
+    if (tool === 'draw' && draft.length) msg.textContent = 'Cancelled. No fence was added.';
+    setTool(null);
+  }
+  function undoPoint() { if (tool !== 'draw' || !draft.length) return; draft.pop(); showHelp(); }
+  // take the main app's fresh lines and stand the fences back up
+  function rebuild(res) {
+    if (disposed || !res) return;
+    if (res.lines) lines = res.lines;
+    if (res.nodes) nodes = res.nodes;
+    buildFences();
+  }
+  function apply(res) {
+    if (!res) return false;
+    if (res.error) { msg.textContent = res.error; return false; }
+    rebuild(res); if (res.msg) msg.textContent = res.msg;
+    return true;
+  }
+  function finishLine() {
+    if (tool !== 'draw') return;
+    if (draft.length < 2) { msg.textContent = 'A fence needs at least two points. Click the ground to place them.'; return; }
+    const len = draftLen(), was = focus; focus = null;   // show every line at full strength, the new one too
+    let res; try { res = edit.addLine(draft.map(p => ({lat: p.lat, lng: p.lng}))); } catch (err) { console.error(err); res = {error: 'The fence could not be added'}; }
+    if (!apply(res)) { focus = was; return; }
+    msg.textContent = (res.msg || 'Fence added') + ` (${fmt(len)}). Press Draw fence to draw another.`;
+    setTool(null);
+  }
+  // what a click would hit right now: a spot on the ground, a corner to join, or a spot on a fence line
+  function pick(ev) {
+    const r = cursorRay(ev), p = new THREE.Vector3();
+    if (!groundHit(r.origin, r.direction, p)) return null;
+    if (!inView(p.x, p.z)) return {miss: true, x: p.x, z: p.z, label: 'Outside the map area'};
+    const dist = p.distanceTo(camera.position), snapR = Math.max(0.5, dist * 0.02), lineR = Math.max(1, dist * 0.04);
+    if (tool === 'draw') {
+      if (draft.length >= 3 && Math.hypot(draft[0].x - p.x, draft[0].z - p.z) < snapR) return {...draft[0], close: true, label: 'Close the loop'};
+      // a corner of fence already there: join onto it exactly
+      let best = null, bd = snapR;
+      for (const l of lines) for (const q of l.pts) { const [x, z] = xz(q.lat, q.lng), d = Math.hypot(x - p.x, z - p.z); if (d < bd) { bd = d; best = {x, z, lat: q.lat, lng: q.lng, join: true}; } }
+      if (best) return {...best, label: 'Join this corner'};
+      const [lat, lng] = llOf(p.x, p.z);
+      return {x: p.x, z: p.z, lat, lng};
+    }
+    // add gate, second post: it slides along the same stretch of fence as the first one
+    if (tool === 'gate' && gateA) {
+      const l = lines.find(x => x.id === gateA.lineId); if (!l || !l.pts[gateA.i]) { gateA = null; showHelp(); return null; }
+      const P = lineXZ(l), [ax, az] = P[gateA.i - 1], [bx, bz] = P[gateA.i], dx = bx - ax, dz = bz - az;
+      const u = clamp(((p.x - ax) * dx + (p.z - az) * dz) / (dx * dx + dz * dz || 1), 0, 1), x = ax + dx * u, z = az + dz * u, [lat, lng] = llOf(x, z);
+      return {x, z, lat, lng, lineId: l.id, i: gateA.i, label: 'Gate ' + fmt(Math.hypot(x - gateA.x, z - gateA.z))};
+    }
+    // add brace or the first gate post: the nearest spot on a fence line (for a brace, a corner when you're on one)
+    let best = null;
+    for (const l of lines) {
+      if (l.pts.length < 2) continue;
+      const P = lineXZ(l);
+      if (tool === 'brace') P.forEach(([x, z], i) => { const d = Math.hypot(x - p.x, z - p.z) - snapR; if (d < 0 && (!best || d < best.d)) best = {d, x, z, lat: l.pts[i].lat, lng: l.pts[i].lng, lineId: l.id, i, corner: true}; });
+      for (let i = 1; i < P.length; i++) {
+        const [ax, az] = P[i - 1], [bx, bz] = P[i], dx = bx - ax, dz = bz - az;
+        const u = clamp(((p.x - ax) * dx + (p.z - az) * dz) / (dx * dx + dz * dz || 1), 0, 1), x = ax + dx * u, z = az + dz * u, d = Math.hypot(x - p.x, z - p.z);
+        if (d >= lineR || (best && d >= best.d)) continue;
+        const [lat, lng] = llOf(x, z);
+        if (tool === 'brace' && (u < 0.002 || u > 0.998)) { const j = u < 0.5 ? i - 1 : i; best = {d, x: P[j][0], z: P[j][1], lat: l.pts[j].lat, lng: l.pts[j].lng, lineId: l.id, i: j, corner: true}; }
+        else best = {d, x, z, lat, lng, lineId: l.id, i};
+      }
+    }
+    if (!best) return {miss: true, x: p.x, z: p.z, label: 'Move closer to a fence line'};
+    return {...best, label: tool === 'brace' ? (best.corner ? 'Brace this corner' : 'Brace here') : 'First gate post here'};
+  }
+  function toolClick(ev) {
+    const h = pick(ev); hover = h;
+    if (!h) { msg.textContent = 'Click on the ground (not the sky).'; return; }
+    if (h.miss) { msg.textContent = tool === 'draw' ? 'Click inside the map area.' : 'Click right on a fence line (the coloured line on the ground).'; return; }
+    if (tool === 'draw') {
+      if (h.close) { draft.push({...draft[0]}); return finishLine(); }
+      const last = draft[draft.length - 1];
+      if (last && Math.hypot(last.x - h.x, last.z - h.z) < 0.3) return;   // the same spot twice
+      draft.push({x: h.x, z: h.z, lat: h.lat, lng: h.lng}); showHelp(); return;
+    }
+    let res;
+    try {
+      if (tool === 'brace') res = edit.addBrace(h.lineId, h.i, h.corner ? null : {lat: h.lat, lng: h.lng});
+      else if (!gateA) { gateA = h; showHelp(); return; }
+      else { const a = gateA; gateA = null; res = edit.addGate(a.lineId, a.i, {lat: a.lat, lng: a.lng}, {lat: h.lat, lng: h.lng}); }
+    } catch (err) { console.error(err); res = {error: 'That could not be added'}; }
+    if (apply(res)) msg.textContent = res.msg + (tool === 'brace' ? '. Click to add another, or press Done.' : '. Click to add another gate, or press Done.');
+    hover = null; showHelp();
+  }
+  const toolBtn = (b, t) => { b.onclick = () => {
+    b.blur();
+    if (tool !== t) return setTool(t);
+    if (t === 'draw' && draft.length >= 2) return finishLine();   // pressing Draw fence again finishes what you drew
+    cancelTool();
+  }; };
+  toolBtn(drawBtn, 'draw'); toolBtn(braceBtn, 'brace'); toolBtn(gateBtn, 'gate');
+  finBtn.onclick = () => { finBtn.blur(); finishLine(); };
+  undoBtn.onclick = () => { undoBtn.blur(); undoPoint(); };
+  cancelBtn.onclick = () => { cancelBtn.blur(); cancelTool(); };
+  cvs.addEventListener('pointermove', ev => { if (tool && !walking) hover = pick(ev); });
+  cvs.addEventListener('pointerleave', () => { hover = null; });
+  // the main app changed the lines on its own (roads and rivers found along a new line): stand them up again
+  if (edit) {
+    edit.onOutsideChange = text => { if (disposed) return; rebuild(edit.fresh?.()); if (text) msg.textContent = text; };
+    trash.push({dispose: () => { edit.onOutsideChange = null; }});
+  }
+
+  // what you're building, drawn over the 3D picture: points, lines along the ground, the side to the mouse with its length
+  const pv = new THREE.Vector3();
+  const scr = (x, z, lift = 0.15) => { pv.set(x, ground(x, z) + lift, z).project(camera); return pv.z > 1 || pv.z < -1 ? null : [(pv.x + 1) / 2 * dc.clientWidth, (1 - pv.y) / 2 * dc.clientHeight]; };
+  function along(a, b) {   // a side, following the ground, as screen points (null where it goes behind you)
+    const len = Math.hypot(b.x - a.x, b.z - a.z), k = clamp(Math.ceil(len / Math.max(1, step)), 1, 80), out = [];
+    for (let j = 0; j <= k; j++) out.push(scr(a.x + (b.x - a.x) * j / k, a.z + (b.z - a.z) * j / k));
+    return out;
+  }
+  function stroke(sides, color, width, dash) {
+    for (const [c, wd] of [['rgba(0,0,0,0.55)', width + 4], [color, width]]) {
+      g2.beginPath(); g2.setLineDash(dash || []); g2.strokeStyle = c; g2.lineWidth = wd; g2.lineJoin = g2.lineCap = 'round';
+      for (const s of sides) { let pen = false; for (const q of s) { if (!q) { pen = false; continue; } if (pen) g2.lineTo(q[0], q[1]); else { g2.moveTo(q[0], q[1]); pen = true; } } }
+      g2.stroke();
+    }
+    g2.setLineDash([]);
+  }
+  function dot(x, z, r, fill) {
+    const q = scr(x, z); if (!q) return null;
+    g2.beginPath(); g2.arc(q[0], q[1], r, 0, Math.PI * 2); g2.fillStyle = fill; g2.fill(); g2.lineWidth = 2.5; g2.strokeStyle = '#17191b'; g2.stroke();
+    return q;
+  }
+  function tag(text, q, dy = -22) {
+    if (!q || !text) return;
+    g2.font = '600 15px system-ui, sans-serif'; const w2 = g2.measureText(text).width + 14, x = q[0] - w2 / 2, y = q[1] + dy - 13;
+    g2.fillStyle = 'rgba(0,0,0,0.75)'; g2.beginPath(); g2.roundRect ? g2.roundRect(x, y, w2, 24, 5) : g2.rect(x, y, w2, 24); g2.fill();
+    g2.fillStyle = '#fff'; g2.textAlign = 'center'; g2.textBaseline = 'middle'; g2.fillText(text, q[0], y + 12);
+  }
+  function drawOverlay() {
+    if (!tool && !drewLast) return;
+    const dpr = dc.width / Math.max(1, dc.clientWidth);
+    g2.setTransform(dpr, 0, 0, dpr, 0, 0); g2.clearRect(0, 0, dc.clientWidth, dc.clientHeight);
+    drewLast = !!tool; if (!tool) return;
+    if (tool === 'draw') {
+      const col = drawColor();
+      if (draft.length > 1) stroke(draft.slice(1).map((p, i) => along(draft[i], p)), col, 4);
+      const last = draft[draft.length - 1];
+      if (last && hover && !hover.miss) {
+        stroke([along(last, hover)], col, 3, [10, 8]);
+        const m = scr((last.x + hover.x) / 2, (last.z + hover.z) / 2); tag(fmt(Math.hypot(hover.x - last.x, hover.z - last.z)), m, 0);
+      }
+      draft.forEach((p, i) => dot(p.x, p.z, i === 0 && draft.length >= 3 ? 8 : 6, i === 0 ? '#ffd21f' : '#ffffff'));
+    }
+    if (tool === 'gate' && gateA) {
+      if (hover && !hover.miss) stroke([along(gateA, hover)], '#ffd21f', 5, [8, 7]);
+      dot(gateA.x, gateA.z, 7, '#ffd21f');
+    }
+    if (hover) {
+      const q = dot(hover.x, hover.z, hover.miss ? 5 : 8, hover.miss ? '#9aa0a6' : hover.close || hover.join || hover.corner ? '#ffd21f' : tool === 'draw' ? '#ffffff' : '#4cd964');
+      tag(hover.label, q);
+    }
+  }
+
   const resize = () => {
     const r = box.getBoundingClientRect();
     renderer.setSize(r.width, r.height, false); camera.aspect = r.width / Math.max(1, r.height); camera.updateProjectionMatrix();
+    const dpr = Math.min(devicePixelRatio, 2); dc.width = Math.round(r.width * dpr); dc.height = Math.round(r.height * dpr); drewLast = true;
   };
   ro = new ResizeObserver(resize); ro.observe(box); resize();
   let last = performance.now();
@@ -881,7 +1108,7 @@ export async function open3D({bounds, lines, types, nodes, key, focus, braces, m
       const near = clamp(camera.position.distanceTo(controls.target) / 100, 0.05, Math.max(0.5, size / 2000));
       if (Math.abs(near - camera.near) / camera.near > 0.2) { camera.near = near; camera.updateProjectionMatrix(); }
     }
-    renderer.render(scene, camera); raf = requestAnimationFrame(loop);
+    renderer.render(scene, camera); drawOverlay(); raf = requestAnimationFrame(loop);
   };
   raf = requestAnimationFrame(loop);
 }

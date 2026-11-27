@@ -262,6 +262,7 @@ body.mapfull #mapwrap{position:fixed;inset:0;z-index:2000;border:0}
 .nd{border-radius:50%;background:#fff;border:2px solid #17191b;box-shadow:0 1px 4px #0008}
 .nd.brace{border-radius:2px;background:var(--mark);border:2px solid #17191b}
 .nd.gate{border-radius:2px;background:#3aa0ff;border:2px solid #fff}
+.nd.gatepost{background:#c98a3c;border:2px solid #fff;cursor:pointer}
 .nd.on{outline:3px solid #fff;outline-offset:2px}
 .nd.post{border-radius:50%;background:#fff;border:1.5px solid #17191b;box-shadow:0 0 0 2px #fff6;cursor:move}
 .nd.post.wood{background:#b98a5a}
@@ -1226,6 +1227,29 @@ $('#bDims').onclick=()=>{showDims=!showDims;try{localStorage.setItem('fence-dims
 /* ---------- fence lines on the map ---------- */
 let A=null;
 let rollEndsBy={};   // roll layout per fence type, worked out once per map drawing
+// a spot `dist` meters along a line from point i, toward the next points (dir 1) or the earlier ones (dir -1)
+function alongLine(pts,i,dir,dist){let cur=ll(pts[i]),j=i+dir;
+  while(j>=0&&j<pts.length){const nx=ll(pts[j]),d=cur.distanceTo(nx);if(d>=dist){const f=dist/(d||1);return L.latLng(cur.lat+(nx.lat-cur.lat)*f,cur.lng+(nx.lng-cur.lng)*f)}dist-=d;cur=nx;j+=dir}
+  return cur}
+// the stretch of a line from a to b meters away from point i, in one direction, as map points
+function alongPath(pts,i,dir,a,b){const out=[alongLine(pts,i,dir,a)];let cur=ll(pts[i]),j=i+dir,run=0;
+  while(j>=0&&j<pts.length){const nx=ll(pts[j]),d=cur.distanceTo(nx);if(run+d>a&&run+d<b)out.push(nx);run+=d;if(run>=b)break;cur=nx;j+=dir}
+  out.push(alongLine(pts,i,dir,b));return out}
+function drawGate(l,i,t){
+  const p=l.pts[i],half=(+p.gw||+t?.gateW||16)/FT/2,pts=l.pts;
+  const kit=S.braces.find(b=>b.id===t?.braceGate),sh=kit?braceShape(kit):null;
+  const reach=sh&&sh.style!=='single'?Math.max(1,+sh.span||8)*(sh.style==='a'||sh.style==='aa'?1:Math.max(1,Math.round(+sh.bays||1)))/FT:0;
+  const ends=[];
+  for(const dir of [-1,1]){
+    if(!(i+dir>=0&&i+dir<pts.length))continue;   // a gate at the very end of a line has a post on one side only
+    const post=alongLine(pts,i,dir,half);ends.push(post);
+    if(reach)for(const w of [[9,'#000',.45],[6,'#c98a3c',1]])L.polyline(alongPath(pts,i,dir,half,half+reach),{weight:w[0],color:w[1],opacity:w[2],interactive:false}).addTo(layer);
+    L.marker(post,{interactive:true,keyboard:false,title:kit?`Gate brace: ${kit.name}`:'Gate post (no brace set for gates on this fence type)',icon:L.divIcon({className:'nd brace gatepost',iconSize:[14,14]})}).addTo(layer)
+      .on('click',e=>{L.DomEvent.stop(e);if(mode!=='idle')return;L.popup({maxWidth:260}).setLatLng(post).setContent(`<div class="small mut">Gate post</div><b>${esc(kit?kit.name:'No brace')}</b><div class="small mut" style="margin-top:4px">${kit?'The brace on this side of the gate. Change it on the fence type ("Each side of a gate").':'Set a brace for "Each side of a gate" on the fence type.'}</div>`).openOn(map)});
+  }
+  // the opening: a dark gap with white dashes, so it reads as "no fence here" whatever the fence's color
+  if(ends.length===2)for(const w of [[10,'#17191b',.95],[4,'#ffffff',1]])L.polyline([ends[0],ends[1]],{weight:w[0],color:w[1],opacity:w[2],dashArray:w[1]==='#ffffff'?'6 6':null,interactive:false}).addTo(layer);
+}
 function drawMap(){rollEndsBy={};
   layer.clearLayers();
   for(const l of P().lines){
@@ -1244,6 +1268,8 @@ function drawMap(){rollEndsBy={};
       h.on('click',e=>{L.DomEvent.stop(e);if(mode==='gate'||mode==='brace')return addOnLine(e.latlng);if(mode==='draw')return addDraftPoint(snap(e.latlng));insertPt(l,i,mid)});
       h.on('dragend',e=>insertPt(l,i,e.target.getLatLng()));
     }
+    // each gate: the opening, a post on each side, and how far each side's brace reaches along the fence
+    l.pts.forEach((p,i)=>{if(A.nodes.get(key(p))?.brace==='gate')drawGate(l,i,t)});
     l.pts.forEach((p,i)=>{
       const o=A.nodes.get(key(p));if(!o)return;
       const cls=o.brace==='gate'?'gate':o.brace==='none'?'pt':'brace';
@@ -2047,8 +2073,47 @@ async function open3D(lineId){
     a={bounds:view};
   }
   if(msg)toast(msg);
-  try{const m=await import('./view3d.js');m.open3D({layoutOf:id=>A.lines.find(r=>r.l.id===id)?.stretches,postRule,bounds:a.bounds,lines:P().lines,types:S.fenceTypes,nodes:A.nodes,key,focus:lineId,braces:S.braces.map(b=>({...b,shape:braceShape(b)})),materials:S.materials})}
+  try{const m=await import('./view3d.js');m.open3D({layoutOf:id=>A.lines.find(r=>r.l.id===id)?.stretches,postRule,bounds:a.bounds,lines:P().lines,types:S.fenceTypes,nodes:A.nodes,key,focus:lineId,braces:S.braces.map(b=>({...b,shape:braceShape(b)})),materials:S.materials,edit:edit3D()})}
   catch(e){console.error(e);toast('3D view could not load')}
+}
+// building fence from inside the 3D view (Draw fence, Add brace, Add gate there). Each one changes the job the same way
+// the map tools do (saved, Final bill recounted, map redrawn) and hands the 3D view the fresh lines to stand back up.
+function edit3D(){
+  const typeOfLine=l=>S.fenceTypes.find(x=>x.id===l.type)||S.fenceTypes[0];
+  const fresh=()=>({lines:P().lines,nodes:A.nodes});
+  const ed={
+    fresh,
+    drawColor:()=>(S.fenceTypes.find(x=>x.id===drawTypeId())||S.fenceTypes[0])?.color||'#ffffff',
+    // a new line from the clicked points (the last one the same as the first makes a closed loop)
+    addLine(pts){
+      if(!pts||pts.length<2)return {error:'A fence needs at least two points'};
+      const l={id:uid('l'),name:'Fence '+(P().lines.length+1),type:drawTypeId(),pts:pts.map(p=>({lat:p.lat,lng:p.lng,brace:null}))};
+      P().lines.push(l);selLine=l.id;selNode=null;S.tab='build';changed();
+      if(S.settings.autoCross!==false){const n0=l.pts.length;
+        findCrossings(l.id,true).then(()=>{const l2=getLine(l.id);if(l2&&l2.pts.length!==n0)ed.onOutsideChange?.(`Added gates at roads and braces at rivers along ${l2.name}. Drag them on the map to move them.`)}).catch(e=>console.error(e))}
+      return {...fresh(),id:l.id,msg:l.name+' added'};
+    },
+    // a brace on line lineId: at point i when at is null (shared corners get it too, like the map), else a new point put in before point i
+    addBrace(lineId,i,at){
+      const l=getLine(lineId);if(!l||!l.pts[i])return {error:'That fence line is not there any more'};
+      const id=braceFor(typeOfLine(l));if(!id)return {error:'Make a brace on the Braces tab first'};
+      if(!at){const k=key(l.pts[i]);for(const l2 of P().lines)for(const p2 of l2.pts)if(key(p2)===k)p2.brace=id}
+      else l.pts.splice(i,0,{lat:at.lat,lng:at.lng,brace:id});
+      selLine=l.id;selNode=null;S.tab='build';changed();
+      return {...fresh(),msg:`${kitName(id)} added on ${l.name}`};
+    },
+    // a gate between spots a and b, both on the stretch from point i-1 to point i (the same three points as the map's two-click gate)
+    addGate(lineId,i,a,b){
+      const l=getLine(lineId);if(!l||i<1||i>=l.pts.length)return {error:'That fence line is not there any more'};
+      const t=typeOfLine(l),qa=L.latLng(a.lat,a.lng),qb=L.latLng(b.lat,b.lng),w=Math.round(qa.distanceTo(qb)*FT);
+      if(w<1)return {error:'Click the other side of the gap for the second gate post'};
+      const A0=ll(l.pts[i-1]),[n,f]=A0.distanceTo(qa)<A0.distanceTo(qb)?[qa,qb]:[qb,qa];   // nearer the start of the stretch first
+      l.pts.splice(i,0,{lat:n.lat,lng:n.lng,brace:'none'},{lat:(n.lat+f.lat)/2,lng:(n.lng+f.lng)/2,brace:'gate',gw:w,gm:t.gateM},{lat:f.lat,lng:f.lng,brace:'none'});
+      selLine=l.id;selNode=null;S.tab='build';changed();
+      return {...fresh(),msg:`${w} ft gate added on ${l.name}`};
+    }
+  };
+  return ed;
 }
 $('#b3d').onclick=()=>open3D(selLine);
 
@@ -2626,7 +2691,7 @@ function sideView(){
   const ac=S.settings.autoCross!==false;
   const head=`<label class="setcheck sidecross"><span><b>Gates at roads, braces at rivers</b><span>Added for you where a fence crosses a road, river or creek</span></span><span class="switch"><input type="checkbox" role="switch" ${ac?'checked':''} data-f="set.autoCross" aria-label="Gates at roads, braces at rivers"><i></i><em>${ac?'On':'Off'}</em></span></label>
   <div class="sum two"><div><span>Fence length</span><b>${fmtFt(A.totalFt)}</b></div><div class="tot"><span>Materials with tax</span><b>${money(A.sub+A.tax)}</b></div></div>
-    <div class="row sumbtns" style="margin-top:8px;flex-wrap:nowrap"><button class="btn grow" data-act="billDlg">Shopping list</button><button class="btn grow" data-act="tab" data-tab="est">Final bill</button></div>`;
+    <div class="row sumbtns" style="margin-top:8px;flex-wrap:nowrap"><button class="btn grow" data-act="tab" data-tab="est">Final bill: what to buy and the cost</button></div>`;
   const drawn=A.lines.filter(r=>!r.manual);
   const list=drawn.length?`<div class="row" style="justify-content:space-between;margin:18px 0 8px"><h2 style="margin:0">Fence lines in this job</h2><button class="btn sm del" data-act="clearLines">Clear map</button></div><p class="small mut" style="margin:-2px 0 8px">Click a line to see its posts, braces and gates.</p><div class="box">${drawn.map(r=>`<button class="tli${r.l.id===selLine?' on':''}" data-act="sel" data-id="${r.l.id}"><span class="dot" style="background:${esc(r.t.color)}"></span><span class="grow"><b>${esc(r.l.name)}</b><span class="small mut">${esc(r.t.name)}${elevShort(r.l)}</span></span><span class="num">${fmtFt(r.len)}</span></button>`).join('')}</div>`:'';
   if(sel)return head+lineView()+list;
@@ -2703,8 +2768,22 @@ function retype(l,typeId){
   }
 }
 function custOf(l,r,si){const s=r.stretches[si];l.cust=l.cust||{};if(!Array.isArray(l.cust[s.key]))l.cust[s.key]=s.items.map(x=>({f:x.f,k:x.k}));return l.cust[s.key]}
+// a brace you put in by hand becomes a real brace point on the line, so the fence is worked out again on
+// both sides of it: posts re-space and the automatic pull braces come or go as needed
+function bracePointAt(lid,si,f){
+  const l=getLine(lid),r=A.lines.find(x=>x.l===l),s=r?.stretches[si];if(!s)return false;
+  const sp=postSpots(l,r),S2=sp.st[si];if(!S2)return false;
+  const d=S2.d0+(S2.d1-S2.d0)*f,[lat,lng]=sp.at(d);
+  let cum=0,at=l.pts.length-1;for(let i=1;i<l.pts.length;i++){const seg=ll(l.pts[i-1]).distanceTo(ll(l.pts[i]))*FT;if(cum+seg>=d){at=i;break}cum+=seg}
+  const kit=braceFor(r.t);if(!kit){toast('Make a brace on the Braces tab first');return false}
+  if(l.cust)delete l.cust[s.key];   // this stretch is split in two now
+  l.pts.splice(at,0,{lat,lng,brace:kit});selNode={l:l.id,i:at};changed();
+  toast('Brace added. The posts and pull braces on each side were worked out again.');return true;
+}
 function movePost(lid,si,ii,f){
   const l=getLine(lid),r=A.lines.find(x=>x.l===l);if(!r?.stretches[si])return;
+  // dragging a pull brace on an automatic stretch: put a real brace where it was dropped and work the rest out again
+  if(r.stretches[si].items[ii]?.k==='p'&&!r.stretches[si].custom){bracePointAt(lid,si,Math.min(0.995,Math.max(0.005,f)));return}
   const c=custOf(l,r,si);if(!c[ii])return;c[ii].f=Math.min(0.995,Math.max(0.005,f));c.sort((a,b)=>a.f-b.f);changed();
 }
 function flipCust(l){if(!l.cust)return;const o={};for(const [k,v] of Object.entries(l.cust)){const [a,b]=k.split('>');o[b+'>'+a]=v.map(x=>({f:1-x.f,k:x.k})).reverse()}l.cust=o}
@@ -2718,7 +2797,9 @@ function openPostPopup(lid,si,ii){
     <label class="f">What goes here</label><select data-k="kind">${opt('-1',(matName(t.postM)||'Line post')+' (normal)',String(it.k))}${(t.posts||[]).map((p,i)=>opt(String(i),matName(p.m),String(it.k))).join('')}${opt('p','Pull brace (stretch from here)',String(it.k))}</select>
     <div class="row" style="margin-top:10px"><button class="btn sm" data-k="add">Add a post after it</button><button class="btn sm del" data-k="del">Delete</button></div>
     ${s.custom?'<button class="btn sm" data-k="reset" style="margin-top:6px">Put this stretch back to automatic</button>':'<p class="small mut" style="margin:6px 0 0">Drag it along the fence to move it.</p>'}`;
-  el.addEventListener('change',e=>{if(e.target.dataset.k!=='kind')return;const v=e.target.value,c=custOf(l,r,si);c[ii].k=v==='p'?'p':+v;changed();openPostPopup(lid,si,ii)});
+  el.addEventListener('change',e=>{if(e.target.dataset.k!=='kind')return;const v=e.target.value;
+    if(v==='p'&&!s.custom){map.closePopup();bracePointAt(lid,si,it.f);return}   // a brace by hand: the fence is worked out again around it
+    const c=custOf(l,r,si);c[ii].k=v==='p'?'p':+v;changed();openPostPopup(lid,si,ii)});
   el.addEventListener('click',e=>{const k=e.target.closest('button[data-k]')?.dataset.k;if(!k)return;map.closePopup();
     if(k==='reset'){delete l.cust[s.key];changed();return}
     const c=custOf(l,r,si);
