@@ -118,6 +118,8 @@ a.btn{text-decoration:none;color:var(--ink);display:inline-flex;align-items:cent
 .setbody .note{margin:16px 0 0;font-size:14px}.setfield{max-width:360px;margin:0 0 12px}.setfield input,.setfield select{min-height:42px;font-size:15px}
 .setcheck{display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--line);cursor:pointer}
 .setcheck{justify-content:space-between;align-items:center}
+.sidecross{background:var(--pan);border:1px solid var(--line);border-radius:6px;padding:10px 12px!important;margin:0 0 10px;gap:10px}
+.sidecross b{font-size:15px}.sidecross span span{font-size:13px}
 .switch{position:relative;display:flex;align-items:center;gap:10px;flex:none}
 .switch input{position:absolute;opacity:0;width:64px;height:34px;margin:0;cursor:pointer}
 .switch i{width:64px;height:34px;border-radius:17px;background:var(--line);position:relative;transition:background .15s;flex:none}
@@ -1531,6 +1533,7 @@ async function findCrossings(lid,quiet){
   if(!ways)ways=await us.catch(()=>null);
   if(!ways){if(!quiet)toast('The street map servers are busy, so roads and rivers could not be checked. Try "Find roads and rivers" again in a minute.');return}
   const L2=getLine(lid);if(!L2)return;   // deleted while we waited
+  if(quiet&&S.settings.autoCross===false)return;   // the road and river switch was turned off while we waited
   const t=S.fenceTypes.find(x=>x.id===L2.type)||S.fenceTypes[0],P2=L2.pts.map(xy),hits=[];
   for(const w of ways){
     const tg=w.tags||{},road=tg.highway?.replace(/_link$/,''),water=tg.waterway;if(!w.geometry)continue;
@@ -1568,6 +1571,16 @@ async function findCrossings(lid,quiet){
   }
   if(!said.length)return;
   changed();toast('Added '+said.reverse().join(', ')+'. Drag them to where you want them.');
+}
+// the road and river switch: off takes out the gates and braces it added on this job's lines; on looks for them again
+async function applyAutoCross(on){
+  const lines=P().lines.filter(l=>!l.manual&&l.pts.length>1);
+  if(!on){let n=0;for(const l of lines){const keep=l.pts.filter(p=>!p.auto);if(keep.length>=2&&keep.length<l.pts.length){n+=l.pts.length-keep.length;l.pts=keep}}
+    changed();toast(n?`Took out ${n} road and river point${n===1?'':'s'}. Turn it back on to add them again.`:'Gates at roads and braces at rivers are off.');return}
+  changed();
+  if(!lines.length)return toast('Gates at roads and braces at rivers are on. They are added when you draw a fence.');
+  toast('Looking for roads and rivers along the fence…');
+  for(const l of lines)await findCrossings(l.id,true);
 }
 // the brace a fence type uses in the middle of a run (its pull brace), else its end brace
 const braceFor=t=>[t?.bracePull,t?.braceEnd,S.braces[0]?.id].find(id=>id&&id!=='none'&&S.braces.some(b=>b.id===id));
@@ -2610,7 +2623,9 @@ function elevShort(l){
 }
 function sideView(){
   const sel=selLine&&getLine(selLine)&&A.lines.find(x=>x.l.id===selLine);
-  const head=`<div class="sum two"><div><span>Fence length</span><b>${fmtFt(A.totalFt)}</b></div><div class="tot"><span>Materials with tax</span><b>${money(A.sub+A.tax)}</b></div></div>
+  const ac=S.settings.autoCross!==false;
+  const head=`<label class="setcheck sidecross"><span><b>Gates at roads, braces at rivers</b><span>Added for you where a fence crosses a road, river or creek</span></span><span class="switch"><input type="checkbox" role="switch" ${ac?'checked':''} data-f="set.autoCross" aria-label="Gates at roads, braces at rivers"><i></i><em>${ac?'On':'Off'}</em></span></label>
+  <div class="sum two"><div><span>Fence length</span><b>${fmtFt(A.totalFt)}</b></div><div class="tot"><span>Materials with tax</span><b>${money(A.sub+A.tax)}</b></div></div>
     <div class="row sumbtns" style="margin-top:8px;flex-wrap:nowrap"><button class="btn grow" data-act="billDlg">Shopping list</button><button class="btn grow" data-act="tab" data-tab="est">Final bill</button></div>`;
   const drawn=A.lines.filter(r=>!r.manual);
   const list=drawn.length?`<div class="row" style="justify-content:space-between;margin:18px 0 8px"><h2 style="margin:0">Fence lines in this job</h2><button class="btn sm del" data-act="clearLines">Clear map</button></div><p class="small mut" style="margin:-2px 0 8px">Click a line to see its posts, braces and gates.</p><div class="box">${drawn.map(r=>`<button class="tli${r.l.id===selLine?' on':''}" data-act="sel" data-id="${r.l.id}"><span class="dot" style="background:${esc(r.t.color)}"></span><span class="grow"><b>${esc(r.l.name)}</b><span class="small mut">${esc(r.t.name)}${elevShort(r.l)}</span></span><span class="num">${fmtFt(r.len)}</span></button>`).join('')}</div>`:'';
@@ -2844,7 +2859,7 @@ async function setField(t){
   else if(sc==='kit')kit()[k]=v;
   else if(sc==='kiti')kit().items[i][k]=v;
   else if(sc==='kits'){const b=kit();b.shape={...braceShape(b),[k]:v}}
-  else if(sc==='set')S.settings[k]=v;
+  else if(sc==='set'){S.settings[k]=v;if(k==='autoCross'){applyAutoCross(v);return}}
   else if(sc==='joblab'){const p=P();p.labor={...LABOR_BASE,...(S.settings.laborDefaults||{}),...(p.labor||{}),[k]:v}}
   else if(sc==='jobhead'){const p=P();p.headache=p.headache||{};if(t.value===''||!(+t.value>0))delete p.headache[id];else p.headache[id]=+t.value}
   else if(sc==='fee'){const p=P();if(p.fees?.[i])p.fees[i][k]=v}
