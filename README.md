@@ -94,7 +94,12 @@ Set `FENCE_PASS` to require a login (user name `fence`) before opening it to oth
   the State of Idaho parcel layer (Ada, Boise, Washington and others), elsewhere Regrid's free
   nationwide lines. Click a line for its parcel number and acres. While drawing, fence points snap to
   property corners and lines. They are approximate, from county records: for reference only, not a
-  survey. Owner names are never downloaded. **Section lines** show the BLM land survey.
+  survey. **Section lines** show the BLM land survey.
+- **Right-click the map** for a menu: start a fence line, a gate or brace on a line, delete a stretch of
+  fence or a brace, **Fence this property** (one parcel), **Fence this owner's land** (the owner's
+  neighbouring parcels as one fence; owner names are used only to group parcels and are never shown or
+  saved), or **Pick several parcels to fence together**.
+- The 3D view has **Draw fence**, **Add brace** and **Add gate** too.
 - 3D view shows the terrain with the satellite photo, every post, wire, brace and gate at
   real size, and nearby buildings. Move with W A S D or the arrow keys.
 
