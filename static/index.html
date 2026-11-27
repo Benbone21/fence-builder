@@ -870,7 +870,11 @@ function askText(msg,def=''){return new Promise(res=>{
   d.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();fin(inp.value)}};
   d.showModal();inp.focus();inp.select()})}
 let toastT;function toast(t){const el=$('#toast');el.textContent=t;el.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove('show'),3200)}
-const P=()=>S.projects.find(p=>p.id===S.cur)||S.projects[0];
+// the job you're working on. With every job deleted it's a blank one that isn't saved until you draw on it
+let blankJob=null;
+const P=()=>S.projects.find(p=>p.id===S.cur)||S.projects[0]||(blankJob??={id:uid('p'),name:'New job',stage:'bid',lines:[],log:[]});
+function keepBlankJob(){if(!blankJob||S.projects.length)return blankJob=null;if(!blankJob.lines.length)return;
+  logJob(blankJob,'Job started');S.projects.push(blankJob);S.cur=blankJob.id;blankJob=null}
 const getLine=id=>P().lines.find(l=>l.id===id);
 const matName=id=>(S.materials.find(m=>m.id===id)||{}).name||'(missing material)';
 
@@ -1613,6 +1617,44 @@ map.on('click',e=>{
   else map.closePopup();
 });
 map.on('dblclick',e=>{if(mode==='draw'){L.DomEvent.stop(e);finishDraw()}});
+/* fence a whole property: the parcel under the spot, from the county map, as one closed fence line.
+   County outlines have lots of tiny jogs, and every point of a fence line is a brace, so the outline is
+   straightened first: only real corners are kept (bends of more than a few degrees, a foot or two off a straight line). */
+function inRing(r,x,y){let c=false;for(let i=0,j=r.length-1;i<r.length;j=i++){const [xi,yi]=r[i],[xj,yj]=r[j];if((yi>y)!==(yj>y)&&x<(xj-xi)*(y-yi)/(yj-yi)+xi)c=!c}return c}
+function parcelAt(ll2){
+  for(const ft of parcelFeats){const g=ft.geometry,polys=g.type==='Polygon'?[g.coordinates]:g.type==='MultiPolygon'?g.coordinates:[];
+    for(const poly of polys)if(poly[0]&&inRing(poly[0],ll2.lng,ll2.lat)&&!poly.slice(1).some(h=>inRing(h,ll2.lng,ll2.lat)))return {ft,ring:poly[0]}}
+  return null}
+function straighten(ring,tolM=0.6){
+  const lat0=ring[0][1]*Math.PI/180,kx=111320*Math.cos(lat0),ky=110574,P2=ring.map(([x,y])=>[x*kx,y*ky]);
+  let pts=P2.slice();if(pts.length>1){const a=pts[0],b=pts[pts.length-1];if(Math.hypot(a[0]-b[0],a[1]-b[1])<1e-6)pts.pop()}
+  if(pts.length<3)return null;
+  // start at the sharpest corner so the loop's join is a real corner too
+  const turn=i=>{const a=pts[(i-1+pts.length)%pts.length],b=pts[i],c=pts[(i+1)%pts.length];const u=[b[0]-a[0],b[1]-a[1]],v=[c[0]-b[0],c[1]-b[1]];return Math.abs(Math.atan2(u[0]*v[1]-u[1]*v[0],u[0]*v[0]+u[1]*v[1]))};
+  let best=0;for(let i=1;i<pts.length;i++)if(turn(i)>turn(best))best=i;
+  pts=[...pts.slice(best),...pts.slice(0,best),pts[best]];
+  const dp=(a,b)=>{let mi=-1,md=0;const A=pts[a],B=pts[b],L=Math.hypot(B[0]-A[0],B[1]-A[1])||1;
+    for(let i=a+1;i<b;i++){const d=Math.abs((B[0]-A[0])*(A[1]-pts[i][1])-(A[0]-pts[i][0])*(B[1]-A[1]))/L;if(d>md){md=d;mi=i}}
+    return md>tolM?[...dp(a,mi),...dp(mi,b).slice(1)]:[a,b]};
+  // a loop starts and ends at the same point, so split it at the point farthest from the start and straighten each half
+  const n=pts.length-1;let far=1,fd=0;for(let i=1;i<n;i++){const d=Math.hypot(pts[i][0]-pts[0][0],pts[i][1]-pts[0][1]);if(d>fd){fd=d;far=i}}
+  const keep=[...dp(0,far),...dp(far,n).slice(1)];
+  return keep.map(i=>({lat:pts[i][1]/ky,lng:pts[i][0]/kx}));
+}
+async function fenceProperty(ll2){
+  if(map.getZoom()<PARCEL_Z)map.setView(ll2,PARCEL_Z);
+  if(!map.hasLayer(parcels))parcels.addTo(map);
+  let hit=parcelAt(ll2);
+  if(!hit){toast('Looking up the property lines here…');const [x,y]=tileOf(ll2.lat,ll2.lng,PARCEL_Z),f=await parcelTile(x,y);parcelTiles.set(x+'/'+y,f.length);
+    for(const ft of f){const k=ft.properties.county+'|'+(ft.properties.pid||JSON.stringify(ft.geometry).slice(0,80));if(!parcelSeen.has(k)){parcelSeen.add(k);parcelFeats.push(ft)}}drawParcels();hit=parcelAt(ll2)}
+  if(!hit)return toast('No property lines found at that spot. Property lines come from county maps; some areas have none.');
+  const pts=straighten(hit.ring);if(!pts||pts.length<4)return toast('That property outline is too small to fence.');
+  const p=hit.ft.properties,l={id:uid('l'),name:'Property '+(p.pid||''),type:drawTypeId(),pts:pts.map(q=>({lat:q.lat,lng:q.lng,brace:null}))};
+  l.name=l.name.trim();P().lines.push(l);selLine=l.id;S.tab='build';changed();
+  map.fitBounds(L.latLngBounds(pts.map(q=>[q.lat,q.lng])),{padding:[40,40]});
+  toast(`Fenced the property line: ${pts.length-1} corners. Property lines are approximate, so check the corners.`);
+  if(S.settings.autoCross!==false)findCrossings(l.id,true);
+}
 /* right-click the map: a menu of what to put there */
 function nearLine(latlng,px=30){const pt=map.latLngToLayerPoint(latlng);let best=null;
   for(const l of P().lines)for(let i=1;i<l.pts.length;i++){const a=map.latLngToLayerPoint(ll(l.pts[i-1])),b=map.latLngToLayerPoint(ll(l.pts[i])),d=L.LineUtil.closestPointOnSegment(pt,a,b).distanceTo(pt);if(d<px&&(!best||d<best.d))best={d,l}}
@@ -1627,10 +1669,12 @@ map.on('contextmenu',e=>{
     ${item('fence','Start a fence line here','Then click each corner')}
     ${onLine?item('gate','Gate here','Then click the other side of the gap'):''}
     ${onLine?item('brace','Brace here','On '+esc(onLine.name)):''}
+    ${item('prop','Fence this property','Around its property lines')}
     ${item('addr','Address of this spot','')}`;
   el.onclick=ev=>{const k=ev.target.closest('[data-k]')?.dataset.k;if(!k)return;map.closePopup();
     if(k==='fence'){startDraw();addDraftPoint(snap(ll2))}
     else if(k==='gate'||k==='brace'){setMode(k);addOnLine(ll2)}
+    else if(k==='prop')fenceProperty(ll2);
     else if(k==='addr')addressAt(ll2)};
   L.popup({maxWidth:300,minWidth:240,className:'ctxpop'}).setLatLng(ll2).setContent(el).openOn(map);
 });
@@ -2005,7 +2049,7 @@ const kitName=id=>id==='none'?'No brace':id==='gate'?'Gate':(S.braces.find(b=>b.
 
 function renderAll(){A=analyze(P());drawMap();renderPanel();renderHeader()}
 function renderHeader(){
-  $('#proj').innerHTML=S.projects.map(p=>opt(p.id,p.name,S.cur)).join('')+'<option value="__newjob">+ Start a new job…</option>';
+  $('#proj').innerHTML=(S.projects.length?'':'<option value="" selected>No jobs yet</option>')+S.projects.map(p=>opt(p.id,p.name,S.cur)).join('')+'<option value="__newjob">+ Start a new job…</option>';
 }
 const focusKey=el=>el&&el.dataset&&(el.dataset.f||el.dataset.act)?['f','act','id','i'].filter(k=>el.dataset[k]!=null).map(k=>`[data-${k}="${el.dataset[k]}"]`).join(''):null;
 function renderPanel(){
@@ -2864,7 +2908,7 @@ async function act(a,d){
   case 'jobBill':S.cur=id;selLine=null;selNode=null;if(mode!=='idle')cancelDraw();gotoTab('est');changed();break;
   case 'jobLog':{const p=S.projects.find(x=>x.id===id),t=$('#jobLogT')?.value.trim();if(p&&t){logJob(p,t);changed()}break}
   case 'jobCopy':{const p=S.projects.find(x=>x.id===id);if(!p)break;const c=JSON.parse(JSON.stringify(p));Object.assign(c,{id:uid('p'),name:p.name+' (copy)',stage:'bid',paid:0,est:undefined,log:[]});for(const l of c.lines)l.id=uid('l');logJob(c,'Copied from '+p.name);S.projects.push(c);jobOpen=c.id;changed();toast('Copied. This is the new job.');break}
-  case 'jobDel':{const p=S.projects.find(x=>x.id===id);if(!p)break;if(S.projects.length<2)return toast('This is your only job');if(await ask('Delete the job "'+p.name+'" and its fence lines? This cannot be undone.')){S.projects=S.projects.filter(x=>x.id!==p.id);if(S.cur===p.id)S.cur=S.projects[0].id;jobOpen=null;selLine=null;selNode=null;changed()}break}
+  case 'jobDel':{const p=S.projects.find(x=>x.id===id);if(!p)break;if(await ask('Delete the job "'+p.name+'" and its fence lines? This cannot be undone.')){S.projects=S.projects.filter(x=>x.id!==p.id);if(S.cur===p.id)S.cur=S.projects[0]?.id||null;jobOpen=null;selLine=null;selNode=null;changed()}break}
   case 'saveSeed':{if(!serverOK)return toast('This needs the Fence Builder server running');
     try{const r=await fetch('api/seed',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({materials:S.materials,fenceTypes:S.fenceTypes,braces:S.braces,settings:S.settings,drawType:S.drawType})});const j=await r.json();if(!r.ok)throw 0;
       toast(`Saved as the starting setup: ${j.fenceTypes} fence types, ${j.braces} braces, ${j.materials} materials`)}catch(e){toast('Could not save the starting setup')}break}
@@ -2933,7 +2977,7 @@ async function act(a,d){
     if(S.braces.length<2)return toast('Keep at least one brace');if(await ask('Remove this brace? Spots set to it go back to automatic.')){braceSel=null;S.braces=S.braces.filter(b=>b.id!==id);delete drafts.kit[id];const f=S.braces[0].id;for(const t of S.fenceTypes)for(const k of['braceEnd','braceCorner','bracePull','braceGate'])if(t[k]===id)t[k]=f;for(const p of S.projects)for(const l of p.lines)for(const pt of l.pts)if(pt.brace===id)pt.brace=null;changed()}break;
   case 'addKiti':draftKit(id).items.push({m:S.materials[0]?.id,q:1});renderPanel();break;
   case 'delKiti':draftKit(id).items.splice(i,1);renderPanel();break;
-  case 'delProj':if(S.projects.length<2)return toast('This is your only job');if(await ask('Delete the job "'+P().name+'" and its fence lines?')){S.projects=S.projects.filter(p=>p.id!==S.cur);S.cur=S.projects[0].id;selLine=null;changed();fitProject()}break;
+  case 'delProj':if(!S.projects.some(p=>p.id===S.cur))break;if(await ask('Delete the job "'+P().name+'" and its fence lines?')){S.projects=S.projects.filter(p=>p.id!==S.cur);S.cur=S.projects[0]?.id||null;selLine=null;changed();fitProject()}break;
   case 'export':{const a2=document.createElement('a');a2.href=URL.createObjectURL(new Blob([JSON.stringify(S,null,1)],{type:'application/json'}));a2.download='fence-estimator-backup.json';a2.click();break}
   case 'import':$('#importFile').click();break;
   }
@@ -3192,17 +3236,17 @@ $('#importFile').onchange=async e=>{
   try{const j=JSON.parse(await f.text());if(!j.materials||!j.projects)throw 0;S=j;S.fenceTypes=(S.fenceTypes||[]).map(t=>migrateType(t,S.settings||{}));selLine=null;selNode=null;changed();fitProject();toast('Backup loaded')}catch(err){toast('That file is not a Fence Builder backup')}
   e.target.value='';
 };
-$('#proj').onchange=e=>{if(e.target.value==='__newjob'){e.target.value=S.cur;$('#newProj').click();return}S.cur=e.target.value;selLine=null;selNode=null;cancelDraw();changed();fitProject()};
+$('#proj').onchange=e=>{if(!e.target.value)return;if(e.target.value==='__newjob'){e.target.value=S.cur||'';$('#newProj').click();return}S.cur=e.target.value;selLine=null;selNode=null;cancelDraw();changed();fitProject()};
 $('#newProj').onclick=async()=>{const n=await askText('Name for the new job','Job '+(S.projects.length+1));if(n===null)return;const p={id:uid('p'),name:n.trim()||'New job',stage:'bid',lines:[]};logJob(p,'Job started');S.projects.push(p);S.cur=p.id;selLine=null;selNode=null;if(mode!=='idle')cancelDraw();map.closePopup();S.tab='build';changed();toast('New job "'+p.name+'". Set up the fence, then draw it.')};
 function fitProject(){const pts=P().lines.flatMap(l=>l.pts);if(pts.length)map.fitBounds(L.latLngBounds(pts.map(ll)),{padding:[40,40],maxZoom:19})}
-function changed(){save();renderAll();record();scheduleElev()}
+function changed(){keepBlankJob();save();renderAll();record();scheduleElev()}
 
 /* ---------- start ---------- */
 // take loaded data and fill in anything an older save is missing
 function adopt(s){
   S=s;const d=defaults();
-  S.settings={...d.settings,...S.settings};S.braces=S.braces||d.braces;S.fenceTypes=S.fenceTypes||d.fenceTypes;S.projects=S.projects?.length?S.projects:d.projects;
-  if(!S.projects.find(p=>p.id===S.cur))S.cur=S.projects[0].id;
+  S.settings={...d.settings,...S.settings};S.braces=S.braces||d.braces;S.fenceTypes=S.fenceTypes||d.fenceTypes;S.projects=Array.isArray(S.projects)?S.projects:d.projects;   // no jobs at all is fine
+  if(!S.projects.find(p=>p.id===S.cur))S.cur=S.projects[0]?.id||null;
   for(const p of S.projects){p.stage=p.stage||'bid';for(const l of p.lines)if(!Array.isArray(l.pts))l.pts=[]}
   if(!S.fenceTypes.some(t=>t.id===S.drawType))S.drawType=S.fenceTypes[0]?.id;
   if(S.fenceTypes.some(t=>!Array.isArray(t.wires))){S.fenceTypes=S.fenceTypes.map(t=>migrateType(t,S.settings));S.settings.labor=0;save()}
