@@ -57,6 +57,8 @@ table.ed td select[data-f="ftw.look"]{min-width:120px}td.ord .btn{display:block;
 .lnk{font-variant-numeric:tabular-nums}
 .vsep{width:2px;align-self:center;height:28px;background:var(--line);margin:0 8px;flex:none}
 .hright{margin-left:auto;display:flex;align-items:center;gap:8px;padding-left:16px}
+#newProj[hidden]{display:none!important}header .jobpick{margin-left:12px}#status{font-size:13px}
+#tabs2 button{background:transparent}#tabs2 button.on{background:var(--acc)}
 body.pg-lib .jobpick,body.pg-lib #newProj{display:none}
 .jobpick{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;color:var(--mut)}
 .hright .btn{min-height:40px;padding:0 16px;font-size:14px;font-weight:600}
@@ -171,6 +173,11 @@ a.btn{text-decoration:none;color:var(--ink);display:inline-flex;align-items:cent
 .jobname{all:unset;cursor:pointer;font-size:16px;font-weight:700;display:block;margin-bottom:2px}.jobname:hover{text-decoration:underline}.jobname:focus-visible{outline:2px solid var(--acc)}
 .job .when{margin-top:4px;font-weight:600}
 .jobnums{display:flex;justify-content:space-between;align-items:baseline;margin-top:8px;padding-top:8px;border-top:1px solid var(--line)}.jobnums b{font-size:16px}
+.newjob{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;width:100%;min-height:110px;margin:0 0 8px;padding:14px;border:2px dashed var(--acc);border-radius:6px;background:transparent;color:var(--acc);cursor:pointer;text-align:center}
+.newjob:hover{background:var(--pan);border-style:solid}.newjob:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+.newjob .plus{font-size:34px;line-height:1;font-weight:400}.newjob b{font-size:18px}.newjob span:last-child{font-size:14px;color:var(--mut)}
+.newjob.wide{min-height:64px;flex-direction:row;gap:12px;margin:0 0 12px}.newjob.wide .plus{font-size:28px}
+.jobbtns .btn.back{color:var(--mut)}
 .jobbtns{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.jobbtns .btn{min-height:38px;font-size:14px}
 .warn{color:var(--red);font-weight:600}
 .stagepill{font-size:13px;font-weight:600;padding:2px 10px;border-radius:12px;border:1px solid var(--line);vertical-align:middle;white-space:nowrap}
@@ -455,11 +462,12 @@ table.ed td.ord{width:1%}table.ed td select[data-f="ftw.look"]{min-width:150px}
 <body>
 <header>
   <h1>Fence Builder</h1>
-  <nav class="tabs" id="tabs" aria-label="Pages"></nav>
+  <nav class="tabs" id="tabs" aria-label="Job pages"></nav>
+  <label class="jobpick"><span>Job</span><select id="proj" aria-label="Job"></select></label>
+  <button class="btn pri" id="newProj" hidden>+ New job</button>
   <div class="hright">
     <span id="status"></span>
-    <label class="jobpick"><span>Job</span><select id="proj" aria-label="Job"></select></label>
-    <button class="btn pri" id="newProj">+ New job</button>
+    <nav class="tabs" id="tabs2" aria-label="Setup pages"></nav>
     <button class="btn" id="bKeys" title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts">?</button>
   </div>
 </header>
@@ -1997,7 +2005,7 @@ const kitName=id=>id==='none'?'No brace':id==='gate'?'Gate':(S.braces.find(b=>b.
 
 function renderAll(){A=analyze(P());drawMap();renderPanel();renderHeader()}
 function renderHeader(){
-  $('#proj').innerHTML=S.projects.map(p=>opt(p.id,p.name,S.cur)).join('');
+  $('#proj').innerHTML=S.projects.map(p=>opt(p.id,p.name,S.cur)).join('')+'<option value="__newjob">+ Start a new job…</option>';
 }
 const focusKey=el=>el&&el.dataset&&(el.dataset.f||el.dataset.act)?['f','act','id','i'].filter(k=>el.dataset[k]!=null).map(k=>`[data-${k}="${el.dataset[k]}"]`).join(''):null;
 function renderPanel(){
@@ -2007,7 +2015,9 @@ function renderPanel(){
   if(!TABS.some(t=>t[0]===S.tab))S.tab='build';
   applyUI();document.documentElement.style.setProperty('--tz',String(+S.settings.textSize||1));
   document.body.classList.toggle('pg-lib',['types','braces','prices','settings'].includes(S.tab));
-  $('#tabs').innerHTML=TABS.map(([k,n])=>`${k==='types'?'<span class="vsep"></span>':''}<button data-tab="${k}" class="${S.tab===k?'on':''}"${S.tab===k?' aria-current="page"':''}>${n}</button>`).join('');
+  const tabBtn=([k,n])=>`<button data-tab="${k}" class="${S.tab===k?'on':''}"${S.tab===k?' aria-current="page"':''}>${n}</button>`,SETUP=['types','braces','prices','settings'];
+  $('#tabs').innerHTML=TABS.filter(t=>!SETUP.includes(t[0])).map(tabBtn).join('');
+  $('#tabs2').innerHTML=TABS.filter(t=>SETUP.includes(t[0])).map(tabBtn).join('');
   const build=S.tab==='build',box=build?$('#side'):$('#panel'),out=build?$('#side'):$('#body');
   const st=box.scrollTop,fk=box.contains(document.activeElement)?focusKey(document.activeElement):null;
   const fn={jobs:jobsView,build:sideView,est:estView,types:typesView,braces:bracesView,prices:pricesView,settings:settingsView}[S.tab];
@@ -2689,22 +2699,24 @@ function jobsView(){
   const chip=(k,name,list)=>`<button class="stagechip${jobStage===k?' on':''}" data-act="jobStage" data-k="${k}"><b>${name}</b><span>${list.length} job${list.length===1?'':'s'}${list.length?' · '+money(list.reduce((a,j)=>a+j.a.total,0)):''}</span></button>`;
   const chips=chip('all','All jobs',jobs)+STAGES.map(([k,n])=>chip(k,n,jobs.filter(j=>j.st===k))).join('');
   const view=jobView();
-  const next=st=>{const i=STAGES.findIndex(s=>s[0]===st);return STAGES[i+1]};
-  const card=({p,a,st})=>{const nx=next(st);return `<div class="job${p.id===S.cur?' cur':''}" draggable="true" data-job="${p.id}">
+  const next=st=>{const i=STAGES.findIndex(s=>s[0]===st);return STAGES[i+1]},prev=st=>{const i=STAGES.findIndex(s=>s[0]===st);return i>0?STAGES[i-1]:null};
+  const card=({p,a,st})=>{const nx=next(st),pv=prev(st);return `<div class="job${p.id===S.cur?' cur':''}" draggable="true" data-job="${p.id}">
       <button class="jobname" data-act="jobPage" data-id="${p.id}">${esc(p.name)}</button>
       ${p.customer?`<div>${esc(p.customer)}</div>`:''}
       ${p.phone?`<div class="mut">${esc(p.phone)}</div>`:''}
       ${p.address?`<div class="mut">${esc(p.address)}</div>`:''}
       ${whenLine(p)?`<div class="when">${whenLine(p)}</div>`:''}
       <div class="jobnums"><span>${fmtFt(a.totalFt)}</span><b>${money(a.total)}</b></div>
-      <div class="jobbtns"><button class="btn pri" data-act="jobPage" data-id="${p.id}">Open job</button>${nx?`<button class="btn" data-act="jobNext" data-id="${p.id}" title="${esc(STAGE_HELP[nx[0]])}">Move to ${nx[1]} →</button>`:''}</div></div>`};
+      <div class="jobbtns"><button class="btn pri" data-act="jobPage" data-id="${p.id}">Open job</button>${nx?`<button class="btn" data-act="jobNext" data-id="${p.id}" title="${esc(STAGE_HELP[nx[0]])}">Move to ${nx[1]} →</button>`:''}${pv?`<button class="btn back" data-act="jobPrev" data-id="${p.id}" title="Move it back to ${esc(pv[1])}">← Back to ${pv[1]}</button>`:''}</div></div>`};
   let body;
-  if(!jobs.length)body='<p class="mut">No jobs yet. Press <b>+ New job</b> to start one.</p>';
+  // a new job starts as a bid: a big "New job" card at the top of the Bid column
+  const addCard=`<button class="newjob" data-act="newJob"><span class="plus" aria-hidden="true">+</span><b>New job</b><span>Start a bid</span></button>`;
+  if(!jobs.length)body=`<div class="jobgrid">${addCard}</div>`;
   else if(!shown.length)body=`<div class="note">No jobs match${jobQ?` "${esc(jobQ)}"`:''}${jobStage!=='all'?' in '+stageName(jobStage):''}. <button class="lnk" data-act="jobClear">Show all jobs</button></div>`;
-  else if(view==='list')body=`<div class="box"><table class="joblist"><thead><tr><th>Job</th><th>Customer</th><th>Phone</th><th>Stage</th><th>When</th><th class="num">Fence</th><th class="num">Total</th><th></th></tr></thead><tbody>${shown.map(({p,a,st})=>`<tr data-job="${p.id}"><td><button class="jobname" data-act="jobPage" data-id="${p.id}">${esc(p.name)}</button></td><td>${esc(p.customer||'')}</td><td>${esc(p.phone||'')}</td><td><span class="stagepill s-${st}">${stageName(st)}</span></td><td>${whenLine(p)}</td><td class="num">${fmtFt(a.totalFt)}</td><td class="num"><b>${money(a.total)}</b></td><td><button class="btn pri" data-act="jobPage" data-id="${p.id}">Open job</button></td></tr>`).join('')}</tbody></table></div>`;
-  else if(jobStage!=='all')body=`<div class="jobgrid">${shown.map(card).join('')}</div>`;
-  else body=`<div class="board">${STAGES.map(([k,name])=>{const mine=shown.filter(j=>j.st===k);return `<div class="col" data-stage="${k}"><h3><span>${name}</span><span class="mut">${mine.length}</span></h3><p class="small mut colhelp">${STAGE_HELP[k]}</p>${mine.map(card).join('')||'<p class="mut" style="margin:6px 4px">None</p>'}</div>`}).join('')}</div>`;
-  return `<div class="phead"><div><h1>Jobs</h1><p>Click a job to see everything about it. Move a job along with its button, or drag its card to another column.</p></div><button class="btn pri big" data-act="newJob">+ New job</button></div>
+  else if(view==='list')body=`${addCard.replace('class="newjob"','class="newjob wide"')}<div class="box"><table class="joblist"><thead><tr><th>Job</th><th>Customer</th><th>Phone</th><th>Stage</th><th>When</th><th class="num">Fence</th><th class="num">Total</th><th></th></tr></thead><tbody>${shown.map(({p,a,st})=>`<tr data-job="${p.id}"><td><button class="jobname" data-act="jobPage" data-id="${p.id}">${esc(p.name)}</button></td><td>${esc(p.customer||'')}</td><td>${esc(p.phone||'')}</td><td><span class="stagepill s-${st}">${stageName(st)}</span></td><td>${whenLine(p)}</td><td class="num">${fmtFt(a.totalFt)}</td><td class="num"><b>${money(a.total)}</b></td><td><button class="btn pri" data-act="jobPage" data-id="${p.id}">Open job</button></td></tr>`).join('')}</tbody></table></div>`;
+  else if(jobStage!=='all')body=`<div class="jobgrid">${jobStage==='bid'?addCard:''}${shown.map(card).join('')}</div>`;
+  else body=`<div class="board">${STAGES.map(([k,name])=>{const mine=shown.filter(j=>j.st===k);return `<div class="col" data-stage="${k}"><h3><span>${name}</span><span class="mut">${mine.length}</span></h3><p class="small mut colhelp">${STAGE_HELP[k]}</p>${k==='bid'?addCard:''}${mine.map(card).join('')||(k==='bid'?'':'<p class="mut" style="margin:6px 4px">None</p>')}</div>`}).join('')}</div>`;
+  return `<div class="phead"><div><h1>Jobs</h1><p>Click a job to see everything about it. Move a job along with its button, or drag its card to another column.</p></div></div>
   <div class="jobtools"><input type="search" id="jobQ" value="${esc(jobQ)}" placeholder="Find a job: name, customer, phone or address" aria-label="Find a job">
     <div class="seg" role="group" aria-label="Show jobs as"><button class="btn${view==='cards'?' on':''}" data-act="jobView" data-k="cards">Cards</button><button class="btn${view==='list'?' on':''}" data-act="jobView" data-k="list">List</button></div></div>
   <div class="stagechips">${chips}</div>
@@ -2815,7 +2827,7 @@ $('#panel').addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='jo
 $('#panel').addEventListener('input',e=>{if(e.target.id!=='matQ')return;const q=e.target.value.trim().toLowerCase();for(const tr of $('#panel').querySelectorAll('table.mats tbody tr[data-name]'))tr.hidden=!!q&&!tr.dataset.name.includes(q);
   // hide a group heading (Wire, Posts…) when none of its materials match
   let g=null,any=false;for(const tr of $('#panel').querySelectorAll('table.mats tbody tr')){if(tr.classList.contains('grp')){if(g)g.hidden=!any;g=tr;any=false}else if(!tr.hidden)any=true}if(g)g.hidden=!any});
-$('#tabs').addEventListener('click',e=>{const b=e.target.closest('[data-tab]');if(!b)return;if(b.dataset.tab==='jobs')jobOpen=null;if(b.dataset.tab==='types')typeSel=null;if(b.dataset.tab==='braces')braceSel=null;gotoTab(b.dataset.tab)});
+for(const nav of [$('#tabs'),$('#tabs2')])nav.addEventListener('click',e=>{const b=e.target.closest('[data-tab]');if(!b)return;if(b.dataset.tab==='jobs')jobOpen=null;if(b.dataset.tab==='types')typeSel=null;if(b.dataset.tab==='braces')braceSel=null;gotoTab(b.dataset.tab)});
 // sections you opened (like "More options") stay open when the page redraws
 const openKeep={};
 for(const el of [$('#panel'),$('#side')])el.addEventListener('toggle',e=>{const k=e.target.dataset?.keep;if(k)openKeep[k]=e.target.open},true);
@@ -2847,6 +2859,7 @@ async function act(a,d){
   case 'jobClear':jobStage='all';jobQ='';renderPanel();break;
   case 'jobView':try{localStorage.setItem('fence-jobview',d.k)}catch(e){}renderPanel();break;
   case 'jobNext':{const p=S.projects.find(x=>x.id===id),k=STAGES[STAGES.findIndex(s=>s[0]===(p?.stage||'bid'))+1]?.[0];if(p&&k){setStage(p,k);changed();toast(`${p.name} moved to ${stageName(k)}`)}break}
+  case 'jobPrev':{const p=S.projects.find(x=>x.id===id),i=STAGES.findIndex(s=>s[0]===(p?.stage||'bid'));if(p&&i>0){const k=STAGES[i-1][0];setStage(p,k);changed();toast(`${p.name} moved back to ${stageName(k)}`)}break}
   case 'jobSetStage':{const p=S.projects.find(x=>x.id===id);if(p){setStage(p,d.k);changed()}break}
   case 'jobBill':S.cur=id;selLine=null;selNode=null;if(mode!=='idle')cancelDraw();gotoTab('est');changed();break;
   case 'jobLog':{const p=S.projects.find(x=>x.id===id),t=$('#jobLogT')?.value.trim();if(p&&t){logJob(p,t);changed()}break}
@@ -3179,7 +3192,7 @@ $('#importFile').onchange=async e=>{
   try{const j=JSON.parse(await f.text());if(!j.materials||!j.projects)throw 0;S=j;S.fenceTypes=(S.fenceTypes||[]).map(t=>migrateType(t,S.settings||{}));selLine=null;selNode=null;changed();fitProject();toast('Backup loaded')}catch(err){toast('That file is not a Fence Builder backup')}
   e.target.value='';
 };
-$('#proj').onchange=e=>{S.cur=e.target.value;selLine=null;selNode=null;cancelDraw();changed();fitProject()};
+$('#proj').onchange=e=>{if(e.target.value==='__newjob'){e.target.value=S.cur;$('#newProj').click();return}S.cur=e.target.value;selLine=null;selNode=null;cancelDraw();changed();fitProject()};
 $('#newProj').onclick=async()=>{const n=await askText('Name for the new job','Job '+(S.projects.length+1));if(n===null)return;const p={id:uid('p'),name:n.trim()||'New job',stage:'bid',lines:[]};logJob(p,'Job started');S.projects.push(p);S.cur=p.id;selLine=null;selNode=null;if(mode!=='idle')cancelDraw();map.closePopup();S.tab='build';changed();toast('New job "'+p.name+'". Set up the fence, then draw it.')};
 function fitProject(){const pts=P().lines.flatMap(l=>l.pts);if(pts.length)map.fitBounds(L.latLngBounds(pts.map(ll)),{padding:[40,40],maxZoom:19})}
 function changed(){save();renderAll();record();scheduleElev()}
