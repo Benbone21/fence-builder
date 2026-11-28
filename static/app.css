@@ -102,13 +102,31 @@ body.pg-lib .jobpick,body.pg-lib #newProj{display:none}
 #side .po>select:first-child{grid-column:1/-1}
 #side .po.head{display:none}
 table.mats td{padding:4px 6px;vertical-align:middle}
-table.mats td:first-child{min-width:260px}
 table.mats input[type=url]{min-width:180px}
 table.mats tr[hidden]{display:none}
 table.mats input.pr{width:96px}table.mats input.un{width:84px}
-table.mats td:nth-child(3),table.mats td:nth-child(4){width:1%}
-table.mats td:nth-child(5){max-width:260px}
-table.mats td:first-child{min-width:230px}
+/* Materials list: fits the page, no side-to-side scrolling. Names and details wrap under the name, store links are
+   shortened (the whole link shows on hover), price and "sold by" share a column. Narrower: "Used in" and
+   "Price checked" move under the name. */
+table.mats{width:100%}
+table.mats td.c-mat{min-width:260px}
+table.mats .mrow{align-items:flex-start}
+table.mats .mtxt{flex:1 1 auto;min-width:0;overflow-wrap:anywhere}
+table.mats .mrow>.btn{flex:none}
+table.mats .mspec{margin-top:2px;line-height:1.4}
+table.mats .mmore{display:none;margin-top:4px;line-height:1.45}
+table.mats td.c-pr{width:1%}table.mats td.c-pr .small{display:block}
+table.mats td.c-use{width:16%;min-width:150px;overflow-wrap:anywhere}
+table.mats td.c-link{width:1%}
+table.mats .mlink{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px}
+table.mats .mlink a{color:var(--acc);display:inline-block;max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+table.mats td.c-chk{width:1%;white-space:nowrap}
+table.mats td.c-chk .msrc,table.mats td.c-chk .up,table.mats td.c-chk .down{display:block}
+table.mats td.c-chk .msrc{max-width:170px;overflow:hidden;text-overflow:ellipsis}
+table.mats td.c-act{width:1%}
+@container (min-width:1300px){table.mats .mlink{flex-wrap:nowrap}}
+@container (max-width:1000px){table.mats .c-use,table.mats .c-chk{display:none}table.mats .mmore{display:block}}
+@container (max-width:640px){table.mats td.c-mat{min-width:200px}}
 header select{width:auto;max-width:240px}
 #status{font-size:14px;color:var(--hdrMut);white-space:nowrap}#status:empty{display:none}
 main{flex:1;display:grid;grid-template-columns:minmax(0,1fr);min-height:0}
@@ -583,7 +601,7 @@ body.signin{display:flex;flex-direction:column;align-items:center;justify-conten
 body.admin header{position:sticky;top:0;z-index:5;gap:12px}
 body.admin .htitle{font-size:19px;font-weight:600;color:var(--mut)}
 body.admin .hright{margin-left:auto;display:flex;gap:8px}
-.adminwrap{max-width:1200px;margin:0 auto;padding:16px;font-size:15px}
+.adminwrap{max-width:none;margin:0 auto;padding:16px clamp(16px,2vw,40px);font-size:15px}
 .apanel{padding:16px 20px;margin:0 0 16px}
 .apanel h2{margin:4px 0 8px;font-size:21px}
 .apanel h3{margin:18px 0 4px}
@@ -626,11 +644,32 @@ p.secret{font:600 22px/1.3 ui-monospace,Consolas,monospace;background:var(--pan2
 .arealbl span{position:absolute;transform:translate(-50%,-50%);white-space:nowrap;text-align:center;background:#000b;color:#fff;font:500 12px/1.3 system-ui,sans-serif;padding:4px 10px;border-radius:8px;pointer-events:none}.arealbl b{font-size:15px}
 .areanote{display:block;margin-top:4px;font-size:14px}.est .sum .areanote{font-size:15px;color:var(--mut)}
 .areabox{display:inline-flex;flex-direction:column;margin:10px 0 0;padding:8px 14px;border:1px solid var(--line);border-radius:6px;background:var(--pan2)}.areabox b{font-size:22px}.areabox span{font-size:13px;color:var(--mut)}
+/* ---------- the whole screen width on laptops and desktops (pages run edge to edge, see #body below) ---------- */
+.est table.runs td.name{white-space:normal;min-width:180px}
+/* a pick list of long material names fits its column instead of pushing the table past the edge (Fence types, Braces) */
+table.ed td>select,table.ed .rollbox>select{width:100%;max-width:0;min-width:100%}
+table.ed td:first-child>select,table.ed td>select[data-f="ftw.look"]{min-width:max(150px,100%)}
+table.ed td:nth-child(4)>select{min-width:max(104px,100%)}
+.pick>select{flex-basis:0}.pick>.lnk{flex:none}
+@container (min-width:1440px){.jobcols{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@container (max-width:1000px){.board{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@container (max-width:520px){.board{grid-template-columns:minmax(0,1fr)}}
+@media (min-width:901px){
+  /* Settings: the section uses the room beside the menu; boxes to type in sit side by side, words stay a readable width */
+  .setwrap{grid-template-columns:260px minmax(0,1fr)}
+  .setbody{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));column-gap:20px;align-content:start}
+  .setbody>*{grid-column:1/-1}
+  .setbody>.setfield{grid-column:auto;max-width:none}
+  .setbody>.setfield textarea{max-width:none}
+  .setbody>.btn,.setbody>a.btn{justify-self:start}
+  .setbody>h3{margin-top:12px}
+  .setbody>p,.setbody>.note,.setbody>.setcheck{max-width:100ch}
+}
 /* ---------- calmer layout (1.9): one page width, the same cards everywhere, quieter colour ---------- */
 :root{--r:8px}
 .box,.card,.sec,.sum,.note,.tcard,.setbody,.setnav,.step,.stagechip,.jobcols .card,.col,.job,.autobox,.sidecross,.bedit,.tli.on{border-radius:var(--r)}
 .box,.card,.sec,.sum,.tcard,.setbody,.jobcols .card,.job,.autobox,.bedit,.stagechip,.step,.setnav,.tipcard{box-shadow:var(--shadow)}
-#body{padding:24px 32px 72px;max-width:1440px}
+#body{padding:24px clamp(16px,2vw,40px) 72px;max-width:none}
 #panel{background:var(--bg)}
 /* buttons at least 40px tall, boxes to type in the same */
 .btn{min-height:40px}.btn.sm,.est .btn.sm{min-height:40px}.btn.x{min-height:40px;width:40px}
