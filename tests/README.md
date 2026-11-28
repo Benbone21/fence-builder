@@ -3,7 +3,12 @@
 `smoke.py` starts the server on a new, empty temp data folder (your real jobs are never touched),
 opens the app in a hidden Chromium browser, clicks every page, adds a test job with a fence line,
 and checks the Final bill shows a fence length and a total. It fails on any JavaScript error, and on
-anything the page's security policy blocks. It does this twice: the single-user way (like the Windows
+anything the page's security policy blocks. Then it opens the app at phone size (390 × 844) with a fake GPS
+near Emmett: the bottom bar and the map's slide-up panel, then Walk the fence (two corners, a gate, one more
+corner with the browser offline, the page reopened offline from the phone's copy, the line finished), and checks
+that the walked line reached the server once back online and shows on the Final bill, and that a page that isn't
+secure explains that the location needs https. The walk holds still 3 seconds per point, so this adds about half a
+minute. It does this twice: the single-user way (like the Windows
 app) and as a shared server with accounts, signed in as a test admin (`--only single` or `--only multi`
 runs one).
 

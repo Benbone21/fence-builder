@@ -8,8 +8,10 @@ async function load(){
   try{const r=await fetch('api/data',{cache:'no-store'});if(r.ok){serverOK=true;const j=await r.json();baseRev=+j?.rev||0;
     await mePromise;const kept=pendingChange(baseRev);   // a change kept when the sign-in ran out
     if(kept){baseJSON=JSON.stringify(j);setTimeout(()=>{save();toast('Your last change was saved.')},800);return kept}
-    if(j&&j.materials){baseJSON=JSON.stringify(j);return j}}}catch(e){}
+    const sent=await offRestore(j);if(sent)return sent;   // points dropped with no signal, kept on this phone (08-offline.js)
+    if(j&&j.materials){baseJSON=JSON.stringify(j);if(offWanted())offPut('copy:'+offWho(),{rev:baseRev,body:baseJSON});return j}}}catch(e){}
   await mePromise;
+  const kept=await offLoad();if(kept)return kept;   // no connection: the copy kept on this phone
   // a shared server keeps nobody's jobs in the browser (other people may use this computer)
   if(!isMulti())try{const j=JSON.parse(localStorage.getItem('fence-est'));if(j&&j.materials)return j}catch(e){}
   // nothing saved yet: start from the setup that ships with the app (your fence types, braces and materials)
@@ -25,14 +27,17 @@ async function pushSave(){
   saving=true;const body=JSON.stringify(S),quiet=elevOnly;elevOnly=false;
   if(!isMulti())try{localStorage.setItem('fence-est',body)}catch(e){}
   if(!serverOK){setStatus('Saved on this device');saving=false;return}
+  await offBeforeSave(body);   // on a phone: kept there first, in case there is no signal
   try{
+    if(isMulti()&&!CSRF)await whoami();   // opened with no signal: this sign-in's safety token first
     const sent=await packed(body);
     const r=await fetch('api/data',{method:'PUT',headers:{'Content-Type':'application/json','X-Base-Rev':String(baseRev),...sent.headers},body:sent.body});
     if(r.status===409){saving=false;saveAgain=false;return mergeLatest(quiet)}
     if(!r.ok)throw r.status;
-    baseRev=+(await r.json()).rev||baseRev;baseJSON=body;setStatus('Saved');
+    baseRev=+(await r.json()).rev||baseRev;baseJSON=body;setStatus('Saved');offSaved(body);
   }catch(e){
-    if(!isMulti())setStatus('Saved on this device only, server not reachable');
+    if(typeof e!=='number'&&offWanted()){offFailed();setTimeout(()=>{if(!saveT&&!saving&&netDown)save()},15000)}   // no signal: kept on the phone, tried again
+    else if(!isMulti())setStatus('Saved on this device only, server not reachable');
     else if(e===403)setStatus('Not saved. Please refresh the page.');
     else if(e!==401){setStatus('Not saved yet, the server is not answering. Trying again…');setTimeout(()=>{if(!saveT&&!saving)save()},15000)}
   }
@@ -153,6 +158,7 @@ async function checkLatest(){
     // the app itself was updated since this window loaded it: say so, with a one-click refresh
     if(j.app){if(appVer==null)appVer=j.app;else if(j.app!==appVer)$('#stale').hidden=false}
     if(saveT||saving||mode!=='idle')return;
+    if(netDown){save();return}   // back in range with work not sent yet: send it (a clash is merged), don't load over it
     if(+j.rev!==baseRev&&!saveT&&!saving&&!busyEditing())takeLatest(false);   // wait while a dialog or an unsaved edit is open
   }catch(e){}
 }

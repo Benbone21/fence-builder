@@ -156,7 +156,7 @@ let autoBusy=false;
 async function autoPrices(manual){
   if(autoBusy||!S)return;
   const every=AUTO_EVERY[S.settings.autoPrices??'day'];
-  if(!manual){if(!every||!serverOK||document.hidden)return;
+  if(!manual){if(!every||!serverOK||document.hidden||netDown||navigator.onLine===false)return;
     const last=Date.parse(S.settings.priceRunAt||0)||0;if(Date.now()-last<every)return;
     if(document.querySelector('dialog[open]')||mode!=='idle')return;}   // not while you are editing something
   const isPO=m=>{try{return PEOPLE_ONLY.test(new URL(m.url).hostname)}catch(e){return false}};

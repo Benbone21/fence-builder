@@ -1,12 +1,16 @@
 {
+  "id": "./",
   "name": "Fence Builder",
   "short_name": "Fence Builder",
+  "description": "Draw or walk a fence line and get every post, brace and roll of wire, with the cost.",
   "start_url": "./",
+  "scope": "./",
   "display": "standalone",
-  "background_color": "#141619",
-  "theme_color": "#1b1e22",
+  "orientation": "any",
+  "background_color": "#f4f5f7",
+  "theme_color": "#ffffff",
   "icons": [
-    {"src": "icon-256.png", "sizes": "256x256", "type": "image/png"},
-    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png"}
+    {"src": "icon-256.png", "sizes": "256x256", "type": "image/png", "purpose": "any"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"}
   ]
 }

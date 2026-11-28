@@ -79,7 +79,15 @@ a service like Cloudflare if that matters).
   nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`,
   `Cross-Origin-Resource-Policy: same-origin`, and over https `Strict-Transport-Security`. Pictures and
   requests may go to any https site, because map tiles, store pictures and the map/LiDAR/parcel services
-  the page asks directly live on many https hosts.
+  the page asks directly live on many https hosts. `Permissions-Policy` lets pages use the location and keep
+  the screen on (Walk the fence) for this site only, and turns off the camera, microphone, payment and USB.
+- On a phone (or the app added to a home screen), for working with no signal: a service worker (`sw.js`, served
+  only to someone signed in) keeps the app's own files, never answers from `api/` except aerial-photo map pieces
+  the person chose to keep; the page keeps, in the phone's IndexedDB, who signed in last (name and user name, no
+  password or session token), the last copy of their own data and any change not sent yet. Changes made with no
+  signal go out through the normal save with the normal sign-in, safety token and version check. Signing out
+  deletes all of it. Nothing of this kind is kept in a computer's browser (unless Fence Builder is installed as
+  an app there).
 - `FENCE_ALLOWED_HOSTS` (optional) makes the server answer only to its own names.
 
 **Requests the server makes to other sites (SSRF)**

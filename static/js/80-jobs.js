@@ -28,7 +28,7 @@ function jobsView(){
   const shown=jobs.filter(j=>(jobStage==='all'||j.st===jobStage)&&(!jobQ||jobSearch(j.p).includes(jobQ.toLowerCase())));
   const chip=(k,name,list)=>`<button class="stagechip${jobStage===k?' on':''}" data-act="jobStage" data-k="${k}"><b>${name}</b><span>${list.length} job${list.length===1?'':'s'}${list.length?' · '+money(list.reduce((a,j)=>a+j.a.total,0)):''}</span></button>`;
   const chips=chip('all','All jobs',jobs)+STAGES.map(([k,n])=>chip(k,n,jobs.filter(j=>j.st===k))).join('');
-  const view=jobView();
+  const view=isPhone()?'cards':jobView();   // a phone always gets the cards (the list is a wide table)
   const next=st=>{const i=STAGES.findIndex(s=>s[0]===st);return STAGES[i+1]},prev=st=>{const i=STAGES.findIndex(s=>s[0]===st);return i>0?STAGES[i-1]:null};
   const card=({p,a,st})=>{const nx=next(st),pv=prev(st);return `<div class="job${p.id===S.cur?' cur':''}" draggable="true" data-job="${p.id}">
       <button class="jobname" data-act="jobPage" data-id="${p.id}">${esc(p.name)}</button>

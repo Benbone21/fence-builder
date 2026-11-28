@@ -170,6 +170,43 @@ install); `fence-estimator.service` is a systemd example, `nginx-fence.conf` an 
   see their pages (like Premier 1 Supplies), use the **Add to Fence Builder** bookmark
   on the Materials page.
 
+## On a phone
+
+Open the same address as on the computer (your shared server's address, for example
+`https://fence.yourbusiness.com`) in the phone's browser and sign in. On a phone the pages are made for one hand:
+a bar of big buttons at the bottom (**Jobs**, **Map**, **Final bill**, **Walk the fence**, **More** for the setup
+pages), the map fills the screen, and the fence setup and the details slide up from the bottom when you tap the bar
+that says the fence's length and price.
+
+**Put it on the home screen**, so it opens like an app: on an iPhone, Safari's Share button, then **Add to Home
+Screen**; on Android, Chrome's menu (⋮), then **Add to Home screen** or **Install app**.
+
+**Walk the fence** (with the phone's GPS):
+
+1. Tap **Walk the fence**, pick the fence type and tap **Start walking a new fence line**.
+2. Stand at the corner where the fence starts and tap **Drop a point here**. Hold still for 3 seconds while it
+   steadies the GPS reading. Walk to the next corner (or brace) and tap again, and so on. The length so far is at the top.
+3. For a gate, stand at one gate post and tap **Add a gate here**, then walk to the other post and tap **Other gate
+   post here**. **Undo last point** takes back the last point (a gate comes off whole).
+4. Tap **Finish line** at the end. The braces at ends and corners, gates at roads, braces at creeks and on hills go in
+   the same as for a line drawn on the map. **Cancel** throws the line away.
+
+It shows how sure the GPS is (for example ±12 ft) and warns when it is rough (worse than ±30 ft): wait a moment or
+move into the open. **Follow me** keeps the map on you; the screen stays on while you walk where the phone's browser
+allows it. Each point is saved as soon as it goes in.
+
+**No signal out in the country?** GPS works without signal. Once you have opened Fence Builder on the phone (signed
+in, with signal) it opens and walks with no signal too: the points are kept on the phone and sent on their own when
+you are back in range (if the job was changed somewhere else meanwhile, both are kept). The map photo can't load with
+no signal, so before you go, tap **Keep this area's map on this phone** on the Walk screen: it keeps the USGS aerial
+photo of the area on the screen (at least about half a mile across; zoom out first to take in more; up to 150 MB, and
+it says how big before it starts; use Wi-Fi if you can). Without it you still see your dot and the fence on a blank map. Signing out removes
+what was kept on the phone.
+
+**The phone only shares its location with https websites** (and with `localhost`). Plain `http://` to the server's
+address works for everything else, but the Walk screen will say so: turn on https as in
+[Later: a domain name and https](#later-a-domain-name-and-https). Working with no signal needs https too.
+
 ## How the counts work
 
 - Wire is counted per fence type from strands, roll length and extra for sag and splices.
@@ -271,7 +308,9 @@ for the app, `data/offline` for the web server. About 4 MB per 50 acres at full 
   of a shared server. `static/js/05-account.js` is the app's side of accounts.
 - `ground.py` looks up the ground along a fence line (soil, water, trees) on public federal maps for the
   app; `static/js/68-ground.js` shows it.
-- `static/index.html` is the page, `static/app.css` its look, and `static/view3d.js` the 3D view. The colours of
+- `static/index.html` is the page, `static/app.css` its look, and `static/view3d.js` the 3D view. `static/js/92-phone.js` is the phone's
+  layout and Walk the fence, `static/js/08-offline.js` and `static/sw.js` let a phone work with no signal; pictures are in
+  `docs/phone/`. The colours of
   each look in **Settings → Look and text size** (Clean, Warm, Ranch, High contrast, Dark) are at the top of `app.css`;
   `static/look.js` puts the one picked on this computer on the page before it shows (the app, sign-in and Accounts
   pages all load it). Pictures of each look are in `docs/looks/`.

@@ -7,7 +7,7 @@ function scheduleElev(){clearTimeout(elevT);elevT=setTimeout(ensureElev,900)}
 function ensureElev(){
   const now=Date.now();
   for(const l of P().lines){
-    if(l.manual||l.pts.length<2)continue;
+    if(l.manual||l.pts.length<2||walkingNow(l))continue;   // a line still being walked: its heights load when it is finished
     const k=geomKey(l),id=l.id+k,f=elevFail.get(id),ev=evOf(l);
     if(elevBusy.has(l.id)||(f&&(f.n>=3||now<f.next)))continue;
     // done, unless they are older numbers, or Open-Meteo stood in because USGS was down (then ask USGS
