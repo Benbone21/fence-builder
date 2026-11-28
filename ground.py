@@ -228,11 +228,55 @@ def _runs_out(runs):
 
 
 # ---------- soil and rock (USDA NRCS soil survey) ----------
+# The soil survey's answer is boiled down here to the few things that matter for setting posts; the page
+# (static/js/68-ground.js) turns them into plain words. Soil survey names and map labels are kept, but only
+# as a footnote there.
+SOIL_V = 2                 # answers without this (kept in a browser from before) are asked again
 BEDROCK = re.compile(r"bedrock", re.I)
 HARDPAN = re.compile(r"duripan|petrocalcic|petrogypsic|petroferric|ortstein|fragipan|placic|cemented|densic material", re.I)
 ROCKY_NAME = re.compile(r"\b(stony|very stony|extremely stony|cobbly|bouldery|rubbly|rocky|rock outcrop|rock land)\b", re.I)
-PAN_WORDS = {"duripan": "hardpan (duripan)", "petrocalcic": "hardpan (caliche)", "petrogypsic": "hardpan (gypsum)",
-             "ortstein": "hardpan", "fragipan": "hardpan (fragipan)", "placic": "hardpan", "petroferric": "hardpan (ironstone)"}
+# hard layers, in the words a fence builder uses
+PAN_WORDS = {"duripan": "hardpan (cemented layer)", "petrocalcic": "caliche hardpan", "petrogypsic": "gypsum hardpan",
+             "ortstein": "hardpan (cemented layer)", "fragipan": "hard, packed layer", "placic": "thin iron hardpan",
+             "petroferric": "ironstone hardpan", "cemented": "hardpan (cemented layer)", "densic": "hard, packed layer"}
+TEXTURES = ("sand", "sandy", "sandyloam", "loam", "silty", "clayloam", "clay", "muck")
+DRAIN = ("Excessively drained", "Somewhat excessively drained", "Well drained", "Moderately well drained",
+         "Somewhat poorly drained", "Poorly drained", "Very poorly drained", "Subaqueous")
+FLOODS = ("Very rare", "Rare", "Occasional", "Frequent", "Very frequent")
+
+
+def _level(name, word):
+    """how strongly the soil survey name says stony / cobbly / gravelly: 0 not at all, 1, 2 very, 3 extremely"""
+    lv = 0
+    for m in re.finditer(r"\b(very |extremely )?(%s)\b" % word, name, re.I):
+        lv = max(lv, {"": 1, "very ": 2, "extremely ": 3}[(m.group(1) or "").lower()])
+    return lv
+
+
+def _texture(sand, clay, name):
+    """the kind of dirt in the top 40 inches, from sand and clay percent (or the name when they're missing)"""
+    if re.search(r"\b(muck|mucky|peat|peaty)\b", name, re.I):
+        return "muck"
+    if sand is None or clay is None:
+        for w, t in (("clay loam", "clayloam"), ("sandy loam", "sandyloam"), ("loamy sand", "sandy"), ("silt", "silty"),
+                     ("clay", "clay"), ("sand", "sand"), ("loam", "loam")):
+            if re.search(r"\b%s" % w, name, re.I):
+                return t
+        return ""
+    silt = 100 - sand - clay
+    if sand >= 85 and clay < 10:
+        return "sand"
+    if sand >= 70 and clay < 15:
+        return "sandy"
+    if clay >= 40:
+        return "clay"
+    if clay >= 27:
+        return "clayloam"
+    if silt >= 50:
+        return "silty"
+    if sand >= 52:
+        return "sandyloam"
+    return "loam"
 
 
 def _sda(sql):
@@ -275,17 +319,28 @@ def soil(line):
         if re.fullmatch(r"\d{1,12}", k):
             meters[k] = meters.get(k, 0.0) + _wkt_len(line, r.get("part"))
     if not meters:
-        return {"units": [], "ft": 0, "covered": False}
+        return {"v": SOIL_V, "units": [], "ft": 0, "covered": False}
     keys = ",".join("'%s'" % k for k in meters)
     qs = {
         "mu": "SELECT M.mukey, M.musym, M.muname FROM mapunit M WHERE M.mukey IN (%s)" % keys,
-        "co": "SELECT C.mukey, C.cokey, C.compname, C.compkind, C.comppct_r FROM component C WHERE C.mukey IN (%s)" % keys,
+        "co": "SELECT C.mukey, C.cokey, C.compname, C.compkind, C.comppct_r, C.slope_l, C.slope_h, C.drainagecl, C.frostact, "
+              "C.geomdesc FROM component C WHERE C.mukey IN (%s)" % keys,
         "res": "SELECT C.cokey, R.reskind, R.resdept_r FROM component C JOIN corestrictions R ON R.cokey = C.cokey WHERE C.mukey IN (%s)" % keys,
-        "hz": "SELECT C.cokey, H.hzdept_r, H.hzdepb_r, H.frag3to10_r, H.fraggt10_r, H.sieveno10_r FROM component C "
-              "JOIN chorizon H ON H.cokey = C.cokey WHERE C.mukey IN (%s) AND H.hzdept_r < %d" % (keys, DEPTH_CM),
+        "hz": "SELECT C.cokey, H.hzdept_r, H.hzdepb_r, H.frag3to10_r, H.fraggt10_r, H.sieveno10_r, H.sandtotal_r, H.claytotal_r, H.lep_r "
+              "FROM component C JOIN chorizon H ON H.cokey = C.cokey WHERE C.mukey IN (%s) AND H.hzdept_r < %d" % (keys, DEPTH_CM),
+        # one row per soil: how wet it is, how often it floods
+        "ag": "SELECT A.mukey, A.wtdepannmin, A.flodfreqdcd, A.pondfreqprs, A.drclassdcd FROM muaggatt A WHERE A.mukey IN (%s)" % keys,
     }
-    with concurrent.futures.ThreadPoolExecutor(4) as ex:
-        got = dict(zip(qs, ex.map(_sda, qs.values())))
+
+    def ask(name):
+        try:
+            return _sda(qs[name])
+        except GroundError:
+            if name == "ag":   # the wet-ground summary is extra: the rest still answers without it
+                return []
+            raise
+    with concurrent.futures.ThreadPoolExecutor(5) as ex:
+        got = dict(zip(qs, ex.map(ask, qs)))
     hz, res = {}, {}
     for h in got["hz"]:
         hz.setdefault(str(h["cokey"]), []).append(h)
@@ -294,22 +349,28 @@ def soil(line):
     comps = {}
     for c in got["co"]:
         comps.setdefault(str(c["mukey"]), []).append(c)
+    ag = {str(a.get("mukey")): a for a in got["ag"]}
     units = []
     for mu in got["mu"]:
         k = str(mu["mukey"])
         name = mu.get("muname") or ""
-        rock_w = gravel_w = wsum = 0.0
+        rock_w = stone_w = gravel_w = wsum = 0.0
+        sand_w = clay_w = tex_w = 0.0
+        swell = None
         bedrock = hardpan = None
-        pan_kind = ""
+        bed_kind = pan_kind = ""
         outcrop = 0.0
-        for c in comps.get(k, []):
+        cs = sorted(comps.get(k, []), key=lambda c: -(_num(c.get("comppct_r")) or 0))
+        main = cs[0] if cs else {}
+        for c in cs:
             pct = _num(c.get("comppct_r")) or 0
             cname = c.get("compname") or ""
             is_rock = bool(re.search(r"rock outcrop|rock land|rubble", cname, re.I))
             if is_rock:
                 outcrop += pct
-            # rock in the top 40 inches, by horizon thickness
-            r_sum = g_sum = th = 0.0
+            # rock, sand and clay in the top 40 inches, by horizon thickness
+            r_sum = s_sum = g_sum = th = 0.0
+            sa_sum = cl_sum = tx = lep_sum = lep_th = 0.0
             for h in hz.get(str(c["cokey"]), []):
                 top, bot = _num(h.get("hzdept_r")), _num(h.get("hzdepb_r"))
                 if top is None or bot is None:
@@ -317,45 +378,84 @@ def soil(line):
                 t = max(0.0, min(bot, DEPTH_CM) - max(top, 0))
                 if t <= 0:
                     continue
-                big = (_num(h.get("frag3to10_r")) or 0) + (_num(h.get("fraggt10_r")) or 0)
+                stones = _num(h.get("fraggt10_r")) or 0
+                big = (_num(h.get("frag3to10_r")) or 0) + stones
                 sv = _num(h.get("sieveno10_r"))
                 small = (100 - sv) * (100 - big) / 100 if sv is not None else 0
                 r_sum += big * t
+                s_sum += stones * t
                 g_sum += small * t
                 th += t
+                sa, cl, lep = _num(h.get("sandtotal_r")), _num(h.get("claytotal_r")), _num(h.get("lep_r"))
+                if sa is not None and cl is not None:
+                    sa_sum += sa * t
+                    cl_sum += cl * t
+                    tx += t
+                if lep is not None:
+                    lep_sum += lep * t
+                    lep_th += t
             if is_rock:
                 rock_w += 100 * pct
                 wsum += pct
             elif th > 0:
                 rock_w += pct * r_sum / th
+                stone_w += pct * s_sum / th
                 gravel_w += pct * g_sum / th
                 wsum += pct
+            if tx > 0 and not is_rock:
+                sand_w += pct * sa_sum / tx
+                clay_w += pct * cl_sum / tx
+                tex_w += pct
+            if lep_th > 0 and pct >= 30:   # clay that swells, in a soil that makes up a good part of the map unit
+                swell = max(swell or 0, lep_sum / lep_th)
             if pct >= 15:   # the shallowest bedrock or hardpan of the soils that make up a good part of the map unit
                 for r in res.get(str(c["cokey"]), []):
                     d, kind = _num(r.get("resdept_r")), r.get("reskind") or ""
                     if d is None:
                         continue
                     if BEDROCK.search(kind) and (bedrock is None or d < bedrock):
-                        bedrock = d
+                        bedrock, bed_kind = d, "solid" if re.search(r"^lithic", kind, re.I) else "soft"
                     elif HARDPAN.search(kind) and (hardpan is None or d < hardpan):
                         hardpan, pan_kind = d, kind
                 if is_rock and (bedrock is None or bedrock > 0):
-                    bedrock = 0.0
+                    bedrock, bed_kind = 0.0, "solid"
         rock = rock_w / wsum if wsum else None
         gravel = gravel_w / wsum if wsum else None
         rocky = (rock is not None and rock >= 15) or bool(ROCKY_NAME.search(name)) or outcrop >= 15
         shallow_cm = min([d for d in (bedrock, hardpan) if d is not None], default=None)
         water = bool(re.fullmatch(r"\s*water\s*", name, re.I))
-        pk = next((v for kk, v in PAN_WORDS.items() if kk in pan_kind.lower()), "hard layer" if hardpan is not None else "")
+        pk = next((v for kk, v in PAN_WORDS.items() if kk in pan_kind.lower()), "hard, packed layer" if hardpan is not None else "")
+        # how steep: from the name ("30 to 60 percent slopes"), or the main soil's range
+        m = re.search(r"(\d+) to (\d+) percent slopes?", name)
+        slope = [int(m.group(1)), int(m.group(2))] if m else None
+        if not slope and _num(main.get("slope_l")) is not None and _num(main.get("slope_h")) is not None:
+            slope = [round(_num(main["slope_l"])), round(_num(main["slope_h"]))]
+        a = ag.get(k, {})
+        drain = a.get("drclassdcd") or main.get("drainagecl") or ""
+        wt = _num(a.get("wtdepannmin"))
+        fl = a.get("flodfreqdcd") or ""
+        misc = (main.get("compname") or "").strip() if (main.get("compkind") or "") == "Miscellaneous area" and (_num(main.get("comppct_r")) or 0) >= 50 else ""
         units.append({"mukey": k, "sym": mu.get("musym") or "", "name": name, "ft": _ft(meters.get(k, 0)),
                       "rock": None if rock is None else round(rock), "gravel": None if gravel is None else round(gravel),
+                      "stone": round(stone_w / wsum) if wsum else None,
                       "outcrop": round(outcrop), "rocky": bool(rocky and not water), "water": water,
-                      "bedrock_in": None if bedrock is None else round(bedrock / 2.54),
+                      "bedrock_in": None if bedrock is None else round(bedrock / 2.54), "bedrock": bed_kind if bedrock is not None else "",
                       "hardpan_in": None if hardpan is None else round(hardpan / 2.54), "hardpan": pk,
-                      "shallow": shallow_cm is not None and shallow_cm < DEPTH_CM})
+                      "shallow": shallow_cm is not None and shallow_cm < DEPTH_CM,
+                      # the name's own words for rocks on and in the ground: 0 none, 1, 2 very, 3 extremely
+                      "stony": max(_level(name, "stony|bouldery"), 3 if re.search(r"\brubbly\b", name, re.I) else 0),
+                      "cobbly": _level(name, "cobbly|channery|flaggy"), "gravelly": _level(name, "gravelly"),
+                      "tex": "" if water else _texture(sand_w / tex_w if tex_w else None, clay_w / tex_w if tex_w else None, name),
+                      "swell": None if swell is None else round(swell, 1), "slope": slope,
+                      "drain": drain if drain in DRAIN else "",
+                      "wt_in": None if wt is None or wt >= 200 else round(wt / 2.54),
+                      "flood": fl if fl in FLOODS else "", "pond": round(_num(a.get("pondfreqprs")) or 0),
+                      "frost": (main.get("frostact") or "") if main.get("frostact") in ("Low", "Moderate", "High") else "",
+                      "bottom": bool(re.search(r"flood ?plain|flood-plain", main.get("geomdesc") or "", re.I)),
+                      "misc": misc[:40] if not water else ""})
     units.sort(key=lambda u: -u["ft"])
     tot = sum(u["ft"] for u in units)
-    return {"units": units, "ft": tot, "covered": True,
+    return {"v": SOIL_V, "units": units, "ft": tot, "covered": True,
             "rocky_ft": sum(u["ft"] for u in units if u["rocky"]),
             "shallow_ft": sum(u["ft"] for u in units if u["shallow"]),
             "bedrock_in": min([u["bedrock_in"] for u in units if u["bedrock_in"] is not None], default=None),
