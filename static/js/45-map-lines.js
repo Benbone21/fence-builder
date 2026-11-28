@@ -15,8 +15,8 @@ function restore(from,to,word){
   save();renderAll();scheduleElev();histButtons();
 }
 const undo=()=>restore(hist.u,hist.r,'undo'),redo=()=>restore(hist.r,hist.u,'redo');
-function histButtons(){$('#bHU').disabled=!hist.u.length;$('#bHR').disabled=!hist.r.length;$('#undofab').hidden=!hist.u.length&&!hist.r.length;$('#bU2').disabled=!hist.u.length;$('#bR2').disabled=!hist.r.length}
-$('#bU2').onclick=()=>{if(hist.u.length){undo();toast('Undone. Press Redo to put it back.')}};$('#bR2').onclick=redo;
+function histButtons(){$('#bHU').disabled=!hist.u.length;$('#bHR').disabled=!hist.r.length}
+
 $('#bHU').onclick=undo;$('#bHR').onclick=redo;$('#bRefresh').onclick=refreshNow;
 let showDims=localStorage.getItem('fence-dims')!=='0';
 let showRolls=localStorage.getItem('fence-rolls')!=='0';

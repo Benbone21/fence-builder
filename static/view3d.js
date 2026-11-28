@@ -130,7 +130,6 @@ export async function open3D({bounds, lines, types, nodes, key, focus, braces, m
     <label class="v3l"><input type="checkbox" class="v3fences" checked> Fences</label>
     <label class="v3l"><input type="checkbox" class="v3bld" checked> <span class="v3bldt">Buildings</span></label>
     <span class="v3counts v3l"></span>
-    <label class="v3l" title="What two fingers on a trackpad, or the mouse wheel, do">Scrolling <select class="v3scroll" aria-label="What scrolling does"><option value="auto">Automatic</option><option value="zoom">Zooms in and out</option><option value="pan">Slides the ground</option></select></label>
     <button class="btn sm v3walk" title="Stand at the start of the fence at eye level (V)">Walk the fence</button>
     <button class="btn sm v3over" title="Back to the view from above">Overview</button>
     <button class="btn sm v3close">Close</button></div>
@@ -139,10 +138,10 @@ export async function open3D({bounds, lines, types, nodes, key, focus, braces, m
       <button class="btn v3undo">Undo last point</button>
       <button class="btn v3cancel">Cancel</button></div>
     <div class="v3c"><div class="v3nav" aria-label="Turn, tilt and zoom">
-      <button data-nav="turn" data-v="1" title="Turn left">⟲</button><button data-nav="tilt" data-v="-1" title="Tilt to look more from above">▲</button><button data-nav="turn" data-v="-1" title="Turn right">⟳</button>
-      <button data-nav="zoom" data-v="-1" title="Zoom in">+</button><button data-nav="tilt" data-v="1" title="Tilt to look more from the side">▼</button><button data-nav="zoom" data-v="1" title="Zoom out">−</button></div></div>
+      <button data-nav="turn" data-v="1" title="Turn left (Left arrow)">⟲</button><button data-nav="tilt" data-v="1" title="Look up, toward the horizon (Up arrow)">▲</button><button data-nav="turn" data-v="-1" title="Turn right (Right arrow)">⟳</button>
+      <button data-nav="zoom" data-v="-1" title="Zoom in">+</button><button data-nav="tilt" data-v="-1" title="Look down, more from above (Down arrow)">▼</button><button data-nav="zoom" data-v="1" title="Zoom out">−</button></div></div>
     <div class="v3note v3src" hidden></div>
-    <div class="v3note">Drag to slide the ground. Right-drag (or <kbd>Ctrl</kbd>-drag) to turn and tilt. The mouse wheel zooms in where the mouse points. <b>Trackpad:</b> pinch to zoom, two fingers to slide the ground, <kbd>Shift</kbd> + two fingers to turn and tilt, or use the buttons in the corner. Keys: <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> or arrows to move, <kbd>Q</kbd> <kbd>E</kbd> to turn, <kbd>R</kbd> <kbd>F</kbd> up and down, hold <kbd>Shift</kbd> to go faster. Lost? Press Overview. Click a post to see what it is and the spacing.</div>`;
+    <div class="v3note">Drag to slide the ground. Right-drag (or <kbd>Ctrl</kbd>-drag) to turn and tilt. Zoom the same way as on the map: the mouse wheel, two fingers up and down on a trackpad, or a pinch. Keys: <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> to move, the arrow keys to turn and tilt the camera, <kbd>R</kbd> <kbd>F</kbd> up and down, hold <kbd>Shift</kbd> to go faster. Lost? Press Overview. Click a post to see what it is and the spacing.</div>`;
   document.body.appendChild(ov);
   const msg = ov.querySelector('.v3msg'), box = ov.querySelector('.v3c'), note = ov.querySelector('.v3note:not(.v3src)'), counts = ov.querySelector('.v3counts');
   let raf = 0, renderer, disposed = false;
@@ -660,7 +659,7 @@ export async function open3D({bounds, lines, types, nodes, key, focus, braces, m
       ov.querySelector('.v3bldt').textContent = 'Buildings (' + (buildings.children.length / 2) + ')';
     }).catch(() => { ov.querySelector('.v3bldt').textContent = 'Buildings (none loaded)'; });
 
-  // ----- moving around: W A S D or arrows, Q E to turn, R F up and down, Shift to go faster -----
+  // ----- moving around: W A S D to move, the arrow keys (or Q E) turn and tilt the camera, R F up and down, Shift to go faster -----
   const held = new Set(), MOVE = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyQ', 'KeyE', 'KeyR', 'KeyF', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'PageUp', 'PageDown'];
   // ----- walk mode: you, at eye level, like a first-person game. Mouse looks, W A S D walks, Shift runs, Space jumps -----
   let walking = false, locked = false, unlockedAt = 0; const EYE = 1.7;
@@ -672,7 +671,7 @@ export async function open3D({bounds, lines, types, nodes, key, focus, braces, m
   box.appendChild(hud);
   const tip = hud.querySelector('.v3tip');
   const NOTE_FLY = note.innerHTML;
-  const NOTE_WALK = 'Move the mouse to look around (hold it near the edge to keep turning). <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> walk, <kbd>Shift</kbd> run, <kbd>Space</kbd> jump. <kbd>Esc</kbd> frees the mouse, <kbd>V</kbd> leaves walk mode. Click a post to see what it is.';
+  const NOTE_WALK = 'Move the mouse to look around (hold it near the edge to keep turning). <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> walk, the arrow keys look around, <kbd>Shift</kbd> run, <kbd>Space</kbd> jump. <kbd>Esc</kbd> frees the mouse, <kbd>V</kbd> leaves walk mode. Click a post to see what it is.';
   function setWalk(on) {
     if (on && tool) setTool(null);   // building tools work from above, not on foot
     walking = on; ov.querySelector('.v3nav').hidden = on; walkBtn.classList.toggle('on', on); walkBtn.textContent = on ? 'Leave walk mode' : 'Walk the fence';
@@ -726,9 +725,11 @@ export async function open3D({bounds, lines, types, nodes, key, focus, braces, m
   const fwd = new THREE.Vector3(), right = new THREE.Vector3(), mv = new THREE.Vector3(), yAxis = new THREE.Vector3(0, 1, 0);
   function stepWalk(dt) {
     const f = fwdOf(), r = new THREE.Vector3(-f.z, 0, f.x);
-    const kf = (held.has('KeyW') || held.has('ArrowUp') ? 1 : 0) - (held.has('KeyS') || held.has('ArrowDown') ? 1 : 0);
-    const kr = (held.has('KeyD') || held.has('ArrowRight') ? 1 : 0) - (held.has('KeyA') || held.has('ArrowLeft') ? 1 : 0);
-    me.yaw += ((held.has('KeyQ') ? 1 : 0) - (held.has('KeyE') ? 1 : 0)) * dt * 2 - (locked ? 0 : edge * dt * 2.2);
+    const kf = (held.has('KeyW') ? 1 : 0) - (held.has('KeyS') ? 1 : 0);
+    const kr = (held.has('KeyD') ? 1 : 0) - (held.has('KeyA') ? 1 : 0);
+    me.yaw += ((held.has('KeyQ') || held.has('ArrowLeft') ? 1 : 0) - (held.has('KeyE') || held.has('ArrowRight') ? 1 : 0)) * dt * 2 - (locked ? 0 : edge * dt * 2.2);
+    const lookUp = (held.has('ArrowUp') ? 1 : 0) - (held.has('ArrowDown') ? 1 : 0);
+    if (lookUp) me.pitch = clamp(me.pitch + lookUp * dt * 1.2, -1.35, 1.25);
     const run = held.has('Shift'), speed = run ? 7 : 3;
     mv.set(0, 0, 0).addScaledVector(f, kf).addScaledVector(r, kr);
     const moving = mv.lengthSq() > 0;
@@ -808,46 +809,23 @@ export async function open3D({bounds, lines, types, nodes, key, focus, braces, m
     orbS.theta += dTurn; orbS.phi = clamp(orbS.phi + dTilt, controls.minPolarAngle, controls.maxPolarAngle); orbS.makeSafe();
     orbV.setFromSpherical(orbS); camera.position.copy(controls.target).add(orbV); camera.lookAt(controls.target);
   }
-  // slide the ground the way two fingers move, like dragging it: the spot under the mouse follows the fingers
-  const slideP = new THREE.Vector3(), slideO = new THREE.Vector3();
-  function slideBy(ev, dx, dy) {
-    const r = cursorRay(ev);
-    if (!groundHit(r.origin, r.direction, slideP)) slideP.copy(controls.target);
-    const r2 = cursorRay({clientX: ev.clientX - dx, clientY: ev.clientY - dy});
-    if (r2.direction.y > -0.02) return;   // pointing at the sky
-    const t = (slideP.y - r2.origin.y) / r2.direction.y;
-    slideO.copy(r2.direction).multiplyScalar(t).add(r2.origin);
-    mv.set(slideP.x - slideO.x, 0, slideP.z - slideO.z);
-    const most = Math.max(5, camH() * 3); if (mv.length() > most) mv.setLength(most);
-    shift(mv);
-  }
-  // Scrolling: a mouse wheel zooms; on a trackpad two fingers slide the ground, Shift (or Alt) + two fingers turns and
-  // tilts, and a pinch zooms (browsers send a pinch as Ctrl + scroll). Which one is scrolling is told from the scroll
-  // itself: a mouse wheel moves in big even steps straight up and down, a trackpad in small, uneven ones.
-  const scrollSel = ov.querySelector('.v3scroll');
-  let scrollPref = 'auto'; try { scrollPref = localStorage.getItem('fence-3d-scroll') || 'auto'; } catch (e) {}
-  scrollSel.value = scrollPref;
-  scrollSel.onchange = () => { scrollPref = scrollSel.value; try { localStorage.setItem('fence-3d-scroll', scrollPref); } catch (e) {} cvs.focus?.(); };
-  let burstEnd = 0, burstPad = false;
-  const fromPad = ev => {
-    const now = performance.now(), fresh = now > burstEnd; burstEnd = now + 350;
-    const wheel = ev.deltaMode !== 0 || (!ev.deltaX && Number.isInteger(ev.deltaY) && Math.abs(ev.deltaY) >= 50);
-    if (fresh) burstPad = !wheel; else if (!wheel) burstPad = true;
-    return burstPad;
+  // Scrolling zooms the same way the map does (the same sums as Leaflet's wheel zoom): one mouse-wheel notch is about
+  // one map zoom level, twice as near or as far; a trackpad's two fingers up and down, or a pinch, zoom at the same rate.
+  // Shift (or Alt) + scroll turns and tilts instead.
+  const mapLevels = ev => {
+    const px = ev.deltaMode === 1 ? ev.deltaY * 20 : ev.deltaMode === 2 ? ev.deltaY * 60 : ev.deltaY / (devicePixelRatio || 1);
+    const d = Math.abs(px) / 240;   // Leaflet: wheelPxPerZoomLevel 60, times 4
+    return Math.sign(px) * 4 * Math.log2(2 / (1 + Math.exp(-d)));
   };
   cvs.addEventListener('wheel', ev => {
     if (walking) return;
     ev.preventDefault();
-    const k = ev.deltaMode === 1 ? 33 : ev.deltaMode === 2 ? 400 : 1, dx = (ev.deltaX || 0) * k, dy = (ev.deltaY || 0) * k;
-    if (ev.ctrlKey || ev.metaKey) return zoomBy(ev, clamp(dy * 0.012, -0.5, 0.5));   // a pinch, or Ctrl + wheel
-    const pad = scrollPref === 'pan' || (scrollPref === 'auto' && fromPad(ev));
-    if (!pad) return zoomBy(ev, clamp(ev.shiftKey && !dy ? dx : dy, -250, 250) * 0.0016);   // one wheel notch is about 15%
-    zoomLeft = 0;
-    if (ev.shiftKey || ev.altKey) {
-      // some systems turn Shift + scroll into a sideways scroll: then up and down arrives as dx
-      const sideOnly = ev.shiftKey && !dy;
-      orbit(-(sideOnly ? 0 : dx) * 0.006, (sideOnly ? dx : dy) * 0.004);
-    } else slideBy(ev, dx, dy);
+    if ((ev.shiftKey || ev.altKey) && !ev.ctrlKey) {
+      const k = ev.deltaMode === 1 ? 33 : ev.deltaMode === 2 ? 400 : 1, dx = (ev.deltaX || 0) * k, dy = (ev.deltaY || 0) * k;
+      const sideOnly = ev.shiftKey && !dy;   // some systems turn Shift + scroll into a sideways scroll
+      return orbit(-(sideOnly ? 0 : dx) * 0.006, (sideOnly ? dx : dy) * 0.004);
+    }
+    zoomBy(ev, clamp(mapLevels(ev), -2, 2) * Math.LN2);
   }, {passive: false});
   // Safari on a Mac sends pinches and two-finger turns as gestures
   let gest = null;
@@ -913,16 +891,17 @@ export async function open3D({bounds, lines, types, nodes, key, focus, braces, m
     const speed = Math.max(3, camH()) * (held.has('Shift') ? 3 : 1);   // about your own height above the ground each second
     fwd.subVectors(controls.target, camera.position); fwd.y = 0;
     if (fwd.lengthSq() < 1e-8) fwd.set(0, 0, -1); fwd.normalize(); right.crossVectors(fwd, yAxis);
-    const f = (held.has('KeyW') || held.has('ArrowUp') ? 1 : 0) - (held.has('KeyS') || held.has('ArrowDown') ? 1 : 0);
-    const r = (held.has('KeyD') || held.has('ArrowRight') ? 1 : 0) - (held.has('KeyA') || held.has('ArrowLeft') ? 1 : 0);
+    const f = (held.has('KeyW') ? 1 : 0) - (held.has('KeyS') ? 1 : 0);
+    const r = (held.has('KeyD') ? 1 : 0) - (held.has('KeyA') ? 1 : 0);
     const u = (held.has('KeyR') || held.has('PageUp') ? 1 : 0) - (held.has('KeyF') || held.has('PageDown') ? 1 : 0);
     mv.set(0, 0, 0).addScaledVector(fwd, f).addScaledVector(right, r);
     if (mv.lengthSq()) mv.normalize().multiplyScalar(speed * dt);
     mv.y = u * speed * dt * 0.7;
     if (mv.lengthSq()) shift(mv);   // flat over the ground (or straight up and down), same tilt
-    // Q turns left, E turns right, around the spot in the middle of the screen (same way as in walk mode)
-    const turn = (held.has('KeyQ') ? 1 : 0) - (held.has('KeyE') ? 1 : 0);
-    if (turn) camera.position.sub(controls.target).applyAxisAngle(yAxis, turn * dt * 1.2).add(controls.target);
+    // the left and right arrows (or Q and E) turn, the up and down arrows tilt, around the spot in the middle of the screen
+    const turn = (held.has('KeyQ') || held.has('ArrowLeft') ? 1 : 0) - (held.has('KeyE') || held.has('ArrowRight') ? 1 : 0);
+    const tilt = (held.has('ArrowUp') ? 1 : 0) - (held.has('ArrowDown') ? 1 : 0);
+    if (turn || tilt) orbit(turn * dt * 1.2, tilt * dt * 0.8);
   }
 
   // start looking at the fences from the south, a bit above
