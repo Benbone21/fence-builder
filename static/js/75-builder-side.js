@@ -30,8 +30,8 @@ function setupView(){
   const q=A.types[t.id]?.q;
   const wires=(t.wires||[]).map((w,i)=>{const u=unitOf(w.m)||'each',need=q?.wires[i],lo=q?.left?.[i];
     return `<div class="wr"><select data-f="ftw.m" ${d} data-i="${i}" aria-label="Wire product">${matOpts(w.m,true)}</select>
-    <label class="mini"><input type="number" min="0" step="1" value="${n(w.strands)}" data-f="ftw.strands" ${d} data-i="${i}" aria-label="Strands"><span>${n(w.strands)===1?'strand':'strands'}</span></label>
-    <label class="mini">${matOf(w.m)?`${matLink(w.m,fmtQ(rollOf(w)))}`:''}<span>ft on a roll</span></label>
+    <label class="mini"><input type="number" min="0" step="1" value="${n(w.strands)}" data-f="ftw.strands" ${d} data-i="${i}" aria-label="Strands"><span>${(lk=>lk==='board'||lk==='rail'||lk==='log'?(n(w.strands)===1?'row':'rows'):lk==='picket'||lk==='panel'?(n(w.strands)===1?'layer':'layers'):n(w.strands)===1?'strand':'strands')(wireLook(matOf(w.m)))}</span></label>
+    <label class="mini">${matOf(w.m)?`${matLink(w.m,fmtQ(rollOf(w)))}`:''}<span>${(lk=>lk==='board'||lk==='rail'||lk==='log'?'ft long':lk==='picket'||lk==='panel'?'ft wide each':'ft on a roll')(wireLook(matOf(w.m)))}</span></label>
     <button class="btn x" data-act="delFtw" ${d} data-i="${i}" title="Remove">×</button>
     <label class="mini"><span>$</span>${priceIn(w.m)}<span>per ${esc(u)}</span></label>
     <span class="small mut need">${lo?.mix?`This job needs ${esc(lo.mix)} rolls. `:need!=null?`This job needs ${fmtQ(roundQ(need,u)||0)} ${esc(u)}${u==="roll"&&roundQ(need,u)!==1?"s":""}. `:''}${lo&&lo.bought>0?`<b class="left">${lo.left>=1?`About ${fmtQ(Math.round(lo.left))} ft left over`:'No wire left over'}</b>${lo.left>=1?lo.mix?' on the last roll':lo.left<lo.roll?` (${Math.round(lo.left/lo.roll*100)}% of a ${fmtQ(lo.roll)} ft roll)`:'':''}. `:''}${matOf(w.m)?`<button class="lnk" data-act="matInfo" data-id="${w.m}">Details</button>`:''}</span></div>`}).join('');

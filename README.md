@@ -233,6 +233,13 @@ install); `fence-estimator.service` is a systemd example, `nginx-fence.conf` an 
   welded pipe H-braces with 2-7/8" posts (7/32" wall) set 3 ft in concrete, and an 8 ft elk gate. It checks
   itself against Idaho's elk fence rules (8 ft tall, post sizes, no more than 24 ft between posts) and says
   what isn't met. Prices are samples.
+- **More starting fence types** (added once to older setups too), each with its posts, corner posts or
+  braces, gate and the hardware that can be counted: wood board fence (4 boards), chain link 6 ft, wood
+  privacy 6 ft, split rail (3 rails), no-climb horse fence with a top board, steel pipe rail (3 rails), vinyl
+  privacy 6 ft, and a government standard 4-strand barbed wire fence that wildlife can pass (wires at 18",
+  22", 28" and 40", barbless bottom wire; it checks itself against that). Boards, rails, pickets and
+  panels are counted like rolls of wire. Prices are local where found (D&B Supply links, so they update
+  on their own); the rest are marked as estimates on each material.
 - **Braces added for you** (top of the Builder, and Settings → Drawing on the map): four switches,
   **Gates at roads**, **Braces at rivers and creeks**, **Braces at hilltops** and **Braces at the
   bottoms of hills**. Hill braces go where the ground's slope bends by at least the fence type's

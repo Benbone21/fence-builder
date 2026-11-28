@@ -192,7 +192,7 @@ function prodSelect(name,fits,preset,label){
   const good=S.materials.filter(fits),rest=S.materials.filter(m=>!fits(m));
   return `<label class="f">${esc(label)}</label><select name="${name}" data-preset='${esc(JSON.stringify(preset))}'>${good.length?`<optgroup label="Suggested">${good.map(m=>opt(m.id,m.name,'')).join('')}</optgroup>`:''}${rest.length?`<optgroup label="Everything else">${rest.map(m=>opt(m.id,m.name,'')).join('')}</optgroup>`:''}<option value="__new">+ New product…</option></select>`;
 }
-const isWire=m=>m.kind==='wire'||rollOf({m:m.id})>0||/wire|woven|barb|mesh/i.test(m.name);
+const isWire=m=>m.kind==='wire'||m.kind==='board'||m.kind==='rail'||rollOf({m:m.id})>0||/wire|woven|barb|mesh/i.test(m.name);
 const isPost=m=>m.kind==='post'||/post|stay|dropper/i.test(m.name);
 async function addWireDlg(id){
   const v=await formDlg('Add wire',`${prodSelect('m',isWire,{kind:'wire',unit:'roll',roll:330},'Which wire')}

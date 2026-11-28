@@ -140,10 +140,10 @@ function lineView(){
   <div class="row" style="margin-top:12px"><button class="btn" data-act="cont" data-id="${l.id}">Keep drawing from the end</button><button class="btn" data-act="rev" data-id="${l.id}">Flip direction</button><button class="btn" data-act="cross" data-id="${l.id}" title="Put a gate where it crosses a road and braces on both banks of a river or creek">Find roads and rivers</button><button class="btn del" data-act="delLine" data-id="${l.id}">Delete line</button></div>
   <p class="small mut">Drag points on the map to move them. A point shared with another line counts as one corner.</p>`;
 }
-const KINDS=[['wire','Wire'],['post','Posts'],['hw','Hardware'],['gate','Gates'],['other','Other']];
+const KINDS=[['wire','Wire'],['board','Boards and pickets'],['rail','Rails and panels'],['post','Posts'],['hw','Hardware'],['gate','Gates'],['other','Other']];
 // a post used in a brace counts as a post; everything else in a brace is hardware
 const isPostName=n=>/post|pole|pipe|piling/i.test(n||'')&&!/insulator|clip|cap|driver|puller|bracket|clamp/i.test(n||'');
-const MADE=[['','Not set'],['tpost','Steel T-post'],['pipe','Steel pipe'],['wood','Wood'],['stay','Stay (hangs on the wire, not in the ground)']];
+const MADE=[['','Not set'],['tpost','Steel T-post'],['pipe','Steel pipe'],['wood','Wood, round'],['woodsq','Wood, square'],['vinyl','Vinyl, square'],['stay','Stay (hangs on the wire, not in the ground)']];
 function matUse(m){
   // where a material is used, and (unless you set its kind yourself) which kind that makes it
   const uses=[];let kind='';const C=c=>{kind=kind||c};
@@ -181,6 +181,10 @@ function openMatDlg(id,preset){return new Promise(res=>{
     const num=(k,lbl,step='any')=>`<div><label class="f">${lbl}</label><input type="number" min="0" step="${step}" value="${m[k]??''}" data-k="${k}" data-n="1"></div>`;
     const txt=(k,lbl,ph='')=>`<div><label class="f">${lbl}</label><input type="text" value="${esc(m[k])}" data-k="${k}" placeholder="${ph}"></div>`;
     const by={
+      rail:`<h3>Rail or panel details</h3><div class="g2">${num('roll','Length (or panel width), ft','any')}${num('dia','Thickness, inches')}${num('height','Height, inches (panels)')}
+        <div><label class="f">In 3D it looks like</label><select data-k="look">${LOOKS.map(([k,l])=>opt(k,l,m.look||'')).join('')}</select></div></div>`,
+      board:`<h3>Board details</h3><div class="g2">${num('roll','Board length, ft','1')}${num('height','Board width, inches')}</div>
+        <p class="small mut">A row of boards is counted like a roll of wire: the fence's length times the rows of boards, divided by the board length.</p>`,
       wire:`<h3>Wire details</h3><div class="g2">${txt('gauge','Gauge','12.5')}${num('roll','Length on one roll, ft','1')}${num('height','Height, inches')}${num('maxPull','Longest stretch in one pull, ft (blank = usual '+fmtQ(PULL_USUAL[wireLook(m)])+')','1')}
         <div><label class="f">In 3D it looks like</label><select data-k="look">${LOOKS.map(([k,l])=>opt(k,l,m.look||'')).join('')}</select></div></div>
         <p class="small mut">Roll length is used for how many rolls a job needs, the roll bands on the map, and the "two rolls joined" stretch limit. Use 0 if you buy it by the foot.</p>`,
@@ -241,7 +245,7 @@ function pricesView(){
   }
   return `<div class="phead"><div><h1>Materials</h1><p>Everything you buy, with its price. Press <b>Edit</b> to change one: nothing changes until you press Save in its window.</p></div><button class="btn pri big" data-act="addMat">+ Add material</button></div>
   <div class="jobtools"><input type="search" id="matQ" placeholder="Find a material by name or fence type" aria-label="Find a material">
-    <button class="btn big" data-act="addFromLink">Add from a store link</button><button class="btn big" data-act="shop">Find at Kencove or D&amp;B</button><button class="btn big" data-act="fetchAll"${autoBusy?' disabled':''}>${autoBusy?'Checking prices…':'Update store prices now'}</button></div>
+    <button class="btn big" data-act="fetchAll"${autoBusy?' disabled':''}>${autoBusy?'Checking prices…':'Update store prices now'}</button></div>
   <details class="note grab"><summary><b>Add from Premier 1 or any store page</b> <span class="small mut">with a bookmark</span></summary>
     <p class="small" style="margin:8px 0">Some stores, like Premier 1 Supplies, only let people see their pages, so the app cannot read them on its own. This bookmark reads the page you have open instead: name, price, SKU and the specifications table, and sends it here.</p>
     <ol class="small" style="margin:0 0 8px;padding-left:18px"><li>Drag this button to your bookmarks bar: <a class="btn sm pri" href="${grabHref()}" data-act="grabHint">Add to Fence Builder</a></li>
@@ -280,7 +284,7 @@ const priceIn0=id=>{const m=S.materials.find(x=>x.id===id);return m?`<input type
 const unitIn0=id=>{const m=S.materials.find(x=>x.id===id);return m?`<input type="text" class="un" value="${esc(m.unit)}" data-f="mat.unit" data-id="${m.id}" aria-label="Unit" title="How it is sold: each, roll, ft, box…">`:''};
 const priceIn=id=>{const m=matOf(id);return m?matLink(m.id,(+m.price||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})):''};
 const unitIn=id=>{const m=matOf(id);return m?`<span class="small mut">${esc(m.unit)}</span>`:''};
-const LOOKS=[['','Auto'],['mesh','Woven or mesh'],['barbed','Barbed strands'],['smooth','Smooth or electric']];
+const LOOKS=[['','Auto'],['mesh','Woven or mesh'],['barbed','Barbed strands'],['smooth','Smooth or electric'],['board','Wood boards'],['picket','Pickets (solid wood)'],['chain','Chain link'],['rail','Pipe rail'],['log','Split rail (wood)'],['panel','Vinyl panel']];
 const PER=[['ft','per ft of fence'],['post','per line post'],['tpost','per normal line post'],['woodpost','per added post'],['stretch','per stretch between braces'],['brace','per brace assembly'],['gate','per gate'],['line','per fence line'],['job','once per job']];
 function stretchFields(t){
   const d=`data-id="${t.id}"`,by=t.pullBy||'auto',r2=2*mainRoll(t),au=autoPull(t);

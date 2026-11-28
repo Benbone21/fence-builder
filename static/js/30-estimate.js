@@ -178,6 +178,8 @@ function analyze(proj){
   const bad={};let labor=0;
   for(const T of Object.values(types)){
     const t=T.t,W=1+(+t.waste||0)/100,q={wires:[],left:[],extras:[],items:[]};T.q=q;
+    // rows of the same wire (like barbed wire at 22" and 28" and again at 40") are added together before rounding to rolls
+    const sameM={},doneM=new Set();for(const w of t.wires||[])if(wireSizes(w).length<=1)sameM[w.m]=(sameM[w.m]||0)+(+w.strands||0);
     for(const w of t.wires||[]){
       const sizes=wireSizes(w);
       if(sizes.length>1){
@@ -187,7 +189,9 @@ function analyze(proj){
         sizes.forEach((z,j)=>{if(cnt[j])add(z.m,cnt[j],t.name,`${fmtQ(z.roll)} ft rolls ${j===0?'laid end to end':'to finish the end'} for ${st} strand${st===1?'':'s'} along ${fmtFt(T.L)} (${fmtQ(Math.round(used))} ft of wire with extra${j===first?leftNote(left):''})`)});
         q.wires.push(cnt[0]);q.left.push({m:w.m,used,bought,left,roll:sizes[0].roll,mix:sizes.map((z,j)=>cnt[j]?`${cnt[j]} × ${fmtQ(z.roll)} ft`:'').filter(Boolean).join(' + ')});continue;
       }
-      const ft=T.L*(+w.strands||0)*W,rl=rollOf(w),n=rl>0?Math.ceil(ft/rl-1e-9):ft,left=rl>0?Math.max(0,n*rl-ft):0;add(w.m,n,t.name,`${+w.strands||0} strand${+w.strands===1?'':'s'} along ${fmtFt(T.L)}${rl>0?` (${fmtQ(Math.round(ft))} ft of wire with extra, ${fmtQ(rl)} ft rolls${leftNote(left)})`:''}`);q.wires.push(n);q.left.push(rl>0?{m:w.m,used:ft,bought:n*rl,left,roll:rl}:null)}
+      if(doneM.has(w.m)){q.wires.push(null);q.left.push(null);continue}   // counted with the first row of this wire
+      doneM.add(w.m);const stn=sameM[w.m]??(+w.strands||0);
+      const ft=T.L*stn*W,rl=rollOf(w),n=rl>0?Math.ceil(ft/rl-1e-9):ft,left=rl>0?Math.max(0,n*rl-ft):0;add(w.m,n,t.name,`${stn} strand${stn===1?'':'s'} along ${fmtFt(T.L)}${rl>0?` (${fmtQ(Math.round(ft))} ft of wire with extra, ${fmtQ(rl)} ft rolls${leftNote(left)})`:''}`);q.wires.push(n);q.left.push(rl>0?{m:w.m,used:ft,bought:n*rl,left,roll:rl}:null)}
     add(t.postM,T.tposts,t.name,`line posts every ${+t.spacing||12} ft`);(t.posts||[]).forEach((r,i)=>add(r.m,T.other[i]||0,t.name,postHow(r)));
     q.clips=T.tposts*(+t.clipsPer||0);add(t.clipM,q.clips,t.name,`${+t.clipsPer||0} per line post`);
     const per={ft:T.L,post:T.posts,tpost:T.tposts,woodpost:T.wood,stretch:T.sections,brace:T.kits,gate:T.gates,line:T.lines,job:1};

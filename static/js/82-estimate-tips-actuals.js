@@ -25,6 +25,7 @@ function addMatPick(){
     if(k==='own')openMatDlg(null);
     else if(k==='link')addFromLink();
     else{const i=+k.slice(1);if(i!==shop.sel)Object.assign(shop,{sel:i,cols:null,cat:null,all:null,items:[],title:'',msg:'',q:''});openShopDlg()}};
+  d.classList.add('addmat');d.addEventListener('close',()=>d.classList.remove('addmat'),{once:true});   // a wider window for the four choices
   d.showModal();d.querySelector('.addopt')?.focus();
 }
 

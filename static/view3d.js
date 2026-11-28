@@ -376,7 +376,7 @@ export async function open3D({bounds, lines, types, nodes, key, focus, braces, m
   const kitById = Object.fromEntries((braces || []).map(b => [b.id, b]));
   const matName = id => (materials || []).find(m => m.id === id)?.name || '';
   const matOf = id => (materials || []).find(m => m.id === id);
-  const lookOf = wr => wr.look || matOf(wr.m)?.look || (/woven|field|mesh|knot|net|hinge|panel|no.?climb/i.test(matName(wr.m)) ? 'mesh' : /barb/i.test(matName(wr.m)) ? 'barbed' : 'smooth');
+  const lookOf = wr => wr.look || matOf(wr.m)?.look || (matOf(wr.m)?.kind === 'rail' ? 'rail' : matOf(wr.m)?.kind === 'board' || /boards?|plank|[12]x[468]/i.test(matName(wr.m)) ? 'board' : /woven|field|mesh|knot|net|hinge|panel|no.?climb/i.test(matName(wr.m)) ? 'mesh' : /barb/i.test(matName(wr.m)) ? 'barbed' : 'smooth');
 
   // where everything goes along one line (distances in metres along the line)
   function postMade(mm, p) {
@@ -451,12 +451,24 @@ export async function open3D({bounds, lines, types, nodes, key, focus, braces, m
     return tx;
   })();
   trash.push(meshTex);
+  // the other fence faces: chain link diamonds (see-through), cedar pickets and white vinyl (solid)
+  const texOf = (draw, opaque) => { const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'); draw(g);
+    const tx = new THREE.CanvasTexture(c); tx.wrapS = tx.wrapT = THREE.RepeatWrapping; tx.colorSpace = THREE.SRGBColorSpace; tx.anisotropy = 8; trash.push(tx); return tx; };
+  const chainTex = texOf(g => { g.strokeStyle = 'rgba(196,202,207,1)'; g.lineWidth = 5; g.beginPath(); g.moveTo(0, 32); g.lineTo(32, 0); g.lineTo(64, 32); g.lineTo(32, 64); g.closePath(); g.stroke(); });
+  const picketTex = texOf(g => { g.fillStyle = '#b98a5c'; g.fillRect(0, 0, 64, 64); g.fillStyle = '#7d5a39'; g.fillRect(0, 0, 3, 64); g.fillStyle = 'rgba(0,0,0,0.06)'; for (let y = 0; y < 64; y += 9) g.fillRect(4, y, 60, 2); });
+  const vinylTex = texOf(g => { g.fillStyle = '#f4f4f1'; g.fillRect(0, 0, 64, 64); g.fillStyle = '#e2e2de'; g.fillRect(0, 0, 2, 64); });
+  const PANEL = new Set(['mesh', 'chain', 'picket', 'panel']);
   let infos = [], layouts = new Map();
 
   function buildFences() {
     fences.traverse(o => { o.geometry?.dispose(); if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => m.dispose()); });
     fences.clear(); infos = []; layouts = new Map();
-    const tposts = [], stays = [], woods = [], pipes = [], cyls = [], wire = {barbed: [], smooth: []}, meshV = [], meshUV = [], meshI = [], braceWire = [];
+    const PB = {chain: {V: [], UV: [], I: []}, picket: {V: [], UV: [], I: []}, panel: {V: [], UV: [], I: []}};
+    // a flat face from a to b, from height m0 to m1, moved sideways by off metres; u runs along the fence, v up it
+    const quad = (buf, a, b, m0, m1, off, u0, u1, v0, v1) => { const nx = -(b.z - a.z), nz = b.x - a.x, nl = Math.hypot(nx, nz) || 1, ox = nx / nl * off, oz = nz / nl * off, o = buf.V.length / 3;
+      buf.V.push(a.x + ox, a.y + m0, a.z + oz, a.x + ox, a.y + m1, a.z + oz, b.x + ox, b.y + m0, b.z + oz, b.x + ox, b.y + m1, b.z + oz);
+      buf.UV.push(u0, v0, u0, v1, u1, v0, u1, v1); buf.I.push(o, o + 1, o + 2, o + 1, o + 3, o + 2); };
+    const tposts = [], stays = [], woods = [], pipes = [], squares = [], boards = [], cyls = [], wire = {barbed: [], smooth: []}, meshV = [], meshUV = [], meshI = [], braceWire = [];
     const up = new THREE.Vector3(0, 1, 0);
     const cyl = (a, b, r, color) => cyls.push({a, b, r, color});
     for (const l of lines) {
@@ -471,18 +483,18 @@ export async function open3D({bounds, lines, types, nodes, key, focus, braces, m
       for (let d = 0; d <= L.total; d += Math.max(1, step)) { const q = P(d); if (inView(q.x, q.z)) route.push(new THREE.Vector3(q.x, q.y + 0.06, q.z)); }
       if (route.length > 1) fences.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(route), new THREE.LineBasicMaterial({color: col, transparent: true, opacity: dim ? 0.35 : 0.9})));
       // wire: woven wire as a grid panel, barbed and smooth wire as single strands, post to post
-      const rows = (t.wires || []).map(wr => ({look: lookOf(wr), n: Math.max(0, Math.round(+wr.strands || 0)), name: matName(wr.m), h: +matOf(wr.m)?.height || 0, start: wr.start, gap: wr.gap})).filter(r => r.n > 0);
+      const rows = (t.wires || []).map(wr => ({look: lookOf(wr), n: Math.max(0, Math.round(+wr.strands || 0)), name: matName(wr.m), h: +matOf(wr.m)?.height || 0, dia: +matOf(wr.m)?.dia || 0, start: wr.start, gap: wr.gap})).filter(r => r.n > 0);
       // the wires go up the fence in the order they are listed: woven wire takes its height, strands share what is left
       const meshH = r => { const inch = r.h || +(r.name.match(/(\d+(?:\.\d+)?)\s*(?:"|in\b|inch)/i)?.[1] || 0); return inch ? inch * 0.0254 : Hf * 0.8; };
       // "starts at" and "apart" on a wire row (inches) place it exactly; without them it is spaced out evenly
       const INCH = 0.0254, isSetV = v => v !== undefined && v !== null && v !== '' && +v >= 0;
-      const nStr = rows.filter(r => r.look !== 'mesh').reduce((a, r) => a + r.n, 0), meshSum = rows.filter(r => r.look === 'mesh').reduce((a, r) => a + meshH(r), 0);
+      const nStr = rows.filter(r => !PANEL.has(r.look)).reduce((a, r) => a + r.n, 0), meshSum = rows.filter(r => PANEL.has(r.look)).reduce((a, r) => a + meshH(r), 0);
       const autoGap = nStr ? Math.max(0.08, (Hf - 0.05 - meshSum) / nStr) : 0;
       const heights = [], meshes = []; // strands: [height, look]; woven panels: [bottom, top]
       { let y = 0.05; for (const r of rows) {
-          if (r.look === 'mesh') { if (isSetV(r.start)) y = +r.start * INCH; const h = meshH(r); meshes.push([y, y + h]); y += h; }
+          if (PANEL.has(r.look)) { if (isSetV(r.start)) y = +r.start * INCH; const h = meshH(r); meshes.push([y, y + h, r.look]); y += h; }
           else { const g = isSetV(r.gap) && +r.gap > 0 ? +r.gap * INCH : autoGap;
-            for (let k = 0; k < r.n; k++) { y = k === 0 && isSetV(r.start) ? +r.start * INCH : y + g; heights.push([y, r.look]); } }
+            for (let k = 0; k < r.n; k++) { y = k === 0 && isSetV(r.start) ? +r.start * INCH : y + g; heights.push([y, r.look, (r.h || 5.5) * INCH, r.dia]); } }
       } }
       const wireLo = Math.min(...heights.map(h => h[0]), ...meshes.map(m => m[0]), Infinity), wireHi = Math.max(...heights.map(h => h[0]), ...meshes.map(m => m[1]), -Infinity);
       const stayLo = isFinite(wireLo) ? Math.max(0.05, wireLo - 0.04) : 0.15, stayHi = isFinite(wireHi) ? wireHi + 0.04 : Hf;
@@ -495,6 +507,7 @@ export async function open3D({bounds, lines, types, nodes, key, focus, braces, m
         const rad = +mm?.dia > 0 ? mm.dia * 0.0127 : made === 'pipe' ? 0.045 : made === 'stay' ? 0.009 : 0.075;
         if (made === 'stay') { stays.push({x: q.x - (q.dz || 0) * 0.014, y: q.y + stayLo, z: q.z + (q.dx || 0) * 0.014, h: stayHi - stayLo, r: rad}); continue; }   // just off the wire, where it clips on   // hangs on the wire, not in the ground
         if (made === 'tpost') tposts.push({x: q.x, y: q.y, z: q.z, h: Hf + 0.1, dx: q.dx, dz: q.dz});
+        else if (made === 'woodsq' || made === 'vinyl') squares.push({x: q.x, y: q.y, z: q.z, h: Hf + (made === 'vinyl' ? 0.12 : 0.1), r: rad, dx: q.dx, dz: q.dz, color: made === 'vinyl' ? 0xf4f4f1 : 0x8f6e4c});
         else (made === 'pipe' ? pipes : woods).push({x: q.x, y: q.y, z: q.z, h: Hf + 0.15, r: rad});
         if (p.kind !== 'mid') marks.push({d: p.d, q, what: p.what || (p.kind === 't' ? 'Line post' : 'Post')});
       }
@@ -504,8 +517,8 @@ export async function open3D({bounds, lines, types, nodes, key, focus, braces, m
         if (!inView(q.x, q.z)) continue;
         const sh = kit?.shape, name = kit?.name || '';
         const h1 = sh ? (+sh.h1 || 4.5) * M : Hf + 0.25, r1 = sh ? (+sh.dia || 6) * 0.0127 : 0.085;
-        const list = sh?.steel ? pipes : woods, rcol = sh?.steel ? 0x9aa3ab : 0x8a6a48;
-        list.push({x: q.x, y: q.y, z: q.z, h: h1, r: r1});
+        const list = sh?.steel ? pipes : sh?.square ? squares : woods, rcol = sh?.steel ? 0x9aa3ab : 0x8a6a48;
+        list.push({x: q.x, y: q.y, z: q.z, h: h1, r: r1, dx: q.dx, dz: q.dz, color: sh?.vinyl ? 0xf4f4f1 : 0x8f6e4c});
         marks.push({d: sp.d, q, what: sp.what + (name ? ' (' + name + ')' : '')});
         if (!sh || sh.style === 'single') continue;
         const isA = sh.style === 'a' || sh.style === 'aa';
@@ -531,16 +544,33 @@ export async function open3D({bounds, lines, types, nodes, key, focus, braces, m
       for (const g of L.gates) {
         const a = P(g.d0 + 0.08), b = P(g.d1 - 0.08); if (!inView(a.x, a.z) || g.d1 - g.d0 < 0.5) continue;
         const gH = +matOf(g.gm)?.height > 0 ? +matOf(g.gm).height * 0.0254 : 0;
+        const gname = matOf(g.gm)?.name || '';
+        if (/vinyl/i.test(gname)) {   // a vinyl gate: a white panel in a white frame
+          const lo = 0.08, hi = gH > 0 ? Math.min(gH, Hf + 0.1) : Math.min(Hf, 1.8), wv = 0xf4f4f1;
+          quad(PB.panel, a, b, lo, hi, 0, 0, (g.d1 - g.d0) / 0.15, 0, 1);
+          for (const hh of [lo + 0.05, hi - 0.05]) boards.push({a: new THREE.Vector3(a.x, a.y + hh, a.z), b: new THREE.Vector3(b.x, b.y + hh, b.z), w: 0.1, t: 0.05, color: wv});
+          marks.push({d: (g.d0 + g.d1) / 2, q: P((g.d0 + g.d1) / 2), what: 'Vinyl gate, ' + ((g.d1 - g.d0) * FT).toFixed(0) + ' ft wide'});
+          continue;
+        }
         if (gH > 1.6) {
           const lo = 0.1, hi = Math.min(gH, Hf + 0.1), fr = 0x7d878f, rr = 0.026;
           for (const hh of [lo, hi, (lo + hi) / 2]) cyl(new THREE.Vector3(a.x, a.y + hh, a.z), new THREE.Vector3(b.x, b.y + hh, b.z), hh === (lo + hi) / 2 ? 0.018 : rr, fr);
           const n = Math.max(1, Math.round((g.d1 - g.d0) / 2.5));
           for (let k = 0; k <= n; k++) { const m = P(g.d0 + 0.08 + (g.d1 - g.d0 - 0.16) * k / n); cyl(new THREE.Vector3(m.x, m.y + lo, m.z), new THREE.Vector3(m.x, m.y + hi, m.z), k === 0 || k === n ? rr : 0.018, fr); }
           cyl(new THREE.Vector3(a.x, a.y + lo, a.z), new THREE.Vector3(b.x, b.y + hi, b.z), 0.018, fr);   // the diagonal that keeps it from sagging
-          const o = meshV.length / 3, w = (g.d1 - g.d0) / 0.15;
-          meshV.push(a.x, a.y + lo, a.z, a.x, a.y + hi, a.z, b.x, b.y + lo, b.z, b.x, b.y + hi, b.z);
-          meshUV.push(0, lo / 0.15, 0, hi / 0.15, w, lo / 0.15, w, hi / 0.15); meshI.push(o, o + 1, o + 2, o + 1, o + 3, o + 2);
+          if (/chain/i.test(gname)) quad(PB.chain, a, b, lo, hi, 0, 0, (g.d1 - g.d0) / 0.1, lo / 0.1, hi / 0.1);
+          else { const o = meshV.length / 3, w = (g.d1 - g.d0) / 0.15;
+            meshV.push(a.x, a.y + lo, a.z, a.x, a.y + hi, a.z, b.x, b.y + lo, b.z, b.x, b.y + hi, b.z);
+            meshUV.push(0, lo / 0.15, 0, hi / 0.15, w, lo / 0.15, w, hi / 0.15); meshI.push(o, o + 1, o + 2, o + 1, o + 3, o + 2); }
           marks.push({d: (g.d0 + g.d1) / 2, q: P((g.d0 + g.d1) / 2), what: 'Gate, ' + ((g.d1 - g.d0) * FT).toFixed(0) + ' ft wide, ' + (gH * FT).toFixed(0) + ' ft tall'});
+          continue;
+        }
+        if (/wood|board/i.test(matOf(g.gm)?.name || '')) {
+          const gh = gH > 0 ? Math.min(gH, Hf + 0.1) : Math.min(Hf, 1.35), n = 4, bw = 0.14, bt = 0.035, wc = 0xc9a77a;
+          for (let k = 0; k < n; k++) { const top = 0.25 + (gh - 0.25) * (k + 1) / n; boards.push({a: new THREE.Vector3(a.x, a.y + top - bw / 2, a.z), b: new THREE.Vector3(b.x, b.y + top - bw / 2, b.z), w: bw, t: bt, color: wc}); }
+          for (const f of [0, 1]) { const m = f ? b : a; boards.push({a: new THREE.Vector3(m.x, m.y + 0.18, m.z), b: new THREE.Vector3(m.x, m.y + gh + 0.02, m.z), w: bw, t: bt, color: wc, upright: true}); }
+          boards.push({a: new THREE.Vector3(a.x, a.y + 0.3, a.z), b: new THREE.Vector3(b.x, b.y + gh - 0.08, b.z), w: bw * 0.8, t: bt, color: wc});
+          marks.push({d: (g.d0 + g.d1) / 2, q: P((g.d0 + g.d1) / 2), what: 'Wood gate, ' + ((g.d1 - g.d0) * FT).toFixed(0) + ' ft wide'});
           continue;
         }
         const gh = Math.min(Hf, 1.3), bars = 5;
@@ -553,8 +583,22 @@ export async function open3D({bounds, lines, types, nodes, key, focus, braces, m
         const qs = ds.map(P);
         for (let i = 1; i < qs.length; i++) {
           const a = qs[i - 1], b = qs[i]; if (!inView(a.x, a.z) && !inView(b.x, b.z)) continue;
-          for (const [hh, look] of heights) cyl(new THREE.Vector3(a.x, a.y + hh, a.z), new THREE.Vector3(b.x, b.y + hh, b.z), look === 'barbed' ? 0.013 : 0.011, look === 'barbed' ? 0x5c5f63 : 0xe6e8ea);
-          for (const [m0, m1] of meshes) {
+          for (const [hh, look, bw, dia] of heights) {
+            if (look === 'rail') { cyl(new THREE.Vector3(a.x, a.y + hh, a.z), new THREE.Vector3(b.x, b.y + hh, b.z), (dia || 1.66) * 0.0127, 0xa9b0b6); continue; }   // a pipe rail
+            if (look === 'log') { cyl(new THREE.Vector3(a.x, a.y + hh, a.z), new THREE.Vector3(b.x, b.y + hh, b.z), (dia || 4) * 0.0127, 0x8b6b48); continue; }    // a split rail through the posts
+            if (look === 'board') {   // a board nailed to the face of the posts: its top edge at hh
+              const nx = -(b.z - a.z), nz = b.x - a.x, nl = Math.hypot(nx, nz) || 1, off = 0.085, ox = nx / nl * off, oz = nz / nl * off;
+              boards.push({a: new THREE.Vector3(a.x + ox, a.y + hh - bw / 2, a.z + oz), b: new THREE.Vector3(b.x + ox, b.y + hh - bw / 2, b.z + oz), w: bw, t: 0.025, color: 0xcfae7f});
+              continue;
+            }
+            cyl(new THREE.Vector3(a.x, a.y + hh, a.z), new THREE.Vector3(b.x, b.y + hh, b.z), look === 'barbed' ? 0.013 : 0.011, look === 'barbed' ? 0x5c5f63 : 0xe6e8ea);
+          }
+          for (const [m0, m1, lk] of meshes) {
+            if (lk !== 'mesh') {   // chain link on the posts, pickets on the outside of the rails, vinyl panels between the posts
+              const off = lk === 'picket' ? 0.11 : lk === 'chain' ? 0.03 : 0, w = lk === 'picket' ? 0.14 : lk === 'chain' ? 0.1 : 0.15;
+              quad(PB[lk], a, b, m0, m1, off, ds[i - 1] / w, ds[i] / w, lk === 'chain' ? m0 / 0.1 : 0, lk === 'chain' ? m1 / 0.1 : 1);
+              continue;
+            }
             for (const hh of [m0, m1]) cyl(new THREE.Vector3(a.x, a.y + hh, a.z), new THREE.Vector3(b.x, b.y + hh, b.z), 0.009, 0xd5d9dc);
             const o = meshV.length / 3, u0 = ds[i - 1] / 0.15, u1 = ds[i] / 0.15, v0 = m0 / 0.15, v1 = m1 / 0.15;
             meshV.push(a.x, a.y + m0, a.z, a.x, a.y + m1, a.z, b.x, b.y + m0, b.z, b.x, b.y + m1, b.z);
@@ -600,6 +644,25 @@ export async function open3D({bounds, lines, types, nodes, key, focus, braces, m
     // stays: a thin rod clipped to the wires, from just under the bottom wire to just over the top one
     inst(stays, new THREE.CylinderGeometry(0.5, 0.5, 1, 8), new THREE.MeshLambertMaterial({color: 0x4f565c}));
     inst(woods, new THREE.CylinderGeometry(0.5, 0.5, 1, 10), new THREE.MeshLambertMaterial({color: 0x8a6a48}));
+    // square wood posts, turned to face along the fence
+    for (const color of new Set(squares.map(p => p.color || 0x8f6e4c))) {
+      const list = squares.filter(p => (p.color || 0x8f6e4c) === color), im = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshLambertMaterial({color}), list.length), yq = new THREE.Quaternion();
+      list.forEach((p, i) => { yq.setFromAxisAngle(up, Math.atan2(-(p.dz || 0), p.dx ?? 1)); ps.set(p.x, p.y + p.h / 2, p.z); sc.set(p.r * 2, p.h, p.r * 2); im.setMatrixAt(i, m4.compose(ps, yq, sc)); });
+      im.instanceMatrix.needsUpdate = true; fences.add(im);
+    }
+    // boards: flat planks, standing on edge, from one post to the next (gates too)
+    for (const color of new Set(boards.map(b => b.color))) {
+      const list = boards.filter(b => b.color === color), im = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshLambertMaterial({color}), list.length);
+      const xA = new THREE.Vector3(), yA = new THREE.Vector3(), zA = new THREE.Vector3(), basis = new THREE.Matrix4(), q4 = new THREE.Quaternion();
+      list.forEach((bd, i) => {
+        xA.subVectors(bd.b, bd.a); const len = xA.length() || 0.01; xA.normalize();
+        if (bd.upright) { zA.set(0, 0, 1); yA.crossVectors(zA, xA).normalize(); zA.crossVectors(xA, yA).normalize(); }
+        else { zA.crossVectors(xA, up).normalize(); yA.crossVectors(zA, xA).normalize(); }
+        basis.makeBasis(xA, yA, zA); q4.setFromRotationMatrix(basis);
+        ps.copy(bd.a).add(bd.b).multiplyScalar(0.5); sc.set(len, bd.w, bd.t); im.setMatrixAt(i, m4.compose(ps, q4, sc));
+      });
+      im.instanceMatrix.needsUpdate = true; fences.add(im);
+    }
     inst(pipes, new THREE.CylinderGeometry(0.5, 0.5, 1, 12), new THREE.MeshLambertMaterial({color: 0x9aa3ab}));
     // a cap on top of every pipe post
     inst(pipes.map(p => ({x: p.x, y: p.y + p.h, z: p.z, h: 0.035, r: p.r * 1.18})), new THREE.CylinderGeometry(0.5, 0.42, 1, 12), new THREE.MeshLambertMaterial({color: 0x4a5056}));
@@ -610,12 +673,20 @@ export async function open3D({bounds, lines, types, nodes, key, focus, braces, m
     }
     const segs = (arr, color) => { if (!arr.length) return; const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(arr, 3)); fences.add(new THREE.LineSegments(g, new THREE.LineBasicMaterial({color}))); };
     segs(wire.barbed, 0x6f6f6f); segs(wire.smooth, 0xe2e2e2); segs(braceWire, 0xbdbdbd);
+    for (const [lk, buf] of Object.entries(PB)) {
+      if (!buf.V.length) continue;
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.Float32BufferAttribute(buf.V, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(buf.UV, 2)); g.setIndex(buf.I); g.computeVertexNormals();
+      const mat = lk === 'chain' ? new THREE.MeshBasicMaterial({map: chainTex, transparent: true, alphaTest: 0.3, side: THREE.DoubleSide})
+        : new THREE.MeshLambertMaterial({map: lk === 'picket' ? picketTex : vinylTex, side: THREE.DoubleSide});
+      fences.add(new THREE.Mesh(g, mat));
+    }
     if (meshV.length) {
       const g = new THREE.BufferGeometry();
       g.setAttribute('position', new THREE.Float32BufferAttribute(meshV, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(meshUV, 2)); g.setIndex(meshI);
       fences.add(new THREE.Mesh(g, new THREE.MeshBasicMaterial({map: meshTex, transparent: true, alphaTest: 0.3, side: THREE.DoubleSide})));
     }
-    counts.textContent = `${tposts.length.toLocaleString()} T-posts, ${(woods.length + pipes.length).toLocaleString()} other and brace posts${stays.length ? `, ${stays.length.toLocaleString()} stays` : ''} shown`;
+    counts.textContent = `${tposts.length.toLocaleString()} T-posts, ${(woods.length + pipes.length + squares.length).toLocaleString()} other and brace posts${stays.length ? `, ${stays.length.toLocaleString()} stays` : ''} shown`;
   }
   function setStretch(v) {
     ex = v;
