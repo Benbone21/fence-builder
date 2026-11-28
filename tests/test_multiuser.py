@@ -542,8 +542,12 @@ def browser_part(srv, admin_user, admin_pw, user, temp_pw):
         page.wait_for_selector("#tabs button")
         page.goto(base + "/admin")
         page.wait_for_selector("table.ptable")
+        try:   # the sign-in log loads a moment after the list of people
+            page.wait_for_function("() => /Dee/.test(document.body.innerText) && /signed in/i.test(document.body.innerText)", timeout=10000)
+        except Exception:
+            pass
         txt = page.evaluate("() => document.body.innerText")
-        check("Dee" in txt and "Signed in" in txt, "the accounts page should list people and sign-ins")
+        check("Dee" in txt and "signed in" in txt.lower(), "the accounts page should list people and sign-ins")
         page.click("#bAdd")
         page.fill("#an", "Eve")
         page.fill("#au", "eve")
