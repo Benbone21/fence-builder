@@ -18,6 +18,17 @@ problems = []
 passed = 0
 
 
+
+def launch_browser(pw, **kw):
+    """Playwright's own Chromium, or the installed Microsoft Edge when Playwright's browser isn't downloaded."""
+    try:
+        return pw.chromium.launch(**kw)
+    except Exception as e:
+        if "Executable doesn't exist" not in str(e) and "playwright install" not in str(e):
+            raise
+        print("  (Playwright's Chromium is not installed here: using Microsoft Edge)")
+        return pw.chromium.launch(channel="msedge", args=["--no-proxy-server"], **kw)
+
 def check(ok, what):
     global passed
     if ok:
@@ -490,7 +501,7 @@ def browser_part(srv, admin_user, admin_pw, user, temp_pw):
     print("multi mode in a browser")
     base = "http://127.0.0.1:%d" % srv.port
     with sync_playwright() as pw:
-        b = pw.chromium.launch()
+        b = launch_browser(pw)
         ctx = b.new_context(viewport={"width": 1400, "height": 900}, service_workers="block")
         ctx.route(re.compile(r"^(?!%s)" % re.escape(base)), lambda route: route.abort())
         page = ctx.new_page()

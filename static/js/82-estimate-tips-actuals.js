@@ -7,9 +7,9 @@ function saveEstimate(){
 }
 function estNote(p){
   if(!A.rows.length)return '';
-  if(!p.est)return `<div class="note noprint estnote">This estimate is not saved to the jobs board yet. <button class="btn sm pri" data-act="saveEst">Save estimate</button></div>`;
+  if(!p.est)return `<div class="note noprint estnote">This estimate is not saved to the jobs board yet. <button class="btn sm soft" data-act="saveEst">Save estimate</button></div>`;
   const ch=Math.abs(p.est.total-A.total)>0.5;
-  return `<div class="note noprint estnote${ch?' warnbox':''}">Estimate saved ${esc(new Date(p.est.at).toLocaleDateString())}: ${money(p.est.total)} for ${fmtFt(p.est.ft)}.${ch?` The job has changed since and is now ${money(A.total)}. <button class="btn sm pri" data-act="saveEst">Save it again</button>`:''}</div>`;
+  return `<div class="note noprint estnote${ch?' warnbox':''}">Estimate saved ${esc(new Date(p.est.at).toLocaleDateString())}: ${money(p.est.total)} for ${fmtFt(p.est.ft)}.${ch?` The job has changed since and is now ${money(A.total)}. <button class="btn sm soft" data-act="saveEst">Save it again</button>`:''}</div>`;
 }
 
 /* ---------- add a material: from a store, from a link, or your own ---------- */
@@ -47,7 +47,7 @@ function tipCard(k){const t=TIPS[k];if(!t||tipsSeen[k])return '';
 /* ---------- builder sidebar helpers ---------- */
 function typeSummary(t){const w=(t.wires||[]).reduce((s,x)=>s+(+x.strands||0),0);
   return [`${w} strand${w===1?'':'s'} of wire`,`posts every ${fmtQ(+t.spacing||12)} ft`,`${kitName(t.braceCorner)} at corners`].join(' · ')}
-function drawnNote(){const n=P().lines.filter(l=>!l.manual&&l.pts?.length>1).length;return n?`<span class="stpdone">✓ ${n} line${n>1?'s':''}, ${fmtFt(A.totalFt)}</span>`:''}
+function drawnNote(){const n=P().lines.filter(l=>!l.manual&&l.pts?.length>1).length;return n?`<span class="stpdone">✓ ${n} line${n>1?'s':''} drawn</span>`:''}
 
 /* ---------- what the job really took, and what to charge for labor next time ---------- */
 // the crew's cost per hour: average pay of the people on the job, plus taxes and insurance

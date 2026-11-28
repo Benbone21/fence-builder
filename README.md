@@ -2,57 +2,25 @@
 
 Draw fence lines on a satellite map and get the footage (following the ground slope),
 every post, brace and roll of wire you need, what it costs, and a final bill with labor
-and fees. Runs as a Windows app, or as a shared server where each person signs in to their own account.
+and fees. It runs in a web browser: on your own computer, or as a shared server where each person signs
+in to their own account.
 
-## Install on Windows
+## Use it in a web browser on this computer
 
-1. Go to the **[Releases](https://github.com/Benbone21/fence-builder/releases/latest)** page and
-   download **FenceBuilder-Setup-<version>.exe**.
-2. Run it. It installs for your Windows user only (no administrator needed), adds
-   **Fence Builder** to the Start menu and the desktop, and opens it. Windows may say
-   "Windows protected your PC" the first time because the installer isn't signed: click
-   **More info**, then **Run anyway**.
+1. Install [Python 3](https://www.python.org/downloads/) (tick "Add python.exe to PATH") and
+   [Git](https://git-scm.com/download/win).
+2. Get the code once: `git clone https://github.com/Benbone21/fence-builder.git`
+3. Start it: in that folder, `py server.py` (or `pyw server.py` to run it with no window). Set
+   `FENCE_DATA` to the full path of your data file to keep your jobs somewhere other than `data/`.
+4. Open **http://localhost:8787** in your browser. Make a Startup shortcut to `pyw server.py` so
+   it starts with Windows.
+5. To update: `git pull` in that folder, then start it again.
 
-Fence Builder is a normal Windows app: its own window and taskbar button, and you can pin it to
-the taskbar or Start. It runs entirely on its own (nothing else needs to be running, and other
-computers can't reach it) and stops when you close the window. It needs Microsoft's WebView2,
-which comes with Windows 10 and 11. To remove it, use
-**Settings → Apps → Installed apps → Fence Builder → Uninstall**.
+Only this computer can reach it unless you set `HOST=0.0.0.0` (then use the shared-server setup below,
+with sign-in, before other people use it).
 
-Your jobs, prices and settings are kept in `%LOCALAPPDATA%\Fence Builder\data`, not in the
-app's folder, so updating, uninstalling or reinstalling never touches them. To move jobs over
-from a copy that ran from source, close Fence Builder and copy that copy's `data` folder there.
-
-### Updates
-
-The app checks this repository when it opens and every few hours. When a newer release is
-out, a green bar says so, with **Update now**. The installed app downloads the new installer,
-runs it quietly, and comes back on the new version in under a minute. You can also check from
-**Settings → Version and updates**.
-
-### Advanced: run it from the Python source
-
-1. Install [Python 3](https://www.python.org/downloads/) (tick "Add python.exe to PATH").
-2. Download the newest release from **Releases** (Source code, zip) and unzip it where you want
-   it to live.
-3. Install the window library once: `py -m pip install pywebview`.
-4. Double-click `app.py`, or make a shortcut to it with `pyw.exe app.py` and the icon
-   `fence.ico`.
-
-The app keeps its own data in `%LOCALAPPDATA%\Fence Builder\data` (the first time, it copies
-your jobs from `data/` next to the code). The web server (`python server.py`) keeps using
-`data/`, so the two are separate. From source, **Update now** downloads the
-release's source, replaces the app's own files (never `data/`; the replaced files are kept in
-`_previous/`) and restarts.
-
-### Use a shared Fence Builder server from the app
-
-If your business runs a shared Fence Builder server (see below), the app can open it instead of its own copy:
-**Settings → Fence Builder server**, type the server's address (for example `https://fence.example.com` or
-`http://192.168.1.20:8787`) and press **Use this server**. The window then shows the server's sign-in page,
-also the next times the app opens. The jobs on this computer stay where they are. To go back to them, press
-**Use the copy on this computer** on the server's sign-in page or in its **Settings → Your account**. If the
-server can't be reached when the app opens, the app shows this computer's copy and says so.
+The Windows app (`app.py`, `installer/`) still works from the source but is no longer built or
+updated with each release.
 
 ## Run it as a shared server (Ubuntu and Docker)
 
@@ -303,7 +271,10 @@ for the app, `data/offline` for the web server. About 4 MB per 50 acres at full 
   of a shared server. `static/js/05-account.js` is the app's side of accounts.
 - `ground.py` looks up the ground along a fence line (soil, water, trees) on public federal maps for the
   app; `static/js/68-ground.js` shows it.
-- `static/index.html` is the page, `static/app.css` its look, and `static/view3d.js` the 3D view.
+- `static/index.html` is the page, `static/app.css` its look, and `static/view3d.js` the 3D view. The colours of
+  each look in **Settings → Look and text size** (Clean, Warm, Ranch, High contrast, Dark) are at the top of `app.css`;
+  `static/look.js` puts the one picked on this computer on the page before it shows (the app, sign-in and Accounts
+  pages all load it). Pictures of each look are in `docs/looks/`.
 - The app's script is kept in pieces in `static/js/`, numbered in the order they run
   (`00-basics.js` … `95-start.js`). The server joins them into one script, `app.js`, so the
   pieces share everything, as if they were one file.
@@ -312,56 +283,17 @@ for the app, `data/offline` for the web server. About 4 MB per 50 acres at full 
 
 ## Making a release
 
-1. Put the new version number in `VERSION` (for example `1.1.0`) and commit it.
+1. Put the new version number in `VERSION` (for example `1.8.3`) and commit it.
 2. Tag that commit and push the tag:
 
-       git tag v1.1.0
-       git push origin v1.1.0
+       git tag v1.8.3
+       git push origin v1.8.3
 
-   The **Release installer** workflow (`.github/workflows/release.yml`) builds
-   `FenceBuilder.exe` with PyInstaller (`installer/fence-builder.spec`), wraps it with
-   Inno Setup (`installer/fence-builder.iss`), and creates the GitHub release with
-   `FenceBuilder-Setup-1.1.0.exe` attached. Installed apps offer the update once the
-   installer is attached. The tag must match `VERSION` or the build stops.
-
-   Before it builds anything, the workflow checks the app still works: it starts it on an
-   empty data folder in a hidden browser, opens every page, adds a test job and checks the
-   Final bill (`tests/smoke.py`, see `tests/README.md`). If that check fails, the build
-   stops and no installer is made, so a broken version never reaches anyone. The Actions
-   page shows what went wrong. You can run the same check yourself first with
-   `py tests/smoke.py`.
-
-### Signing the installer (optional)
-
-Right now the installer is not signed, so Windows shows a blue "Windows protected your PC"
-box the first time someone runs it (they click **More info**, then **Run anyway**). Signing
-it with a code-signing certificate makes that warning go away (right away with an EV
-certificate or Azure Trusted Signing; an ordinary OV certificate earns trust over time as
-more people install it). Nothing needs to change in the code to turn it on:
-
-1. Get a code-signing certificate. Either buy an **OV or EV code-signing certificate**
-   from a company such as DigiCert, Sectigo or SSL.com, or sign up for **Azure Trusted
-   Signing** from Microsoft. (EV certificates and Azure Trusted Signing keep the key on a
-   hardware token or in the cloud and cannot be saved as a .pfx file. Ask the seller for
-   a certificate you can export as a `.pfx` file, or ask someone to help set up their
-   signing service in the workflow.)
-2. Save the certificate as a `.pfx` file with a password (the seller explains how; in
-   Windows it is the certificate's **Export** button, choosing "Yes, export the private key").
-3. Turn the file into text. In PowerShell, in the folder with the file:
-
-       [Convert]::ToBase64String([IO.File]::ReadAllBytes("$PWD\certificate.pfx")) | Set-Clipboard
-
-   That copies a long block of letters and numbers.
-4. On GitHub open the repository, then **Settings** > **Secrets and variables** >
-   **Actions** > **New repository secret**, and add two secrets:
-   - `WINDOWS_CERT_PFX`: paste the long text from step 3.
-   - `WINDOWS_CERT_PASSWORD`: the password of the .pfx file.
-5. Make the next release as usual. The workflow signs `FenceBuilder.exe` and the setup
-   file with it. Without these two secrets it just skips signing, as now.
-
-Keep the .pfx file and its password private. Do not put them in the repository.
-
-To build it on your own computer: `pip install pyinstaller`, then
-`python -m PyInstaller installer/fence-builder.spec` (makes `dist/FenceBuilder/`), then with
-[Inno Setup 6](https://jrsoftware.org/isdl.php): `iscc /DAppVersion=1.1.0 installer/fence-builder.iss`
-(makes `dist/installer/`).
+   The **Release** workflow (`.github/workflows/release.yml`) first checks the app still works:
+   it starts it on an empty data folder in a hidden browser, opens every page, adds a test job
+   and checks the Final bill, and checks the shared server's sign-in and security
+   (`tests/smoke.py` and `tests/test_multiuser.py`, see `tests/README.md`). If that passes it
+   makes the GitHub release. If it fails, no release is made; the Actions page shows what went
+   wrong. The tag must match `VERSION`. You can run the same checks yourself first with
+   `py tests/smoke.py` and `py tests/test_multiuser.py` (they use Playwright's Chromium, or
+   Microsoft Edge if Playwright's browser isn't installed).

@@ -5,22 +5,18 @@ function gapText(r){
   const range=b-a<0.05?f(a):f(a)+' to '+f(b);
   return nc?`${nc} stretch${nc>1?'es have':' has'} posts you placed by hand. Gaps run ${range} ft.`:`Posts are evened out between braces: ${range} ft apart (you set ${set} ft).`;
 }
-// one line of ground info for the list of lines: climb, steepest grade and the length along the ground
-function elevShort(l){
-  if(l.manual||l.pts.length<2)return '';
-  const e=evOf(l)||evAny(l);
-  if(!e)return elevState(l)==='fail'?' · heights did not load':' · getting heights…';
-  return ` · climbs ${fmtFt(e.climb)}, steepest ${(+e.grade||0).toFixed(0)}%, ${fmtFt(e.surface)} along the ground${evOf(l)?'':' (updating…)'}`;
-}
+// Two views. Setting up: the job's two key numbers, pick the fence type, draw; the rest in sections that start closed.
+// One line (after clicking it): see lineView. Sections remember open or closed (openKeep, data-keep).
 function sideView(){
   const sel=selLine&&getLine(selLine)&&A.lines.find(x=>x.l.id===selLine);
-  const head=`<details class="autobox" data-keep="sideAuto"${openKeep.sideAuto!==false?' open':''}><summary><b>Braces added for you</b> <span class="small mut">${AUTO_KINDS.filter(x=>autoOn(x[0])).length} of 4 on</span></summary>${autoSwitches('sidecross')}</details>
-  <div class="sum two"><div><span>Fence length</span><b>${fmtFt(A.totalFt)}</b>${A.area?`<span class="small mut areanote">${fmtAcres(A.area)} fenced in<br>${fmtSqFt(A.area)}</span>`:''}</div><div class="tot"><span>Materials with tax</span><b>${money(A.sub+A.tax)}</b></div></div>
-    <div class="row sumbtns" style="margin-top:8px;flex-wrap:nowrap"><button class="btn grow" data-act="tab" data-tab="est">Final bill: what to buy and the cost</button></div>`;
+  if(sel)return lineView();
+  const head=`<div class="sum two sidesum"><div><span>Fence in this job</span><b>${fmtFt(A.totalFt)}</b>${A.area?`<span class="small mut areanote">${fmtAcres(A.area)} fenced in</span>`:''}</div><div class="tot"><span>Materials with tax</span><b>${money(A.sub+A.tax)}</b></div></div>
+    <div class="row sumbtns"><button class="btn grow" data-act="tab" data-tab="est">Final bill: what to buy and the cost</button></div>`;
+  const nOn=AUTO_KINDS.filter(x=>autoOn(x[0])).length;
+  const auto=`<details class="sbox" data-keep="sideAuto"${openKeep.sideAuto?' open':''}><summary><b>Braces added for you</b><span class="sboxsum">${nOn} of 4 on</span></summary><div class="sboxbody">${autoSwitches('sidecross')}</div></details>`;
   const drawn=A.lines.filter(r=>!r.manual);
-  const list=drawn.length?`<details class="linesbox" data-keep="sideLines"${openKeep.sideLines!==false?' open':''}><summary><h2 style="margin:0">Fence lines in this job (${drawn.length})</h2></summary><div class="row" style="justify-content:space-between;margin:6px 0 8px"><p class="small mut" style="margin:0">Click a line to see its posts, braces and gates.</p><button class="btn sm del" data-act="clearLines">Clear map</button></div><div class="box">${drawn.map(r=>`<button class="tli${r.l.id===selLine?' on':''}" data-act="sel" data-id="${r.l.id}"><span class="dot" style="background:${esc(r.t.color)}"></span><span class="grow"><b>${esc(r.l.name)}</b><span class="small mut">${esc(r.t.name)}${r.area?` · fences in ${fmtAcres(r.area)}`:''}${elevShort(r.l)}</span></span><span class="num">${fmtFt(r.len)}</span></button>`).join('')}</div></details>`:'';
-  if(sel)return head+lineView()+list;
-  const [top,rest]=setupView();return head+top+list+rest;
+  const list=drawn.length?`<details class="sbox" data-keep="sideLines"${openKeep.sideLines!==false?' open':''}><summary><b>Fence lines in this job</b><span class="sboxsum">${drawn.length} line${drawn.length>1?'s':''}</span></summary><div class="sboxbody"><p class="small mut" style="margin:0 0 8px">Click a line to see its posts, braces and ground.</p><div class="box">${drawn.map(r=>`<button class="tli${r.l.id===selLine?' on':''}" data-act="sel" data-id="${r.l.id}"><span class="dot" style="background:${esc(r.t.color)}"></span><span class="grow"><b>${esc(r.l.name)}</b><span class="small mut">${esc(r.t.name)}${r.area?` · fences in ${fmtAcres(r.area)}`:''}</span></span><span class="num">${fmtFt(r.len)}</span></button>`).join('')}</div></div></details>`:'';
+  const [top,rest]=setupView();return head+top+list+auto+rest;
 }
 function setupView(){
   const t=TYP(drawTypeId())||TYP(S.fenceTypes[0]?.id);if(!t)return ['<p class="mut">Make a fence type first, on the Fence types page.</p>',''];
@@ -40,8 +36,8 @@ function setupView(){
   <div class="pick"><select data-f="ui.drawType" aria-label="Fence type">${typeOpts(t.id)}</select><button class="btn" data-act="addFt">New type</button></div>
   ${apply}
   <h2 class="stp"><span class="stpn">2</span>Draw it on the map${drawnNote()}</h2>
-  <div class="row"><button class="btn pri big" data-act="draw">${mode==='draw'?'Finish line':'Draw fence'}</button><button class="btn big" data-act="gate">Add gate</button><button class="btn big" data-act="brace">Add brace</button></div>
-  <p class="small mut">Press <b>Draw fence</b>, then click each corner on the map. Press <b>Finish line</b> at the end. Every spot you click gets a brace (a bend gets a corner brace), and the posts space themselves evenly in between. Zoom in to see every post. You can also <b>right-click</b> the map to pick what goes there.</p>`,
+  <div class="row drawbtns"><button class="btn pri big" data-act="draw">${mode==='draw'?'Finish line':'Draw fence'}</button><button class="btn big" data-act="gate">Add gate</button><button class="btn big" data-act="brace">Add brace</button></div>
+  <details class="help sidehelp" data-keep="sideDrawHelp"${openKeep.sideDrawHelp?' open':''}><summary>How to draw</summary><p class="small">Press <b>Draw fence</b>, then click each corner on the map. Press <b>Finish line</b> at the end. Every spot you click gets a brace (a bend gets a corner brace), and the posts space themselves evenly in between. Zoom in to see every post. You can also <b>right-click</b> the map to pick what goes there.</p></details>`,
   `${saveBar('Ft',t.id)}${elkNote(t)}<details class="stepbox" data-keep="side3"${openKeep.side3?' open':''}><summary><h2 class="stp"><span class="stpn">3</span>Check what goes into it<span class="stpmore">Show</span></h2><span class="small mut stepsum">${esc(t.name)}: ${esc(typeSummary(t))}</span></summary>
   <p class="small mut" style="margin:0 0 8px">These are the settings of the fence type <b>${esc(t.name)}</b>. A change here counts for every job that uses it, once you press Save.</p>
   <div class="sec"><h3>Wire</h3>${wires||'<p class="small mut" style="margin:0 0 6px">No wire yet.</p>'}

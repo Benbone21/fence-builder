@@ -106,7 +106,8 @@ function estView(){
     <tr class="tot"><td colspan="5">Total</td><td class="num">${money(A.total)}</td><td></td></tr></tfoot></table></div>
 `
     :`<p class="mut">Once there is some fence, the list of what to buy shows up here.</p>`;
-  return `<div class="phead"><div><h1>Final bill: ${esc(p.name)}</h1><p>${p.customer?esc(p.customer)+'. ':''}What to buy and what to charge for this job. A price you change here is for this job only.</p></div><div class="row noprint"><button class="btn big" data-act="jobPage" data-id="${p.id}">Job details</button><button class="btn big" data-act="showMap">Fence map</button><button class="btn big" data-act="copyBill">Copy list</button><button class="btn big" data-act="print">Print my copy</button><button class="btn big" data-act="saveEst">Save estimate</button><button class="btn pri big" data-act="quote">Customer quote</button></div></div>
+  return `<div class="phead"><div><h1>Final bill: ${esc(p.name)}</h1><p>${p.customer?esc(p.customer)+'. ':''}What to buy and what to charge for this job. A price you change here is for this job only.</p></div><div class="row noprint"><button class="btn big" data-act="saveEst">Save estimate</button><button class="btn pri big" data-act="quote">Customer quote</button></div></div>
+  <div class="pbar noprint"><button class="btn" data-act="jobPage" data-id="${p.id}">Job details</button><button class="btn" data-act="showMap">Fence map</button><button class="btn" data-act="copyBill">Copy list</button><button class="btn" data-act="print">Print my copy</button></div>
   ${estNote(p)}<div class="est"><div class="sum"><div><span>Fence length</span><b>${fmtFt(A.totalFt)}</b>${A.area?`<span class="areanote">${fmtAcres(A.area)} fenced in (${fmtSqFt(A.area)})</span>`:''}</div><div><span>Braces</span><b>${braces}</b></div><div><span>Gates</span><b>${A.gates}</b></div>
     <div><span>Materials</span><b>${money(A.sub)}</b></div><div><span>Labor</span><b>${money(A.lab.cost)}</b></div><div><span>Headache and fees</span><b>${money(A.lab.matHead+A.lab.feeTotal)}</b></div><div class="tot"><span>Total</span><b>${money(A.total)}</b></div></div>
   <div class="wide"><h2>Materials to buy</h2>${bill}</div>
@@ -123,22 +124,29 @@ function lineView(){
     const sel=`<select data-f="node.brace" data-id="${l.id}" data-i="${i}" aria-label="Brace at point ${i+1}">${opt('',autoLbl,cur)}${S.braces.map(b=>opt(b.id,b.name,cur)).join('')}${opt('none','No brace (line post)',cur)}${opt('gate','Gate opening',cur)}</select>`;
     const gate=o.brace==='gate'&&p.brace==='gate'?`<div class="g2" style="margin-top:6px"><label class="small mut">Width ft<input type="number" min="1" step="1" value="${+p.gw||0}" data-f="node.gw" data-id="${l.id}" data-i="${i}"></label><label class="small mut">Gate<select data-f="node.gm" data-id="${l.id}" data-i="${i}">${matOpts(p.gm)}</select></label></div>`:'';
     return `<tr class="${on?'on':''}"><td class="num">${i+1}</td><td>${o.role}${o.refs.length>1?'<br><span class="small mut">shared</span>':''}</td><td>${sel}${gate}</td><td><button class="btn x" data-act="delPt" data-id="${l.id}" data-i="${i}" aria-label="Remove point ${i+1}" title="Remove">×</button></td></tr>`}).join('');
-  return `<div class="jobtop" style="margin-top:14px"><button class="btn big" data-act="back">← Back to fence setup</button></div>
-  <h2 style="margin:0 0 8px">One fence line</h2><div class="row noprint"><button class="btn" data-act="zoom" data-id="${l.id}">Zoom to it</button></div>
-  <label class="f">Line name</label><input type="text" value="${esc(l.name)}" data-f="line.name" data-id="${l.id}">
-  <label class="f">Fence type</label><select data-f="line.type" data-id="${l.id}">${S.fenceTypes.map(t=>opt(t.id,t.name,l.type)).join('')}</select>
-  <p class="big" style="margin:14px 0 2px">${fmtFt(r.len)}</p><p class="small mut" style="margin:0">of wire run${r.gateW?`, after ${fmtFt(r.gateW)} of gate openings`:''}. ${postText(r)}${r.pulls?`, ${r.pulls} pull braces`:''}.</p>
-  ${r.area?`<div class="areabox"><span>Fenced in</span><b>${fmtAcres(r.area)}</b><span>${fmtSqFt(r.area)}</span></div>`:''}
-  <p class="small" style="margin:4px 0 0">${gapText(r)}</p>
-  ${(()=>{const ps=stretchParts(r);return ps.length?`<div class="box" style="margin-top:10px"><table class="strs"><thead><tr><th>Section</th><th class="num">Length</th><th>Which roll</th><th>Wire pulled</th></tr></thead><tbody>${ps.map((q,i)=>`<tr><td>${i+1}</td><td class="num">${fmtFt(q.len)}</td><td>${q.on?(q.on.q1>q.on.q0?`Rolls ${q.on.q0+1}–${q.on.q1+1}`:`Roll ${q.on.q0+1}`)+` <span class="mut">(${q.on.sizes.map(fmtQ).join(' + ')} ft)</span>`:'–'}</td><td>${q.split?'Into the pull brace':'From the end brace'}</td></tr>`).join('')}</tbody></table></div>`:''})()}
-  <p class="small mut" style="margin:4px 0 0">Zoom in on the map to drag any post or pull brace along the fence, or click one to change it, delete it or add another.</p>
-  ${r.stretches.some(x=>x.custom)?`<button class="btn sm" data-act="resetCust" data-id="${l.id}" style="margin-top:6px">Put all posts back to automatic</button>`:''}
-  ${evh}
+  // the few things needed right away up top; the rest in sections that start closed and remember how you left them
+  const e=evOf(l)||evAny(l),gates=l.pts.filter(q=>q.brace==='gate').length;
+  const k3=[[`Length`,fmtFt(r.len),r.gateW?`plus ${fmtFt(r.gateW)} of gate${gates>1?'s':''}`:'of wire run'],['Line posts',fmtQ(r.tposts),r.pulls?`${r.pulls} pull brace${r.pulls>1?'s':''}`:'no pull braces'],
+    r.area?['Fenced in',fmtAcres(r.area),fmtSqFt(r.area)]:e?['Steepest',`${(+e.grade||0).toFixed(0)}%`,`climbs ${fmtFt(e.climb)}`]:['Gates',String(gates),'']];
+  const ps=stretchParts(r);
+  const sec=(key,title,sum,body,open)=>`<details class="sbox" data-keep="${key}"${open??openKeep[key]?' open':''}><summary><b>${title}</b><span class="sboxsum">${sum}</span></summary><div class="sboxbody">${body}</div></details>`;
+  const posts=`<p style="margin:0 0 6px">${postText(r)}${r.pulls?`, ${r.pulls} pull braces`:''}.</p><p class="small" style="margin:0 0 8px">${gapText(r)}</p>
+    ${ps.length?`<div class="box"><table class="strs"><thead><tr><th>Section</th><th class="num">Length</th><th>Which roll</th><th>Wire pulled</th></tr></thead><tbody>${ps.map((q,i)=>`<tr><td>${i+1}</td><td class="num">${fmtFt(q.len)}</td><td>${q.on?(q.on.q1>q.on.q0?`Rolls ${q.on.q0+1}–${q.on.q1+1}`:`Roll ${q.on.q0+1}`)+` <span class="mut">(${q.on.sizes.map(fmtQ).join(' + ')} ft)</span>`:'–'}</td><td>${q.split?'Into the pull brace':'From the end brace'}</td></tr>`).join('')}</tbody></table></div>`:''}
+    <p class="small mut" style="margin:8px 0 0">Zoom in on the map to drag a post or pull brace, or click one to change it.</p>
+    ${r.stretches.some(x=>x.custom)?`<button class="btn sm" data-act="resetCust" data-id="${l.id}" style="margin-top:6px">Put all posts back to automatic</button>`:''}`;
+  const est=e?'':elevState(l),hillSum=e?`climbs ${fmtFt(e.climb)}, steepest ${(+e.grade||0).toFixed(0)}%`:est==='fail'?'<span class="warn">heights did not load</span>':'getting heights…';
+  const onPt=!!(selNode&&selNode.l===l.id);
+  return `<div class="jobtop sideback"><button class="btn" data-act="back">← All fence lines</button><button class="btn" data-act="zoom" data-id="${l.id}">Zoom to it</button></div>
+  <div class="linehead"><label class="f" for="lnName">Line name</label><input id="lnName" type="text" value="${esc(l.name)}" data-f="line.name" data-id="${l.id}">
+  <label class="f" for="lnType">Fence type</label><select id="lnType" data-f="line.type" data-id="${l.id}">${S.fenceTypes.map(t=>opt(t.id,t.name,l.type)).join('')}</select></div>
+  <div class="sum three">${k3.map(([a,b,c])=>`<div><span>${a}</span><b>${b}</b>${c?`<span class="small mut">${c}</span>`:''}</div>`).join('')}</div>
+  ${sec('lnPosts','Posts and braces',ps.length?`${ps.length} section${ps.length===1?'':'s'}: post spacing and wire rolls`:'post spacing',posts)}
   ${groundView(l)}
-  <h3>Points, braces and gates</h3>
-  <div class="box"><table class="nodes"><thead><tr><th>#</th><th>Spot</th><th>What goes here</th><th></th></tr></thead><tbody>${nodes}</tbody></table></div>
-  <div class="row" style="margin-top:12px"><button class="btn" data-act="cont" data-id="${l.id}">Keep drawing from the end</button><button class="btn" data-act="rev" data-id="${l.id}">Flip direction</button><button class="btn" data-act="cross" data-id="${l.id}" title="Put a gate where it crosses a road and braces on both banks of a river or creek">Find roads and rivers</button><button class="btn del" data-act="delLine" data-id="${l.id}">Delete line</button></div>
-  <p class="small mut">Drag points on the map to move them. A point shared with another line counts as one corner.</p>`;
+  ${sec('lnHills','Hills and height',hillSum,evh)}
+  ${sec('lnPoints','Points on this line',`${l.pts.length} points${gates?`, ${gates} gate${gates>1?'s':''}`:''}`,
+    `<div class="box"><table class="nodes"><thead><tr><th>#</th><th>Spot</th><th>What goes here</th><th></th></tr></thead><tbody>${nodes}</tbody></table></div>
+    <p class="small mut" style="margin:8px 0 0">Drag points on the map to move them. A point shared with another line counts as one corner.</p>`,openKeep.lnPoints||onPt)}
+  <div class="row linetools"><button class="btn" data-act="cont" data-id="${l.id}">Keep drawing from the end</button><button class="btn" data-act="rev" data-id="${l.id}">Flip direction</button><button class="btn" data-act="cross" data-id="${l.id}" title="Put a gate where it crosses a road and braces on both banks of a river or creek">Find roads and rivers</button><button class="btn del" data-act="delLine" data-id="${l.id}">Delete line</button></div>`;
 }
 const KINDS=[['wire','Wire'],['board','Boards and pickets'],['rail','Rails and panels'],['post','Posts'],['hw','Hardware'],['gate','Gates'],['other','Other']];
 // a post used in a brace counts as a post; everything else in a brace is hardware
@@ -355,7 +363,7 @@ function typesView(){
         <dt>Labor</dt><dd>${money(+x.labor||0)} a foot</dd>
       </dl>
       <div class="small mut">${nl?`Used on ${nl} fence line${nl===1?'':'s'}`:'Not used on any job yet'}</div>
-      <div class="jobbtns"><button class="btn pri" data-act="selFt" data-id="${x.id}">Open and change</button><button class="btn" data-act="dupFt" data-id="${x.id}">Make a copy</button></div></div>`}).join('');
+      <div class="jobbtns"><button class="btn soft" data-act="selFt" data-id="${x.id}">Open and change</button><button class="btn" data-act="dupFt" data-id="${x.id}">Make a copy</button></div></div>`}).join('');
   return `<div class="phead"><div><h1>Fence types</h1><p>What each kind of fence is made of. The builder uses these when you draw. Click one to open it and make changes.</p></div><button class="btn pri big" data-act="addFt">+ New fence type</button></div>
   ${cards?`<div class="jobgrid tgrid">${cards}</div>`:'<p class="mut">Make a fence type to get started.</p>'}`;
 }
@@ -509,13 +517,17 @@ function bracesView(){
         <dt>Used by</dt><dd>${u.length?u.map(esc).join(', '):'<span class="mut">no fence type yet</span>'}</dd>
       </dl>
       <div class="small mut">${n?`${fmtQ(n)} in the open job`:'None in the open job'}</div>
-      <div class="jobbtns"><button class="btn pri" data-act="selKit" data-id="${b.id}">Open and change</button><button class="btn" data-act="dupKit" data-id="${b.id}">Make a copy</button></div></div>`}).join('');
+      <div class="jobbtns"><button class="btn soft" data-act="selKit" data-id="${b.id}">Open and change</button><button class="btn" data-act="dupKit" data-id="${b.id}">Make a copy</button></div></div>`}).join('');
   return `<div class="phead"><div><h1>Braces</h1><p>What goes into each brace and what it costs. Each fence type picks which brace goes at its ends, corners, gates and long runs. Click one to open it and make changes.</p></div><button class="btn pri big" data-act="addKit">+ New brace</button></div>
   ${cards?`<div class="jobgrid tgrid">${cards}</div>`:'<p class="mut">Make a brace to get started.</p>'}`;
 }
 // Settings: a list of sections down the left, one open at a time
 let setSec='look';
-const SET_ALL=[['account','Your account','Password and signing out'],['look','Text size and help','Bigger words, how-to cards'],['biz','Your business','Name, logo and quote terms'],['crew','Crew','Who works on your jobs'],['money','Sales tax','Tax on materials'],['map','Drawing on the map','Slope, roads and rivers'],['ground','Ground and clearing','Soil, water, trees, clearing $'],['offline','Offline maps','Maps saved for no internet'],['prices','Store prices','Keep prices up to date'],['backup','Backup','Save or load a copy of everything'],['server','Fence Builder server','Use a shared server instead'],['updates','Updates','Your version and new ones']];
+// the looks in Settings, Look and text size (their colours are in app.css, look.js keeps the one picked on this computer)
+const APP_LOOKS=[['clean','Clean','White and light grey, with a little blue'],['warm','Warm','Cream and warm grey, with a soft slate blue'],
+  ['ranch','Ranch','A brown top bar, earthy colours and a deep teal'],['contrast','High contrast','Black on white with bold lines, the easiest to read'],
+  ['dark','Dark','Light words on dark grey, easy on the eyes at night']];
+const SET_ALL=[['account','Your account','Password and signing out'],['look','Look and text size','Colours, bigger words, how-to cards'],['biz','Your business','Name, logo and quote terms'],['crew','Crew','Who works on your jobs'],['money','Sales tax','Tax on materials'],['map','Drawing on the map','Slope, roads and rivers'],['ground','Ground and clearing','Soil, water, trees, clearing $'],['offline','Offline maps','Maps saved for no internet'],['prices','Store prices','Keep prices up to date'],['backup','Backup','Save or load a copy of everything'],['server','Fence Builder server','Use a shared server instead'],['updates','Updates','Your version and new ones']];
 // Your account only on a shared server; the server choice only in the Windows app
 const setSecs=()=>SET_ALL.filter(([k])=>k==='account'?isMulti():k==='server'?ME.desktop:true);
 function settingsView(){
@@ -542,7 +554,9 @@ function settingsView(){
       <div class="setfield" style="max-width:560px"><label class="f" for="srvUrl">The server's address</label><input id="srvUrl" type="url" inputmode="url" value="${esc(ME.server_url||'')}" placeholder="https://fence.example.com"></div>
       <div class="row"><button class="btn pri big" data-act="useServer">Use this server</button>${ME.server_url?'<button class="btn big" data-act="useLocalCopy">Keep using this computer</button>':''}</div>
       <div class="note">Your jobs on this computer stay here, apart from the server's. To come back to them, press <b>Use the copy on this computer</b> on the server's sign-in page or in its Settings, Your account.</div>`,
-    look:`<h2>Text size</h2><p class="lead">Make the words and buttons bigger. It counts on this computer and every other one. The map itself stays the same.</p>
+    look:`<h2>Look</h2><p class="lead">Pick the colours you find easiest to read. The look is kept on this computer only, so each computer can have its own.</p>
+      <div class="lookpick">${APP_LOOKS.map(([k,n,dsc])=>{const on=(window.fbLook?.get()||'clean')===k;return `<button class="lookbtn${on?' on':''}" data-act="look" data-k="${k}"${on?' aria-pressed="true"':' aria-pressed="false"'}><span class="lookprev" data-theme="${k}" aria-hidden="true"><i class="lp-bar"><i class="lp-tab"></i><i class="lp-tab on"></i><i class="lp-tab"></i></i><i class="lp-card"><i class="lp-ln"></i><i class="lp-ln s"></i><i class="lp-row"><i class="lp-btn"></i><i class="lp-btn pri"></i></i></i></span><b>${n}${on?' <span class="lookon">✓ in use</span>':''}</b><span class="lookd">${dsc}</span></button>`}).join('')}</div>
+      <h3>Text size</h3><p class="mut" style="margin-top:0">Make the words and buttons bigger. It counts on this computer and every other one. The map itself stays the same.</p>
       <div class="sizepick">${[['1','Normal'],['1.15','Large'],['1.3','Larger']].map(([v,n])=>`<button class="sizebtn${String(+s.textSize||1)===v?' on':''}" data-act="textSize" data-k="${v}"><span style="font-size:${17*+v}px">Aa</span><b>${n}</b></button>`).join('')}</div>
       <h3>How-to cards</h3><p class="mut" style="margin-top:0">A short card at the top of each page says how it works. Press <b>Got it</b> on a card to hide it.</p>
       <button class="btn big" data-act="tipsReset">Show the how-to cards again</button>`,

@@ -78,6 +78,7 @@ async function act(a,d){
   case 'goCrew':setSec='crew';gotoTab('settings');break;
   case 'setSec':setSec=d.k;renderPanel();$('#panel').scrollTop=0;break;
   case 'textSize':S.settings.textSize=+d.k;changed();break;
+  case 'look':if(window.fbLook){fbLook.set(d.k);renderPanel()}break;
   case 'offNew':startOffSel();break;
   case 'offShow':{const a=offList.find(x=>x.id===id);if(!a)break;gotoTab('build');const [w,s2,e,n]=a.bbox;setTimeout(()=>{map.fitBounds([[s2,w],[n,e]]);if(!map.hasLayer(offAreas))offAreas.addTo(map)},60);break}
   case 'offDel':{const a=offList.find(x=>x.id===id);if(!a)break;if(await ask(`Delete the offline map "${a.name}" from this computer? You can download it again later.`)){try{await fetchT('api/off/areas/'+id+'/delete',{method:'POST'},20000)}catch(e){}loadOffAreas()}break}

@@ -30,6 +30,17 @@ NET_NOISE = re.compile(r"Failed to load resource|net::ERR_|ERR_INTERNET|ERR_NAME
                        r"AbortError|signal is aborted|timed? ?out", re.I)
 
 
+
+def launch_browser(pw, **kw):
+    """Playwright's own Chromium, or the installed Microsoft Edge when Playwright's browser isn't downloaded."""
+    try:
+        return pw.chromium.launch(**kw)
+    except Exception as e:
+        if "Executable doesn't exist" not in str(e) and "playwright install" not in str(e):
+            raise
+        print("  (Playwright's Chromium is not installed here: using Microsoft Edge)")
+        return pw.chromium.launch(channel="msedge", args=["--no-proxy-server"], **kw)
+
 def free_port():
     with socket.socket() as s:
         s.bind(("127.0.0.1", 0))
@@ -138,7 +149,7 @@ def run(args, multi=False):
         if multi:
             sign_in(base)
         with sync_playwright() as pw:
-            browser = pw.chromium.launch(headless=not args.headed)
+            browser = launch_browser(pw, headless=not args.headed)
             ctx = browser.new_context(viewport={"width": 1400, "height": 900}, service_workers="block")
             if multi:
                 k, _, v = SIGNED_IN["cookie"].partition("=")
