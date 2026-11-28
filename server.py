@@ -539,8 +539,7 @@ class Handler(BaseHTTPRequestHandler):
                     return self.send(200, {"version": app_version(), "available": False, "reason": "Could not check for updates (%s)" % e})
             if api == "rev":
                 # "app" changes whenever the app's own files change, so an open window can tell it is out of date
-                app = max((int(os.path.getmtime(os.path.join(STATIC, f))) for f in ("index.html", "view3d.js")
-                           if os.path.exists(os.path.join(STATIC, f))), default=0)
+                app = max((int(os.path.getmtime(f)) for f in app_files()), default=0)
                 with LOCK:
                     return self.send(200, {"rev": current_rev(), "app": app})
             if api == "store":
@@ -655,12 +654,28 @@ class Handler(BaseHTTPRequestHandler):
     def static(self, path):
         path = urllib.parse.unquote(path)
         rel = path.lstrip("/") or "index.html"
+        if rel == "app.js":
+            return self.send(200, app_js(), "text/javascript; charset=utf-8")
         full = os.path.realpath(os.path.join(STATIC, rel))
         if not full.startswith(os.path.realpath(STATIC)) or not os.path.isfile(full):
             full = os.path.join(STATIC, "index.html")
         with open(full, "rb") as f:
             body = f.read()
         self.send(200, body, TYPES.get(os.path.splitext(full)[1].lower(), "application/octet-stream"))
+
+
+def app_js():
+    """The app's script, kept in pieces in static/js/ (numbered in the order they run) and served as one.
+    The pieces share one block, exactly like the single script they came from."""
+    parts = sorted(glob.glob(os.path.join(STATIC, "js", "*.js")))
+    body = "{\n" + "".join(open(f, encoding="utf-8").read() for f in parts) + "\n}\n"
+    return body.encode("utf-8")
+
+
+def app_files():
+    """The app's own files: when one changes, an open window offers to refresh."""
+    names = [os.path.join(STATIC, f) for f in ("index.html", "app.css", "view3d.js")]
+    return [f for f in names + glob.glob(os.path.join(STATIC, "js", "*.js")) if os.path.exists(f)]
 
 
 if __name__ == "__main__":

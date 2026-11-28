@@ -67,7 +67,20 @@ Set `FENCE_PASS` to require a login (user name `fence`) before opening it to oth
   space themselves evenly between braces. Zoom in to drag single posts or pull braces.
 - **Final bill** lists every material to buy, what each one is for, and a link to buy it,
   then labor (each fence type's $ per foot), headache charges and other fees.
-- **Fence types**, **Braces** and **Materials** are your own library. Changes there wait
+- **Save estimate** on the Final bill keeps the price on the jobs board, with the date.
+- **Customer quote** (on the Final bill or a job's page) makes a clean, printable quote: your
+  business name and logo, the work to be done with a price for each part (or the total only), a
+  drawing of the fence to scale, deposit, terms and signature lines. Print it or save it as a PDF.
+  Your business details, deposit, terms and quote numbers are in **Settings → Your business**.
+- **How the job really went** on each job's page: type the days, crew and what the materials
+  really cost, and it compares that with the estimate and shows your profit. From your finished
+  jobs it suggests a labor price per foot for each fence type (shown on the fence type too), using
+  each person's pay and the profit you want, set in **Settings → Crew**.
+- A short **how-to card** at the top of each page says how it works. **Got it** hides it;
+  **Settings → Text size and help** brings them back. The big **Undo** button at the top of the
+  map takes back the last change to the fence.
+- **Fence types**, **Braces** and **Materials** are your own library. **+ Add material** offers
+  Kencove, D&B Supply, a store link, or your own. Changes there wait
   for **Save**. Materials can be found in Kencove or D&B Supply from inside the app, and
   prices from store links update on their own once a day. For stores that only let people
   see their pages (like Premier 1 Supplies), use the **Add to Fence Builder** bookmark
@@ -116,6 +129,16 @@ Saved areas are listed in **Settings → Offline maps** (show, finish a stopped 
 They are kept in an `offline` folder next to the data file: `%LOCALAPPDATA%\Fence Builder\data\offline`
 for the app, `data/offline` for the web server. About 4 MB per 50 acres at full detail.
 
+## How the code is laid out
+
+- `server.py` runs the app (the Windows app starts it inside its window), with `offline.py` for
+  saved offline areas.
+- `static/index.html` is the page, `static/app.css` its look, and `static/view3d.js` the 3D view.
+- The app's script is kept in pieces in `static/js/`, numbered in the order they run
+  (`00-basics.js` … `95-start.js`). The server joins them into one script, `app.js`, so the
+  pieces share everything, as if they were one file.
+- `tests/smoke.py` opens the app in a hidden browser and checks every page (see `tests/README.md`).
+
 ## Making a release
 
 1. Put the new version number in `VERSION` (for example `1.1.0`) and commit it.
@@ -129,6 +152,43 @@ for the app, `data/offline` for the web server. About 4 MB per 50 acres at full 
    Inno Setup (`installer/fence-builder.iss`), and creates the GitHub release with
    `FenceBuilder-Setup-1.1.0.exe` attached. Installed apps offer the update once the
    installer is attached. The tag must match `VERSION` or the build stops.
+
+   Before it builds anything, the workflow checks the app still works: it starts it on an
+   empty data folder in a hidden browser, opens every page, adds a test job and checks the
+   Final bill (`tests/smoke.py`, see `tests/README.md`). If that check fails, the build
+   stops and no installer is made, so a broken version never reaches anyone. The Actions
+   page shows what went wrong. You can run the same check yourself first with
+   `py tests/smoke.py`.
+
+### Signing the installer (optional)
+
+Right now the installer is not signed, so Windows shows a blue "Windows protected your PC"
+box the first time someone runs it (they click **More info**, then **Run anyway**). Signing
+it with a code-signing certificate makes that warning go away (right away with an EV
+certificate or Azure Trusted Signing; an ordinary OV certificate earns trust over time as
+more people install it). Nothing needs to change in the code to turn it on:
+
+1. Get a code-signing certificate. Either buy an **OV or EV code-signing certificate**
+   from a company such as DigiCert, Sectigo or SSL.com, or sign up for **Azure Trusted
+   Signing** from Microsoft. (EV certificates and Azure Trusted Signing keep the key on a
+   hardware token or in the cloud and cannot be saved as a .pfx file. Ask the seller for
+   a certificate you can export as a `.pfx` file, or ask someone to help set up their
+   signing service in the workflow.)
+2. Save the certificate as a `.pfx` file with a password (the seller explains how; in
+   Windows it is the certificate's **Export** button, choosing "Yes, export the private key").
+3. Turn the file into text. In PowerShell, in the folder with the file:
+
+       [Convert]::ToBase64String([IO.File]::ReadAllBytes("$PWD\certificate.pfx")) | Set-Clipboard
+
+   That copies a long block of letters and numbers.
+4. On GitHub open the repository, then **Settings** > **Secrets and variables** >
+   **Actions** > **New repository secret**, and add two secrets:
+   - `WINDOWS_CERT_PFX`: paste the long text from step 3.
+   - `WINDOWS_CERT_PASSWORD`: the password of the .pfx file.
+5. Make the next release as usual. The workflow signs `FenceBuilder.exe` and the setup
+   file with it. Without these two secrets it just skips signing, as now.
+
+Keep the .pfx file and its password private. Do not put them in the repository.
 
 To build it on your own computer: `pip install pyinstaller`, then
 `python -m PyInstaller installer/fence-builder.spec` (makes `dist/FenceBuilder/`), then with
