@@ -228,6 +228,11 @@ install); `fence-estimator.service` is a systemd example, `nginx-fence.conf` an 
   fence or a brace, **Fence this property** (one parcel), **Fence this owner's land** (the owner's
   neighbouring parcels as one fence; owner names are used only to group parcels and are never shown or
   saved), or **Pick several parcels to fence together**.
+- **Elk fence 8 ft (Idaho)** is one of the starting fence types (added once to older setups too): 96"
+  high-tensile woven wire plus a top wire, 2-1/8" pipe line posts (3/16" wall) every 20 ft driven 4 ft in,
+  welded pipe H-braces with 2-7/8" posts (7/32" wall) set 3 ft in concrete, and an 8 ft elk gate. It checks
+  itself against Idaho's elk fence rules (8 ft tall, post sizes, no more than 24 ft between posts) and says
+  what isn't met. Prices are samples.
 - **Braces added for you** (top of the Builder, and Settings → Drawing on the map): four switches,
   **Gates at roads**, **Braces at rivers and creeks**, **Braces at hilltops** and **Braces at the
   bottoms of hills**. Hill braces go where the ground's slope bends by at least the fence type's

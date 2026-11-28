@@ -164,7 +164,7 @@ function matUse(m){
 function matSpec(m,kind){
   const a=[],v=k=>m[k]!=null&&m[k]!==''&&m[k]!==0;
   if(kind==='wire'){if(v('gauge'))a.push(m.gauge+' ga');if(v('roll'))a.push(fmtQ(+m.roll)+' ft roll');if(v('height'))a.push(m.height+' in tall')}
-  else if(kind==='post'){if(v('len'))a.push(m.len+' ft long');if(v('dia'))a.push(m.dia+' in thick');if(m.made)a.push((MADE.find(x=>x[0]===m.made)||[])[1])}
+  else if(kind==='post'){if(v('len'))a.push(m.len+' ft long');if(v('dia'))a.push(m.dia+' in thick');if(v('wall'))a.push(m.wall+' in wall');if(m.made)a.push((MADE.find(x=>x[0]===m.made)||[])[1])}
   else if(kind==='gate'){if(v('width'))a.push(m.width+' ft wide');if(v('height'))a.push(m.height+' in tall')}
   if(m.notes)a.push(m.notes);
   return a.join(' · ');
@@ -184,7 +184,7 @@ function openMatDlg(id,preset){return new Promise(res=>{
       wire:`<h3>Wire details</h3><div class="g2">${txt('gauge','Gauge','12.5')}${num('roll','Length on one roll, ft','1')}${num('height','Height, inches')}${num('maxPull','Longest stretch in one pull, ft (blank = usual '+fmtQ(PULL_USUAL[wireLook(m)])+')','1')}
         <div><label class="f">In 3D it looks like</label><select data-k="look">${LOOKS.map(([k,l])=>opt(k,l,m.look||'')).join('')}</select></div></div>
         <p class="small mut">Roll length is used for how many rolls a job needs, the roll bands on the map, and the "two rolls joined" stretch limit. Use 0 if you buy it by the foot.</p>`,
-      post:`<h3>Post details</h3><div class="g2">${num('len','Length, ft')}${num('dia','Thickness, inches')}
+      post:`<h3>Post details</h3><div class="g2">${num('len','Length, ft')}${num('dia','Thickness, inches')}${num('wall','Wall thickness, inches (pipe)')}
         <div><label class="f">Made of</label><select data-k="made">${MADE.map(([k,l])=>opt(k,l,m.made||'')).join('')}</select></div></div>
         <p class="small mut">Thickness and what it's made of set how the post is drawn in the 3D view.</p>`,
       gate:`<h3>Gate details</h3><div class="g2">${num('width','Width, ft')}${num('height','Height, inches')}</div>`};
@@ -386,7 +386,7 @@ function typeEditor(t){
     <div class="row" style="margin-top:8px"><button class="btn sm" data-act="addFtw" ${d}>Add wire</button><span class="grow"></span>
       <label class="lbl">Extra wire for sag and splices % <input type="number" min="0" step="0.5" value="${n(t.waste)}" data-f="ft.waste" ${d} style="width:70px"></label></div>
     <details class="help"><summary>How does this work?</summary><p class="small mut">The list runs from the top of the fence down, so use ▲ ▼ to put your wires in order. "Starts at" sets how high a wire's lowest strand (or the bottom of woven wire) is, and "Apart" the gap between its strands, both in inches. Leave them on auto to space them evenly. Under each wire, "Roll sizes" lists every roll it comes in with its price. Add a shorter roll there, and the wire is laid in full rolls of the main size (a roll carries on past braces), with the end finished by the cheapest mix of the other sizes. Click a price to change it. Woven wire or mesh is 1 layer. Barbed or smooth wire is one line per strand. Set roll length to 0 if you buy it by the foot.</p></details></div>
-  <div class="sec"><h3>Posts</h3>${postsEditor(t)}<div class="g3" style="margin-top:8px">
+  ${elkNote(t)}<div class="sec"><h3>Posts</h3>${postsEditor(t)}<div class="g3" style="margin-top:8px">
     <div><label class="f">Clips or insulators <span class="r">$ each</span></label><div class="pick"><select data-f="ft.clipM" ${d}>${matOpts(t.clipM,true,'None')}</select>${priceIn(t.clipM)}</div></div>
     <div><label class="f">Clips per normal line post</label>${inp('clipsPer',t.clipsPer)}</div>
     <div><label class="f">Fence height ft (for the 3D view)</label>${inp('height',t.height||4.5)}</div></div>

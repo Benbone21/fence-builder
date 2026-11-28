@@ -31,6 +31,7 @@ function adopt(s){
   for(const m of S.materials||[])if(m.kind==='part')m.kind=isPostName(m.name)?'post':'hw';
   if((S.pullAuto||0)<2){for(const t of S.fenceTypes){const own=+t.pullEvery||0;t.pullBy=own>0&&autoPull(t)!==own?'ft':'auto'}S.pullAuto=2}
   for(const t of S.fenceTypes)for(const w of t.wires||[]){const m=matOf(w.m);if(m&&m.roll==null&&w.roll!=null)m.roll=+w.roll||0}
+  if(addElk(S))setTimeout(save,0);   // the elk fence, once, for setups made before it existed
 }
 load().then(s=>{
   adopt(s);

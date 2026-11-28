@@ -42,7 +42,7 @@ function setupView(){
   <h2 class="stp"><span class="stpn">2</span>Draw it on the map${drawnNote()}</h2>
   <div class="row"><button class="btn pri big" data-act="draw">${mode==='draw'?'Finish line':'Draw fence'}</button><button class="btn big" data-act="gate">Add gate</button><button class="btn big" data-act="brace">Add brace</button></div>
   <p class="small mut">Press <b>Draw fence</b>, then click each corner on the map. Press <b>Finish line</b> at the end. Every spot you click gets a brace (a bend gets a corner brace), and the posts space themselves evenly in between. Zoom in to see every post. You can also <b>right-click</b> the map to pick what goes there.</p>`,
-  `${saveBar('Ft',t.id)}<details class="stepbox" data-keep="side3"${openKeep.side3?' open':''}><summary><h2 class="stp"><span class="stpn">3</span>Check what goes into it<span class="stpmore">Show</span></h2><span class="small mut stepsum">${esc(t.name)}: ${esc(typeSummary(t))}</span></summary>
+  `${saveBar('Ft',t.id)}${elkNote(t)}<details class="stepbox" data-keep="side3"${openKeep.side3?' open':''}><summary><h2 class="stp"><span class="stpn">3</span>Check what goes into it<span class="stpmore">Show</span></h2><span class="small mut stepsum">${esc(t.name)}: ${esc(typeSummary(t))}</span></summary>
   <p class="small mut" style="margin:0 0 8px">These are the settings of the fence type <b>${esc(t.name)}</b>. A change here counts for every job that uses it, once you press Save.</p>
   <div class="sec"><h3>Wire</h3>${wires||'<p class="small mut" style="margin:0 0 6px">No wire yet.</p>'}
     <button class="btn sm" data-act="addFtw" ${d}>Add wire</button>

@@ -409,7 +409,7 @@ export async function open3D({bounds, lines, types, nodes, key, focus, braces, m
     for (const st of stops) {
       if (st.b === 'gate') {
         const d0 = clamp(st.d - st.gw / 2, 0, total), d1 = clamp(st.d + st.gw / 2, 0, total);
-        gates.push({d0, d1});
+        gates.push({d0, d1, gm: pts[st.i].o?.pt?.gm || t.gateM});
         spots.push({d: d0, kit: t.braceGate, dirs: d0 > 0 ? [-1] : [], what: 'Gate post'}, {d: d1, kit: t.braceGate, dirs: d1 < total ? [1] : [], what: 'Gate post'});
       } else if (st.b !== 'none' && kitById[st.b]) {
         spots.push({d: st.d, kit: st.b, dirs: st.i === 0 ? [1] : st.i === pts.length - 1 ? [-1] : [-1, 1], what: st.i === 0 || st.i === pts.length - 1 ? 'End brace' : 'Corner brace'});
@@ -526,9 +526,23 @@ export async function open3D({bounds, lines, types, nodes, key, focus, braces, m
           }
         }
       }
-      // gates: a tube gate across each opening
+      // gates: a tube gate across each opening. A tall gate (its material says how tall, like an 8 ft elk gate) is a
+      // pipe frame filled with wire mesh, braced corner to corner; a farm gate is five tubes about 4 ft tall.
       for (const g of L.gates) {
         const a = P(g.d0 + 0.08), b = P(g.d1 - 0.08); if (!inView(a.x, a.z) || g.d1 - g.d0 < 0.5) continue;
+        const gH = +matOf(g.gm)?.height > 0 ? +matOf(g.gm).height * 0.0254 : 0;
+        if (gH > 1.6) {
+          const lo = 0.1, hi = Math.min(gH, Hf + 0.1), fr = 0x7d878f, rr = 0.026;
+          for (const hh of [lo, hi, (lo + hi) / 2]) cyl(new THREE.Vector3(a.x, a.y + hh, a.z), new THREE.Vector3(b.x, b.y + hh, b.z), hh === (lo + hi) / 2 ? 0.018 : rr, fr);
+          const n = Math.max(1, Math.round((g.d1 - g.d0) / 2.5));
+          for (let k = 0; k <= n; k++) { const m = P(g.d0 + 0.08 + (g.d1 - g.d0 - 0.16) * k / n); cyl(new THREE.Vector3(m.x, m.y + lo, m.z), new THREE.Vector3(m.x, m.y + hi, m.z), k === 0 || k === n ? rr : 0.018, fr); }
+          cyl(new THREE.Vector3(a.x, a.y + lo, a.z), new THREE.Vector3(b.x, b.y + hi, b.z), 0.018, fr);   // the diagonal that keeps it from sagging
+          const o = meshV.length / 3, w = (g.d1 - g.d0) / 0.15;
+          meshV.push(a.x, a.y + lo, a.z, a.x, a.y + hi, a.z, b.x, b.y + lo, b.z, b.x, b.y + hi, b.z);
+          meshUV.push(0, lo / 0.15, 0, hi / 0.15, w, lo / 0.15, w, hi / 0.15); meshI.push(o, o + 1, o + 2, o + 1, o + 3, o + 2);
+          marks.push({d: (g.d0 + g.d1) / 2, q: P((g.d0 + g.d1) / 2), what: 'Gate, ' + ((g.d1 - g.d0) * FT).toFixed(0) + ' ft wide, ' + (gH * FT).toFixed(0) + ' ft tall'});
+          continue;
+        }
         const gh = Math.min(Hf, 1.3), bars = 5;
         for (let i = 0; i < bars; i++) { const hh = 0.2 + (gh - 0.2) * i / (bars - 1); cyl(new THREE.Vector3(a.x, a.y + hh, a.z), new THREE.Vector3(b.x, b.y + hh, b.z), 0.022, 0x8f9aa3); }
         for (const f of [0, 0.5, 1]) { const m = P(g.d0 + 0.08 + (g.d1 - g.d0 - 0.16) * f); cyl(new THREE.Vector3(m.x, m.y + 0.2, m.z), new THREE.Vector3(m.x, m.y + gh, m.z), 0.022, 0x8f9aa3); }
@@ -587,6 +601,8 @@ export async function open3D({bounds, lines, types, nodes, key, focus, braces, m
     inst(stays, new THREE.CylinderGeometry(0.5, 0.5, 1, 8), new THREE.MeshLambertMaterial({color: 0x4f565c}));
     inst(woods, new THREE.CylinderGeometry(0.5, 0.5, 1, 10), new THREE.MeshLambertMaterial({color: 0x8a6a48}));
     inst(pipes, new THREE.CylinderGeometry(0.5, 0.5, 1, 12), new THREE.MeshLambertMaterial({color: 0x9aa3ab}));
+    // a cap on top of every pipe post
+    inst(pipes.map(p => ({x: p.x, y: p.y + p.h, z: p.z, h: 0.035, r: p.r * 1.18})), new THREE.CylinderGeometry(0.5, 0.42, 1, 12), new THREE.MeshLambertMaterial({color: 0x4a5056}));
     for (const color of new Set(cyls.map(c => c.color))) {
       const list = cyls.filter(c => c.color === color), im = new THREE.InstancedMesh(new THREE.CylinderGeometry(1, 1, 1, 8), new THREE.MeshLambertMaterial({color}), list.length);
       list.forEach((c, i) => { const dv = c.b.clone().sub(c.a), len = dv.length() || 0.01; ps.copy(c.a).addScaledVector(dv, 0.5); qn.setFromUnitVectors(up, dv.normalize()); sc.set(c.r, len, c.r); im.setMatrixAt(i, m4.compose(ps, qn, sc)); });

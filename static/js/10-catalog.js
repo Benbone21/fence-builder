@@ -98,7 +98,7 @@ function migrateType0(t,st){
 function defaults(){
   const M=(id,name,unit,price)=>({id,name,unit,price,url:'',checked:null,src:''});
   const I=(m,q)=>({m,q});
-  return {v:1,tab:'build',drawType:'ft_fk',
+  const d={v:1,tab:'build',drawType:'ft_fk',
   settings:{tax:6,labor:0,crew:[{id:'e_1',name:'Crew lead',wage:25},{id:'e_2',name:'Hand',wage:18},{id:'e_3',name:'Hand',wage:18}],burden:15,dayHrs:8,laborDefaults:{mode:'hours',hrs100:2.5,braceHrs:2,gateHrs:1.5,perFt:0,perPost:0,perBrace:0,perGate:0,perJob:0},cornerAngle:25,useSurface:true,endBrace:'b_h',cornerBrace:'b_dh',pullBrace:'b_h',gateBrace:'b_h',gateHw:'m_ghw',gateMat:'m_gate16',gateWidth:16},
   materials:[
     M('m_fk','Fixed knot woven wire 47" (330 ft roll)','roll',420),
@@ -129,5 +129,59 @@ function defaults(){
     {id:'b_n',name:'N-brace (diagonal)',items:[I('m_post',2),I('m_rail',1),I('m_pin',2),I('m_bwire',14)]},
     {id:'b_single',name:'Single post, no brace',items:[I('m_post',1)]}],
   projects:[{id:'p_1',name:'My fence',stage:'bid',lines:[]}],cur:'p_1'};
+  addElk(d);return d;
 }
-
+/* ---------- elk fence (Idaho domestic elk rules), added to every setup once ----------
+   Idaho's rules for elk fence: at least 8 ft tall; line posts metal pipe at least 2-1/8" across (outside) with 3/16" walls,
+   no more than 24 ft apart; corner posts at least 2-7/8" across with 7/32" walls. Line posts are driven 4 ft into the
+   ground (13 ft pipe, 9 ft above); brace and corner posts are set 3 ft deep in concrete (12 ft pipe). Sample prices. */
+function elkCatalog(){
+  const M=(id,name,unit,price,more)=>({id,name,unit,price,url:'',checked:null,src:'',...more});
+  const I=(m,q)=>({m,q});
+  const materials=[
+    M('m_elkwire','High-tensile fixed knot woven wire 96" tall, 20 line wires, 6" stays (330 ft roll)','roll',950,{kind:'wire',roll:330,height:96,gauge:12.5,look:'mesh'}),
+    M('m_elkht','High-tensile smooth wire 12.5 ga (4,000 ft coil)','coil',160,{kind:'wire',roll:4000,gauge:12.5,look:'smooth'}),
+    M('m_elkline','Pipe line post 2-1/8" OD, 3/16" wall, 13 ft','each',52,{kind:'post',len:13,dia:2.125,wall:0.1875,made:'pipe'}),
+    M('m_elkcorner','Pipe brace and corner post 2-7/8" OD, 7/32" wall, 12 ft','each',78,{kind:'post',len:12,dia:2.875,wall:0.21875,made:'pipe'}),
+    M('m_elkrail','Pipe brace rail 2-3/8" OD, 10 ft','each',48,{kind:'post',len:10,dia:2.375,made:'pipe'}),
+    M('m_elkcap1','Post cap for 2-1/8" pipe','each',2.25,{kind:'hw'}),
+    M('m_elkcap2','Post cap for 2-7/8" pipe','each',2.75,{kind:'hw'}),
+    M('m_elktie','Wire tie for pipe posts, 9 ga','each',0.2,{kind:'hw'}),
+    M('m_concrete','Concrete mix, 80 lb bag','bag',6.5,{kind:'other'}),
+    M('m_elkstrain','Inline wire strainer','each',4.5,{kind:'hw'}),
+    M('m_elkgate','Elk gate 16 ft wide x 8 ft tall, tube frame with wire mesh','each',650,{kind:'gate',width:16,height:96}),
+    M('m_elkghw','Heavy hinge and latch kit for pipe gate posts','kit',55,{kind:'hw'})];
+  const shape=bays=>({style:'h',span:10,h1:9,bury1:3,h2:1,bury2:3,dia:2.875,rail:2.375,bays,wire:false,steel:true});
+  const braces=[
+    {id:'b_elk_h',name:'Elk H-brace (welded pipe)',items:[I('m_elkcorner',2),I('m_elkrail',1),I('m_elkcap2',2),I('m_concrete',8)],shape:shape(1)},
+    {id:'b_elk_dh',name:'Elk double H-brace (welded pipe)',items:[I('m_elkcorner',3),I('m_elkrail',2),I('m_elkcap2',3),I('m_concrete',12)],shape:shape(2)}];
+  const type={...typeBase(),id:'ft_elk',name:'Elk fence 8 ft (Idaho)',color:'#d08a3c',height:8.5,rule:'idaho-elk',
+    wires:[{m:'m_elkwire',strands:1,roll:330},{m:'m_elkht',strands:1,roll:4000}],postM:'m_elkline',spacing:20,
+    clipM:'m_elktie',clipsPer:10,braceEnd:'b_elk_h',braceCorner:'b_elk_dh',bracePull:'b_elk_h',braceGate:'b_elk_h',
+    gateM:'m_elkgate',gateW:16,gateHw:'m_elkghw',extras:[{m:'m_elkcap1',per:'tpost',q:1},{m:'m_elkstrain',per:'stretch',q:1}]};
+  return {materials,braces,type};
+}
+// add the elk fence (and what goes into it) to a setup that doesn't have it yet; only once, so it stays deleted if you delete it
+function addElk(s){
+  if(s.elkAdded)return false;s.elkAdded=1;
+  const c=elkCatalog();s.materials=s.materials||[];s.braces=s.braces||[];s.fenceTypes=s.fenceTypes||[];
+  for(const m of c.materials)if(!s.materials.some(x=>x.id===m.id))s.materials.push(m);
+  for(const b of c.braces)if(!s.braces.some(x=>x.id===b.id))s.braces.push(b);
+  if(!s.fenceTypes.some(x=>x.id===c.type.id))s.fenceTypes.push(c.type);
+  return true;
+}
+// a fence type set to follow Idaho's elk fence rules: what it doesn't meet, in plain words
+function elkCheck(t){
+  if(t?.rule!=='idaho-elk')return [];
+  const out=[],m=matOf(t.postM),big=b=>(b?.items||[]).some(it=>{const mm=matOf(it.m);return mm&&+mm.dia>=2.875&&+mm.wall>=0.21875});
+  if(+t.height<8)out.push(`the fence is ${fmtQ(+t.height||0)} ft tall; it needs at least 8 ft`);
+  if(+t.spacing>24)out.push(`line posts are ${fmtQ(+t.spacing)} ft apart; no more than 24 ft`);
+  if(!m||m.made!=='pipe'&&!/pipe/i.test(m.name)||!(+m.dia>=2.125)||!(+m.wall>=0.1875))out.push('line posts need to be metal pipe at least 2-1/8" across with 3/16" walls (set the thickness and wall on the post in Materials)');
+  for(const id of new Set([t.braceCorner,t.braceEnd])){const b=S.braces.find(x=>x.id===id);if(b&&!big(b))out.push(`${b.name}: corner posts need to be pipe at least 2-7/8" across with 7/32" walls`)}
+  return out;
+}
+function elkNote(t){
+  if(t?.rule!=='idaho-elk')return '';const bad=elkCheck(t);
+  return `<div class="note${bad.length?' warnbox':''}"><b>Idaho elk fence rules:</b> at least 8 ft tall; line posts metal pipe at least 2-1/8" across with 3/16" walls, no more than 24 ft apart; corner posts at least 2-7/8" across with 7/32" walls.
+    ${bad.length?`<br><b>Not met:</b> ${bad.map(esc).join('; ')}.`:'<br>This fence type meets them.'}</div>`;
+}
