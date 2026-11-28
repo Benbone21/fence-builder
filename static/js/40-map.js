@@ -13,9 +13,36 @@ const R3857=20037508.342789244;
 const Usgs=L.TileLayer.extend({getTileUrl(c){const n=2**c.z,sz=2*R3857/n,x0=-R3857+c.x*sz,y1=R3857-c.y*sz;
   return USGS+'/exportImage?bbox='+[x0,y1-sz,x0+sz,y1].map(v=>v.toFixed(2)).join(',')+'&bboxSR=3857&imageSR=3857&size=256,256&format=png32&interpolation=RSP_BilinearInterpolation&renderingRule='+encodeURIComponent(JSON.stringify({rasterFunction:this.options.fn}))+'&f=image'}});
 const usgs=(fn,o)=>new Usgs('',{fn,maxZoom:21,attribution:'Elevation: USGS 3DEP',...o});
-// saved for working offline: these come through Fence Builder, which answers from the saved copy first (USGS, public domain)
-const aerial=L.tileLayer('api/off/tile/naip/{z}/{x}/{y}',{maxZoom:21,maxNativeZoom:19,attribution:'Aerial photo: USGS NAIP'});
-const hillBase=L.tileLayer('api/off/tile/hill/{z}/{x}/{y}',{maxZoom:21,maxNativeZoom:18,attribution:'Elevation: USGS 3DEP'});
+/* the two map layers that can be saved for working offline (USGS, public domain), asked by this browser straight
+   from USGS: the aerial photo from USGS's ready-made map pieces up to zoom 16 and drawn by its NAIP image service
+   closer in; the LiDAR bare earth drawn by 3DEP. The same address for a piece every time, so a saved piece is found
+   again (60-offline-area.js keeps them; sw.js answers the same addresses from the saved copy on a phone). */
+const NAIP_X='https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer/exportImage';
+const NAIP_T='https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryOnly/MapServer/tile/';
+const DEP_X='https://elevation.nationalmap.gov/arcgis/rest/services/3DEPElevation/ImageServer/exportImage';
+const HILL_RULE=encodeURIComponent(JSON.stringify({rasterFunction:'Hillshade Gray'}));
+// k: a k x k block of pieces in one picture (used when saving for offline, then cut into pieces under their own addresses)
+const usgsDrawn=(layer,z)=>layer!=='naip'||z>16;
+function usgsTileUrl(layer,z,x,y,k=1){
+  if(!usgsDrawn(layer,z))return NAIP_T+z+'/'+y+'/'+x;
+  const n=2**z,sz=2*R3857/n,x0=-R3857+x*sz,y1=R3857-y*sz,bb=[x0,y1-sz*k,x0+sz*k,y1].map(v=>v.toFixed(2)).join(','),px=256*k;
+  return layer==='naip'?NAIP_X+'?bbox='+bb+'&bboxSR=3857&imageSR=3857&size='+px+','+px+'&format=jpg&f=image'
+    :DEP_X+'?bbox='+bb+'&bboxSR=3857&imageSR=3857&size='+px+','+px+'&format=png32&interpolation=RSP_BilinearInterpolation&renderingRule='+HILL_RULE+'&f=image';
+}
+// a map piece from USGS; when it can't come (no internet) the copy saved on this device, if there is one
+const SavedLayer=L.TileLayer.extend({
+  getTileUrl(c){return usgsTileUrl(this.options.kind,c.z,c.x,c.y)},
+  createTile(c,done){
+    const img=document.createElement('img'),url=this.getTileUrl(c);let saved=false;
+    img.alt='';img.setAttribute('role','presentation');
+    const net=()=>{img.src=url},fromSaved=async(none)=>{saved=true;let b=null;try{b=await offTileBlob(url)}catch(e){}if(b)img.src=URL.createObjectURL(b);else none()};
+    img.onload=()=>{if(img.src.startsWith('blob:'))URL.revokeObjectURL(img.src);done(null,img)};
+    img.onerror=e=>{if(saved)done(e,img);else fromSaved(()=>done(e,img))};
+    if(navigator.onLine===false||offShown)fromSaved(net);else net();   // no internet: the saved copy first
+    return img;
+  }});
+const aerial=new SavedLayer('',{kind:'naip',maxZoom:21,maxNativeZoom:19,attribution:'Aerial photo: USGS NAIP'});
+const hillBase=new SavedLayer('',{kind:'hill',maxZoom:21,maxNativeZoom:18,attribution:'Elevation: USGS 3DEP'});
 const offAreas=L.layerGroup();
 /* ---------- property lines: county parcel maps, approximate, for reference only ----------
    Each county's own public map (only the parcel number and acres are asked for, never owner names). Where no
@@ -54,7 +81,7 @@ async function parcelTile(x,y){
         out.push({type:'Feature',geometry:ft.geometry,properties:{pid:String(pr[src.id]??'').trim(),acres:src.acres&&typeof pr[src.acres]==='number'?pr[src.acres]:null,county:String(pr[src.county]??'').trim()||src.name.replace(' Assessor',''),src:src.name}})}
       if(!(j.exceededTransferLimit||j.properties?.exceededTransferLimit)||!(j.features||[]).length)break;off+=j.features.length}
   }));
-  if(!online&&serverOK)try{const j=await (await fetchT('api/off/parcels?bbox='+bb,{},15000)).json();out.push(...(j.features||[]))}catch(e){}   // no internet: the lines saved with offline areas
+  if(!online)try{out.push(...await offParcels([w,s2,e,n]))}catch(e){}   // no internet: the lines saved on this device with offline areas
   return out;
 }
 function drawParcels(){
@@ -91,12 +118,12 @@ const OVL={'Property lines (approximate, not a survey)':parcels,'Section lines (
 const layCtl=L.control.layers(BASE,OVL,{position:'topright'}).addTo(map);   // 68-ground.js adds the soil, water and tree layers
 /* remember which layers are on; roads and state lines start on */
 const lay={base:'Satellite',on:['Roads and street names','State lines and place names','Areas saved for offline']};
+let offSwitching=false,offShown=false,tileErrs=[];   // offShown: no internet, the saved map is showing (below)
 try{Object.assign(lay,JSON.parse(localStorage.getItem('fence-layers')))}catch(e){}
 (BASE[lay.base]||sat).addTo(map);for(const n of lay.on)OVL[n]?.addTo(map);
 const saveLay=()=>{try{localStorage.setItem('fence-layers',JSON.stringify(lay))}catch(e){}};
 map.on('baselayerchange',e=>{if(!offSwitching){lay.base=e.name;saveLay()}});
 /* ---------- no internet: the saved aerial photo takes over from the satellite photo, and back again ---------- */
-let offSwitching=false,offShown=false,tileErrs=[];
 function useOffline(on){
   if(on===offShown)return;offShown=on;
   const want=on?(lay.base.startsWith('LiDAR')?hillBase:aerial):(BASE[lay.base]||sat);
@@ -111,6 +138,15 @@ sat.on('tileerror',async()=>{const now=Date.now();tileErrs=tileErrs.filter(t=>no
 sat.on('tileload',()=>{tileErrs=[]});
 map.on('overlayadd overlayremove',()=>{lay.on=Object.keys(OVL).filter(n=>map.hasLayer(OVL[n]));saveLay()});
 
+/* OpenStreetMap's place finder (Nominatim) asks for at most one question a second, and only when someone asks
+   (never while typing): every question this browser sends it waits its turn here, across open windows too */
+let nomAt=0;
+async function nomFetch(path){
+  let last=nomAt;try{last=Math.max(last,+localStorage.getItem('fence-nom-at')||0)}catch(e){}
+  const wait=last+1100-Date.now();if(wait>0)await new Promise(r=>setTimeout(r,Math.min(wait,1100)));
+  nomAt=Date.now();try{localStorage.setItem('fence-nom-at',String(nomAt))}catch(e){}
+  return fetchT('https://nominatim.openstreetmap.org/'+path,{},12000);
+}
 /* click the map (when not drawing) to see the nearest address */
 let addrReq=0;
 async function addressAt(latlng){
@@ -118,7 +154,7 @@ async function addressAt(latlng){
   L.popup({maxWidth:280}).setLatLng(latlng).setContent(el).openOn(map);
   const ll6=latlng.lat.toFixed(6)+', '+latlng.lng.toFixed(6);let txt=null;
   try{const r=await fetch('https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/reverseGeocode?f=json&location='+latlng.lng.toFixed(6)+','+latlng.lat.toFixed(6));const j=await r.json();txt=j.address?.LongLabel||j.address?.Match_addr||null}catch(e){}
-  if(!txt)try{const r=await fetch('https://nominatim.openstreetmap.org/reverse?format=json&zoom=18&lat='+latlng.lat.toFixed(6)+'&lon='+latlng.lng.toFixed(6));txt=(await r.json()).display_name||null}catch(e){}
+  if(!txt&&n===addrReq)try{const r=await nomFetch('reverse?format=json&zoom=18&lat='+latlng.lat.toFixed(6)+'&lon='+latlng.lng.toFixed(6));txt=(await r.json()).display_name||null}catch(e){}
   if(n!==addrReq)return;
   el.innerHTML=`<div class="small mut">Nearest address</div><b>${esc(txt||'None found here')}</b><div class="small mut" style="margin-top:4px">${ll6}</div><button class="btn sm" style="margin-top:6px">Copy</button>`;
   el.querySelector('button').onclick=()=>navigator.clipboard.writeText(txt?txt+'\n'+ll6:ll6).then(()=>toast('Copied'),()=>toast('Copy was blocked by the browser'));

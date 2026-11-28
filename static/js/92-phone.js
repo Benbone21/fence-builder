@@ -260,40 +260,40 @@ function walkView(f,z,anim){
   map.setView(map.unproject(map.project([f.lat,f.lng],zz).add([0,h/2]),zz),zz,{animate:!!anim});
 }
 /* ---------- the map with no signal: the USGS aerial photo of an area kept on this phone ----------
-   The pieces come through Fence Builder (api/off/tile/naip, from an area saved on the server when there is one) and
-   are kept in the fb-tiles cache, which sw.js answers from. Esri's satellite photo may not be kept (its terms). */
-const TILE_CAP_MB=150,TILE_KB=25,TILE_MAX=3000;
-function keptTiles(){try{return JSON.parse(localStorage.getItem('fence-tiles')||'[]')}catch(e){return []}}
-function tileList(b,z0,z1){const out=[];for(let z=z0;z<=z1;z++){const [x0,y0]=tileOf(b.getNorth(),b.getWest(),z),[x1,y1]=tileOf(b.getSouth(),b.getEast(),z);for(let x=x0;x<=x1;x++)for(let y=y0;y<=y1;y++)out.push(`api/off/tile/naip/${z}/${x}/${y}`)}return out}
+   The same downloader as "Save area for offline" (offStart in 60-offline-area.js): this phone fetches the USGS aerial
+   photo, the LiDAR ground heights and the property lines straight from USGS and the county, and keeps them in its own
+   storage, which the map, the 3D view and sw.js read with no signal. Esri's satellite photo may not be kept (its terms). */
 function tilesHtml(){
   if(WK.tiles)return `<p class="wmsg" id="wTileProg">Keeping the map on this phone…</p>`;
-  const k=keptTiles(),mb=k.reduce((a,x)=>a+(+x.mb||0),0);
-  return `<div class="wmsg" style="margin-top:10px"><b>The map with no signal</b><br>${k.length?`The map of ${k.length===1?'one area':k.length+' areas'} is kept on this phone (${fmtQ(Math.max(1,Math.round(mb)))} MB). It shows when there is no signal.`:"Out of range, the map photo can't load (you still see your dot and the fence). Keep the map of this area on the phone first, while you have signal."}
+  const k=offList,mb=k.reduce((a,x)=>a+(x.bytes||0),0);
+  return `<div class="wmsg" style="margin-top:10px"><b>The map with no signal</b><br>${k.length?`The map of ${k.length===1?'one area':k.length+' areas'} is kept on this phone (${offMB(mb)} MB). It shows when there is no signal.`:"Out of range, the map photo can't load (you still see your dot and the fence). Keep the map of this area on the phone first, while you have signal."}
     <div class="wrow"><button class="btn wmid" data-w="tiles">Keep this area's map on this phone</button>${k.length?'<button class="btn wmid del" data-w="tilesDel">Remove kept maps</button>':''}</div></div>`;
 }
 async function keepTiles(){
   if(navigator.onLine===false||netDown)return toast('This needs signal. Do it before you go out of range, for example at home on Wi-Fi.');
-  if(!('caches' in window))return toast("This phone's browser can't keep the map.");
+  if(!offCanKeep())return toast("This phone's browser can't keep the map here (it needs a secure https address).");
+  if(offRun.size)return toast('A map is already being kept on this phone. Wait for it to finish.');
   // the area on the screen (zoom out first to take in more), and at least about half a mile around its middle
   const vb=map.getBounds(),c=vb.getCenter(),size=Math.min(6000,Math.max(800,vb.getNorthWest().distanceTo(vb.getSouthEast())/Math.SQRT2));
   const b=L.latLngBounds([c.toBounds(size).getSouthWest(),c.toBounds(size).getNorthEast(),vb.getSouthWest(),vb.getNorthEast()]);
-  let z1=19,list;
-  for(;;){list=tileList(b,13,z1);if((list.length*TILE_KB/1024<=TILE_CAP_MB&&list.length<=TILE_MAX)||z1<=15)break;z1--}
-  const mb=Math.max(1,Math.round(list.length*TILE_KB/1024)),mi=fmtQ(Math.round(size*FT/5280*10)/10),mins=Math.max(1,Math.round(list.length/180));
-  if(!await ask(`Keep the map of the area on the screen on this phone, so it shows with no signal? (Zoom the map out first to take in more.)\n\nAn area about ${mi} mile${mi==='1'?'':'s'} across: about ${mb} MB, ${mins} minute${mins===1?'':'s'} or so. Use Wi-Fi if you can.`))return;
-  WK.tiles={done:0,total:list.length,bytes:0};renderWalk();
-  const cache=await caches.open('fb-tiles');let i=0,fail=0;
-  const one=async()=>{while(i<list.length){const u=new URL(list[i++],location.href).href;
-    try{if(!await cache.match(u)){const r=await fetchT(u,{},20000);if(r.ok){WK.tiles.bytes+=(await r.clone().blob()).size;await cache.put(u,r)}else fail++}}catch(e){fail++}
-    WK.tiles.done++;if(WK.tiles.done%8===0)updWalk()}};
-  await Promise.all(Array.from({length:6},one));
-  const got=list.length-fail,kept=keptTiles();
-  if(got)kept.push({b:[b.getWest(),b.getSouth(),b.getEast(),b.getNorth()],z1,n:got,mb:Math.round(WK.tiles.bytes/1048576*10)/10,at:new Date().toISOString()});
-  try{localStorage.setItem('fence-tiles',JSON.stringify(kept))}catch(e){}
+  const bbox=[b.getWest(),b.getSouth(),b.getEast(),b.getNorth()].map(v=>+v.toFixed(6)),cap=OFF_CAP.phone;
+  let z1=19,p;
+  for(;;){p=offPlan(bbox,z1,['naip'],cap);if(!p.too||z1<=15)break;z1--}
+  if(p.too)return toast('That area is too big to keep on this phone. Zoom the map in a little and try again.');
+  const mb=Math.max(1,Math.round(p.mb)),mi=fmtQ(Math.round(size*FT/5280*10)/10),mins=Math.max(1,Math.round(p.tiles/150));
+  if(!await ask(`Keep the map of the area on the screen on this phone, so it shows with no signal? (Zoom the map out first to take in more.) The ground heights and property lines come too.\n\nAn area about ${mi} mile${mi==='1'?'':'s'} across: about ${mb} MB, ${mins} minute${mins===1?'':'s'} or so. Use Wi-Fi if you can.`))return;
+  if(!await offRoom(p.mb))return toast(`This phone doesn't have room for about ${mb} MB more. Remove kept maps or free some space.`);
+  WK.tiles={done:0,total:1,bytes:0};renderWalk();
+  let a;
+  try{a=await offStart({id:uid('a'),name:(P()?.name?P().name+', ':'')+'kept on this phone',bbox,maxz:z1,layers:['naip'],cap:cap.heights,created:Date.now()},
+    x=>{WK.tiles={done:x.done,total:x.total,bytes:x.bytes};if(x.done%8===0)updWalk()})}
+  catch(e){console.error(e)}
   WK.tiles=null;renderWalk();
-  toast(!got?'The map could not be kept. Check the signal and try again.':fail?`The map is kept on this phone, but ${fail} of ${list.length} pieces did not come (no photo there, or the signal dropped).`:'The map of this area is kept on this phone.');
+  toast(!a||a.done<=a.failed+1?'The map could not be kept. Check the signal and try again.':a.full?"This phone ran out of room: part of the map is kept. Remove kept maps you don't need and try again."
+    :a.failed?`The map is kept on this phone, but ${a.failed} of ${a.total} pieces did not come (no photo there, or the signal dropped).`:'The map of this area is kept on this phone.');
 }
-async function dropTiles(){if(!await ask('Remove the maps kept on this phone? The fence lines are not touched.'))return;try{await caches.delete('fb-tiles')}catch(e){}try{localStorage.removeItem('fence-tiles')}catch(e){}renderWalk();toast('The kept maps are removed.')}
+async function dropTiles(){if(!await ask('Remove the maps kept on this phone? The fence lines are not touched.'))return;
+  for(const a of [...offList])await offDelete(a.id);try{await caches.delete('fb-tiles')}catch(e){}renderWalk();toast('The kept maps are removed.')}
 $('#walkbox').addEventListener('click',e=>{
   const b=e.target.closest('[data-w]');if(!b||b.disabled)return;
   switch(b.dataset.w){

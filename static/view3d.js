@@ -52,8 +52,9 @@ async function terrainSource(lat, lng) {
   } catch (e) { return ''; }
 }
 
-// ----- saved downloads: the ground heights and photo for an area are kept in this browser (IndexedDB,
-// which also works on a plain http address on the office network) so opening the same spot again is quick.
+// ----- saved downloads: the USGS ground heights for an area are kept in this browser (IndexedDB, which also
+// works on a plain http address on the office network) so opening the same spot again is quick. Esri's satellite
+// photo is never kept (its terms): with no internet the USGS aerial photo saved for offline stands in.
 // Keeps the newest 40 files, about 300 MB at most. Never throws: if saving is not allowed it just skips it.
 const KEEP = 40, KEEP_BYTES = 300e6;
 let dbP = null;
@@ -96,6 +97,17 @@ async function cachePut(url, value) {
     };
   } catch (e) { /* no room or not allowed: just skip saving */ }
 }
+// satellite photos older versions kept here: thrown away (once)
+let esriGone = false;
+async function dropEsri() {
+  if (esriGone) return; esriGone = true;
+  try {
+    const db = await cacheDb();
+    if (!db) return;
+    const st = db.transaction('files', 'readwrite').objectStore('files'), rq = st.openKeyCursor();
+    rq.onsuccess = () => { const c = rq.result; if (!c) return; if (String(c.key).includes('arcgisonline.com')) st.delete(c.key); c.continue(); };
+  } catch (e) { /* nothing kept */ }
+}
 
 let open = null;
 
@@ -115,8 +127,9 @@ const EDIT_CSS = `#v3d .v3tools{display:flex;gap:8px;flex-wrap:wrap}#v3d .v3tool
 #v3d .v3nav button:active{background:#ffd21f}
 #v3d .v3nav .gap{visibility:hidden}`;
 
-export async function open3D({bounds, lines, types, nodes, key, focus, braces, materials, postRule, layoutOf, edit}) {
+export async function open3D({bounds, lines, types, nodes, key, focus, braces, materials, postRule, layoutOf, edit, saved}) {
   if (open) open.close();
+  dropEsri();
   if (!document.getElementById('v3edit-css')) { const st = document.createElement('style'); st.id = 'v3edit-css'; st.textContent = EDIT_CSS; document.head.appendChild(st); }
   const ov = document.createElement('div');
   ov.id = 'v3d';
@@ -179,22 +192,14 @@ export async function open3D({bounds, lines, types, nodes, key, focus, braces, m
     }
     return urls;
   }
-  // one photo: the saved copy if there is one, otherwise download it and save it for next time
+  // one photo, from Esri (not kept here: its terms)
   async function loadTex(url) {
-    let blob = (await cacheGet(url))?.buf, fresh = false;
-    if (!(blob instanceof Blob)) {
-      let r;
-      try { r = await fetch(url, {mode: 'cors'}); }
-      catch (e) { return loader.loadAsync(url); }   // the browser blocked it: load it the old way, just not saved
-      if (!r.ok || !/^image\//.test(r.headers.get('content-type') || '')) throw Error('no photo');
-      blob = await r.blob(); fresh = true;
-    }
-    const ou = URL.createObjectURL(blob);
-    try {
-      const t = await loader.loadAsync(ou);
-      if (fresh) cachePut(url, {buf: blob, at: Date.now()});   // only save photos that opened fine
-      return t;
-    } finally { URL.revokeObjectURL(ou); }
+    let r;
+    try { r = await fetch(url, {mode: 'cors'}); }
+    catch (e) { if (navigator.onLine === false) throw e; return loader.loadAsync(url); }   // the browser blocked it: load it the old way
+    if (!r.ok || !/^image\//.test(r.headers.get('content-type') || '')) throw Error('no photo');
+    const ou = URL.createObjectURL(await r.blob());
+    try { return await loader.loadAsync(ou); } finally { URL.revokeObjectURL(ou); }
   }
   async function loadSat(maxPx = 4096) {
     for (const url of satUrls(maxPx)) {
@@ -203,19 +208,27 @@ export async function open3D({bounds, lines, types, nodes, key, focus, braces, m
     }
     return savedPhoto(maxPx);
   }
-  // no internet: put the photo together from the aerial photo saved for offline (map pieces from Fence Builder)
+  // Esri not answering (no internet?): put the photo together from the USGS aerial photo, the pieces saved on this
+  // device for offline first (saved.photo). Saved areas may stop short of the sharpest zoom: then a less sharp one.
   async function savedPhoto(maxPx) {
+    if (!saved?.photo) return null;
     try {
       const R = 6378137, X = lng => R * lng * Math.PI / 180, Y = lat => R * Math.log(Math.tan(Math.PI / 4 + lat * Math.PI / 360));
-      let z = 19; for (; z > 12; z--) { const m = 2 * Math.PI * R / 2 ** z / 256; if (Math.max(X(e) - X(w), Y(n) - Y(s)) / m <= maxPx) break; }
-      const nT = 2 ** z, tx = lng => (lng + 180) / 360 * nT, ty = lat => (1 - Math.log(Math.tan(lat * Math.PI / 180) + 1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2 * nT;
-      const fx0 = tx(w), fx1 = tx(e), fy0 = ty(n), fy1 = ty(s), x0 = Math.floor(fx0), x1 = Math.floor(fx1), y0 = Math.floor(fy0), y1 = Math.floor(fy1);
-      if ((x1 - x0 + 1) * (y1 - y0 + 1) > 1200) return null;
-      const big = new OffscreenCanvas((x1 - x0 + 1) * 256, (y1 - y0 + 1) * 256), g = big.getContext('2d');
-      let got = 0; const jobs = [];
-      for (let x = x0; x <= x1; x++) for (let y = y0; y <= y1; y++)
-        jobs.push(fetch(`api/off/tile/naip/${z}/${x}/${y}`).then(r => { if (!r.ok) throw 0; return r.blob(); }).then(createImageBitmap).then(bm => { g.drawImage(bm, (x - x0) * 256, (y - y0) * 256); got++; }).catch(() => {}));
-      await Promise.all(jobs);
+      let z0 = 19; for (; z0 > 12; z0--) { const m = 2 * Math.PI * R / 2 ** z0 / 256; if (Math.max(X(e) - X(w), Y(n) - Y(s)) / m <= maxPx) break; }
+      let z, tx, ty, fx0, fx1, fy0, fy1, x0, x1, y0, y1, big, got = 0;
+      for (z = z0; z >= Math.max(12, z0 - 3); z--) {
+        const nT = 2 ** z;
+        tx = lng => (lng + 180) / 360 * nT; ty = lat => (1 - Math.log(Math.tan(lat * Math.PI / 180) + 1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2 * nT;
+        fx0 = tx(w); fx1 = tx(e); fy0 = ty(n); fy1 = ty(s); x0 = Math.floor(fx0); x1 = Math.floor(fx1); y0 = Math.floor(fy0); y1 = Math.floor(fy1);
+        const all = (x1 - x0 + 1) * (y1 - y0 + 1);
+        if (all > 1200) continue;
+        big = new OffscreenCanvas((x1 - x0 + 1) * 256, (y1 - y0 + 1) * 256); const g = big.getContext('2d');
+        got = 0; const jobs = [];
+        for (let x = x0; x <= x1; x++) for (let y = y0; y <= y1; y++)
+          jobs.push(saved.photo(z, x, y).then(createImageBitmap).then(bm => { g.drawImage(bm, (x - x0) * 256, (y - y0) * 256); got++; }).catch(() => {}));
+        await Promise.all(jobs);
+        if (got >= all * 0.6) break;
+      }
       if (!got) return null;
       // the photo is in map (Mercator) rows; the ground is in even latitude steps, so lay each row where it belongs
       const W = Math.round((fx1 - fx0) * 256), H = Math.round((fy1 - fy0) * 256), out = document.createElement('canvas');
@@ -257,21 +270,22 @@ export async function open3D({bounds, lines, types, nodes, key, focus, braces, m
     return {W: gw2, H: gh2, data: out, fallback: true};
   }
   async function loadDem() {
-    const saved = await cacheGet(demUrl);
-    if (saved) try { return readTiff(saved.buf); } catch (e) { /* saved copy is no good, download it again */ }
+    const kept = await cacheGet(demUrl);
+    if (kept) try { return readTiff(kept.buf); } catch (err) { /* saved copy is no good, download it again */ }
     try {
+      if (navigator.onLine === false) throw Error('no internet');
       const r = await timeout(25000, fetch(demUrl));
       if (!r.ok) throw Error('USGS answered ' + r.status);
       const buf = await r.arrayBuffer(), d = readTiff(buf);   // readTiff only reads buf, so it is still whole to save
       cachePut(demUrl, {buf, at: Date.now()});   // only the USGS file is saved, never the AWS fill-in
       return d;
-    } catch (e) {
-      // no internet? the LiDAR saved for offline, if this area was saved
+    } catch (err) {
+      // no internet? the LiDAR saved on this device for offline, if this area was saved
       try {
-        const r = await timeout(30000, fetch(`api/off/dem?bbox=${bbox}&w=${gw}&h=${gh}`));
-        if (r.ok) { const d = readTiff(await r.arrayBuffer()); d.offline = true; return d; }
+        const d = saved?.dem && await timeout(30000, saved.dem([w, s, e, n], gw, gh));
+        if (d) return d;
       } catch (e2) { /* not saved here */ }
-      console.warn('USGS elevation not available, using AWS Terrain Tiles', e);
+      console.warn('USGS elevation not available, using AWS Terrain Tiles', err);
       return terrainTiles();
     }
   }
@@ -282,10 +296,10 @@ export async function open3D({bounds, lines, types, nodes, key, focus, braces, m
   const showSrc = () => { const t = srcFallback ? 'AWS Terrain Tiles, about 10 m detail (USGS LiDAR is not answering right now)' : srcText; srcBox.hidden = !t; srcBox.textContent = t ? 'Terrain from ' + t + '.' : ''; };
   timeout(8000, terrainSource(lat0, (w + e) / 2)).then(t => { srcText = t; showSrc(); }).catch(() => {});
   const fullDem = loadDem().catch(() => null), fullSat = loadSat();   // start the sharp ones now, they take longer
-  // already saved from last time? then skip the rough version and show the sharp one straight away
-  const [savedDem, savedSat] = await Promise.all([cacheGet(demUrl), cacheGet(satUrls()[0])]);
+  // ground already saved from last time (or no internet)? then skip the rough version and show the sharp one straight away
+  const savedDem = await cacheGet(demUrl);
   let dem, tex, rough;
-  if (savedDem && savedSat) {
+  if (savedDem || navigator.onLine === false) {
     [dem, tex] = await Promise.all([fullDem, fullSat]);
     rough = false; if (dem?.fallback) srcFallback = true;
   } else {

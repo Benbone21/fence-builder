@@ -198,9 +198,10 @@ allows it. Each point is saved as soon as it goes in.
 **No signal out in the country?** GPS works without signal. Once you have opened Fence Builder on the phone (signed
 in, with signal) it opens and walks with no signal too: the points are kept on the phone and sent on their own when
 you are back in range (if the job was changed somewhere else meanwhile, both are kept). The map photo can't load with
-no signal, so before you go, tap **Keep this area's map on this phone** on the Walk screen: it keeps the USGS aerial
-photo of the area on the screen (at least about half a mile across; zoom out first to take in more; up to 150 MB, and
-it says how big before it starts; use Wi-Fi if you can). Without it you still see your dot and the fence on a blank map. Signing out removes
+no signal, so before you go, tap **Keep this area's map on this phone** on the Walk screen: the phone downloads the
+USGS aerial photo, ground heights and property lines of the area on the screen and keeps them itself (at least about
+half a mile across; zoom out first to take in more; up to 150 MB, and it says how big before it starts; use Wi-Fi if
+you can). They show up in **Settings → Offline maps** too. Without it you still see your dot and the fence on a blank map. Signing out removes
 what was kept on the phone.
 
 **The phone only shares its location with https websites** (and with `localhost`). Plain `http://` to the server's
@@ -223,7 +224,8 @@ address works for everything else, but the Walk screen will say so: turn on http
 
 ## LiDAR map layers and 3D
 
-- Layers: satellite, USGS aerial photo, streets, LiDAR bare earth, topo, contour lines, slope.
+- Layers: satellite, USGS aerial photo, streets, LiDAR bare earth, topo, contour lines, slope. Every map layer
+  comes straight from its source to your browser, not through the Fence Builder server.
 - **Property lines** (zoom in close): county parcel maps for Gem, Canyon, Valley and Ada counties and
   the State of Idaho parcel layer (Ada, Boise, Washington and others), elsewhere Regrid's free
   nationwide lines. Click a line for its parcel number and acres. While drawing, fence points snap to
@@ -291,20 +293,28 @@ areas yet.
 ## Offline maps
 
 On the Builder map, press **Save area for offline**, click two corners of the area, name it and
-press **Download**. Fence Builder saves, from USGS (public domain): the aerial photo (NAIP, about
-1 ft per pixel), the LiDAR bare-earth map, and the LiDAR ground heights (about 1 m apart). With no
-internet the map switches to the saved aerial photo on its own, and slope footage and the 3D view
-use the saved ground heights. Esri's satellite photo can't be saved for offline use under Esri's
-terms, so offline you see the USGS photo instead.
+press **Download**. It says how big the download is first. Your browser then fetches, straight from USGS
+(public domain) and the county parcel maps: the aerial photo (NAIP, about 1 ft per pixel), the LiDAR
+bare-earth map, the LiDAR ground heights (about 1 m apart) and the property lines (parcel number, acres
+and outline only, never owner names). They are kept **in that browser on that computer or phone**, not
+on the server. With no internet the map switches to the saved aerial photo on its own, and slope
+footage and the 3D view use the saved ground heights. Esri's satellite photo can't be saved for offline
+use under Esri's terms, so offline you see the USGS photo instead.
 
-Saved areas are listed in **Settings → Offline maps** (show, finish a stopped download, delete).
-They are kept in an `offline` folder next to the data file: `%LOCALAPPDATA%\Fence Builder\data\offline`
-for the app, `data/offline` for the web server. About 4 MB per 50 acres at full detail.
+Saved areas are listed in **Settings → Offline maps** (size, show, finish a stopped download, delete).
+The download runs while the page is open (close it part way and press **Finish it** later). One area
+can be up to 400 MB on a computer and 150 MB on a phone; a quarter section (160 acres) at full detail is
+about 10 MB (about 7 MB on a phone, which keeps the photo but not the LiDAR map). Signing out removes them. It needs a secure address (https, or the app on this computer).
+
+The map pieces, heights and place search all come from the browser too: the aerial photo and LiDAR
+layers from USGS, ground heights from USGS 3DEP (Open-Meteo only where USGS has none), and place search
+from OpenStreetMap (one search a second at most) with Esri's address finder as the backup.
 
 ## How the code is laid out
 
 - `server.py` runs the app (the Windows app starts it inside its window), with `offline.py` for
-  saved offline areas and `auth.py` for the accounts of a shared server (`FENCE_MODE=multi`).
+  the old server-side offline areas (the page no longer uses it: offline areas are saved in the browser by
+  `static/js/60-offline-area.js`) and `auth.py` for the accounts of a shared server (`FENCE_MODE=multi`).
 - `static/login.html`/`login.js` is the sign-in page and `static/admin.html`/`admin.js` the Accounts page
   of a shared server. `static/js/05-account.js` is the app's side of accounts.
 - `static/js/67-ground-fetch.js` looks up the ground along a fence line (soil, water, trees) on public federal maps,

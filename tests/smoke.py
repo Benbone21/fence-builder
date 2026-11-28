@@ -28,6 +28,13 @@ JOB = "Smoke Test Job"
 NET_NOISE = re.compile(r"Failed to load resource|net::ERR_|ERR_INTERNET|ERR_NAME|ERR_CONNECTION|"
                        r"ERR_FAILED|ERR_BLOCKED|CORS policy|Failed to fetch|NetworkError|Load failed|"
                        r"AbortError|signal is aborted|timed? ?out", re.I)
+# map pieces, heights, place search and offline areas come straight from USGS and the others to the browser:
+# the page must never ask the server for them
+SERVER_MAPS = re.compile(r"/api/(off/|elevation|geocode)")
+
+
+def watch_server_maps(page, base, hits):
+    page.on("request", lambda r: hits.append(r.url) if r.url.startswith(base) and SERVER_MAPS.search(r.url) else None)
 
 
 
@@ -149,8 +156,9 @@ def phone_check(browser, base, args, problems):
         ctx.route(re.compile(r"^(?!%s)" % re.escape(base)), lambda route: route.abort())
     page = ctx.new_page()
     page.set_default_timeout(15000)
-    errors = []
+    errors, map_calls = [], []
     page.on("pageerror", lambda e: errors.append("JS exception: %s" % e))
+    watch_server_maps(page, base, map_calls)
 
     def on_console(m):
         src = (m.location or {}).get("url") or ""
@@ -190,6 +198,24 @@ def phone_check(browser, base, args, problems):
     # walk a line
     page.click('#phonebar [data-ph="walk"]')
     page.wait_for_timeout(800)
+    # keep this area's map on the phone (the phone downloads it from USGS itself; with --online only, as the test
+    # blocks other sites otherwise)
+    if not page.locator('[data-w="tiles"]').is_visible():
+        problems.append("phone: the Walk screen does not offer to keep the area's map on the phone")
+    elif args.online:
+        page.click('[data-w="tiles"]')
+        page.wait_for_timeout(500)
+        page.locator('#askDlg [data-a="1"]').click()
+        end, box = time.time() + 420, ""
+        while time.time() < end:   # (the page's security policy doesn't allow wait_for_function)
+            box = page.locator("#walkbox").inner_text()
+            if re.search(r"is kept on this phone \(", box):
+                break
+            page.wait_for_timeout(1000)
+        if re.search(r"is kept on this phone \(", box):
+            print("  the area's map is kept on the phone: %s" % re.search(r"\([\d.,]+ MB\)", box).group(0))
+        else:
+            problems.append("phone: keeping the area's map did not finish (%r)" % box[-200:])
     page.click('[data-w="start"]')
 
     def at(lat, lng):
@@ -216,6 +242,12 @@ def phone_check(browser, base, args, problems):
         problems.append("phone: with no signal the page did not open again on the line being walked")
     else:
         print("  opened again with no signal, still walking")
+    if args.online:   # the kept USGS map pieces show with no signal
+        n = page.evaluate("[...document.querySelectorAll('#map .leaflet-tile-container img')].filter(i=>/nationalmap\\.gov|^blob:/.test(i.src)&&i.complete&&i.naturalWidth>0).length")
+        if not n:
+            problems.append("phone: with no signal the kept map does not show")
+        else:
+            print("  with no signal the kept map shows (%d pieces on screen)" % n)
     tap("finish")
     ctx.set_offline(False)
     page.wait_for_timeout(7000)
@@ -252,6 +284,8 @@ def phone_check(browser, base, args, problems):
         problems.append("phone: an insecure page does not explain that the location needs https")
     for e in errors:
         problems.append("phone: %s" % e)
+    if map_calls:
+        problems.append("phone: the page asked the server for maps, heights or place search: %s" % sorted(set(map_calls))[:5])
     ctx.close()
 
 
@@ -295,10 +329,11 @@ def run(args, multi=False):
                 ctx.route(re.compile(r"^(?!%s)" % re.escape(base)), lambda route: route.abort())
             page = ctx.new_page()
             page.set_default_timeout(15000)
-            errors = []
+            errors, map_calls = [], []
             page.on("pageerror", lambda e: errors.append("JS exception: %s" % e))
             asked = []   # every request the page makes (the ground lookups must go from the browser, not via api/ground)
             page.on("request", lambda r: asked.append(r.url))
+            watch_server_maps(page, base, map_calls)
 
             def on_console(m):
                 if m.type != "error" or NET_NOISE.search(m.text or ""):
@@ -422,6 +457,8 @@ def run(args, multi=False):
                 problems.append("the page did not ask the public ground maps for the fence line")
             else:
                 print("  ground: asked from the browser (no api/ground)")
+            if map_calls:
+                problems.append("the page asked the server for maps, heights or place search: %s" % sorted(set(map_calls))[:5])
             if problems and args.shot:
                 page.screenshot(path=args.shot, full_page=True)
             # 4. on a phone: the page bar, the Builder's slide-up panel, and walking a fence line with fake GPS,
