@@ -798,3 +798,170 @@ details.sbox>summary{display:grid;grid-template-columns:auto minmax(0,1fr);align
 details.sbox>summary::before{grid-row:1/span 2;align-self:center}
 details.sbox>summary b{grid-column:2}
 .sboxsum{grid-column:2;margin:1px 0 0;font-size:14px;color:var(--mut);text-align:left;line-height:1.35}
+/* ---------- on a phone (92-phone.js): a bar of big buttons at the bottom, the map full screen with the Builder's
+   left bar as a panel that slides up, and Walk the fence (GPS). PHONE_Q in 92-phone.js is the same test as below. ---------- */
+#phonebar,#sheetBar{display:none}
+#walkbox[hidden],.phoneonly{display:none!important}
+#moreDlg{border:1px solid var(--line);border-radius:16px 16px 0 0;background:var(--pan);color:var(--ink);box-shadow:0 -6px 30px #0005;margin:auto 0 0;width:100%;max-width:none;padding:16px 16px calc(18px + env(safe-area-inset-bottom))}
+#moreDlg::backdrop{background:#0007}
+#moreDlg h2{margin:0 0 4px;font-size:20px}#moreDlg .addpick{margin-top:10px}#moreDlg .addopt{min-height:64px}
+/* Walk the fence: the map full size, with the walking buttons at the bottom of it */
+body.walk main{display:block;position:relative}
+body.walk #side,body.walk #split,body.walk #sheetBar,body.walk #mapbar,body.walk #drawbar,body.walk #mapsum,body.walk #offbar,body.walk #updbar{display:none!important}
+body.walk #mapwrap{display:flex;position:absolute;inset:0;border:0}
+body.walk #mapbox{flex:1;height:auto}
+#walkbox{position:absolute;z-index:1000;left:0;right:0;bottom:0;max-height:64%;overflow:auto;background:var(--pan);color:var(--ink);border-top:1px solid var(--line);border-radius:16px 16px 0 0;box-shadow:0 -4px 22px #0004;padding:12px 14px 14px;font-size:16px;zoom:var(--tz,1)}
+#walkbox h2{margin:0 0 4px;font-size:20px}
+#walkbox p{margin:6px 0}
+#walkbox label.f{font-size:15px;margin:10px 0 4px}
+#walkbox select{min-height:50px;font-size:17px}
+.wbig{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;width:100%;min-height:76px;margin:10px 0 0;font-size:21px!important;font-weight:700;border-radius:12px;white-space:normal;text-align:center;line-height:1.2}
+.wbig span{font-size:14px;font-weight:500;opacity:.9}
+.wrow{display:flex;gap:8px;margin-top:8px}
+.wmid{flex:1 1 0;min-height:56px;font-size:16px!important;font-weight:600;border-radius:10px;white-space:normal;text-align:center;line-height:1.2;padding:4px 8px}
+.wtop{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.wtop b{display:block;font-size:24px;line-height:1.15;font-variant-numeric:tabular-nums}
+.wtop span{display:block;color:var(--mut);font-size:14.5px}
+.wacc{flex:none;text-align:right;font-weight:700;font-size:16px;padding:4px 10px;border:1px solid var(--line);border-radius:8px;background:var(--pan2);font-variant-numeric:tabular-nums}
+.wacc.good{color:var(--ok);border-color:currentColor}.wacc.rough{color:var(--warnInk);background:var(--warnBg);border-color:var(--warnLine)}
+.wmsg{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--pan2);font-size:16px;line-height:1.4}
+.wmsg.warnbox{border-color:var(--warnLine)}
+.wwarn{border:1px solid var(--warnLine);background:var(--warnBg);color:var(--warnInk);border-radius:10px;padding:8px 12px;font-weight:600;font-size:15.5px;line-height:1.35}
+.wwarn[hidden]{display:none}
+.wfollow{border-bottom:0;padding:10px 0 2px}
+.wnote{font-size:14px;color:var(--mut);margin:6px 0 0!important}
+.wdone{border-left:5px solid var(--ok)}
+.wyou{border-radius:50%;background:#1a73e8;border:3px solid #fff;box-shadow:0 0 0 1px #0006,0 1px 6px #0008}
+@media (max-width:640px),(max-width:950px) and (max-height:500px){
+  body{display:flex;flex-direction:column;height:100vh;height:100dvh;overflow:hidden}
+  input,select,textarea{font-size:16px}   /* 16px or more: a phone doesn't zoom in when you tap a box */
+  /* the top bar: the job picker, nothing else */
+  header{flex-wrap:nowrap;min-height:0;padding:6px 10px;gap:8px}
+  header h1{flex:none;flex-basis:auto;font-size:0;margin:0;gap:0}
+  header h1::before{width:34px;height:34px}
+  #tabs,.hright,#newProj{display:none!important}
+  .jobpick{flex:1 1 auto;gap:6px;font-size:14px}.jobpick select{flex:1;min-width:0;max-width:none;min-height:46px;font-size:16px}
+  #status{font-size:12.5px;max-width:30vw;overflow:hidden;text-overflow:ellipsis}
+  main{flex:1;min-height:0;display:block;position:relative}
+  #panel{position:absolute;inset:0;overflow:auto;-webkit-overflow-scrolling:touch}
+  #body{padding:14px 14px 32px}
+  /* the bar of pages at the bottom */
+  #phonebar{display:flex;flex:none;gap:2px;padding:4px 4px calc(4px + env(safe-area-inset-bottom));background:var(--hdr);border-top:1px solid var(--hdrLine);box-shadow:0 -1px 3px #0001;z-index:2100}
+  #phonebar button{flex:1 1 0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:60px;padding:4px 2px;border:0;border-radius:10px;background:transparent;color:var(--hdrInk);font-family:inherit;font-size:13px;font-weight:600;line-height:1.1;text-align:center;cursor:pointer}
+  #phonebar button.on{background:var(--accSoft);color:var(--ink);box-shadow:inset 0 3px 0 var(--acc)}
+  #phonebar button:focus-visible{outline:3px solid var(--focus);outline-offset:-3px}
+  #phonebar svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  #toast{bottom:calc(86px + env(safe-area-inset-bottom));max-width:calc(100vw - 24px);text-align:center}
+  /* every page: one column, big buttons */
+  .phead{flex-direction:column;align-items:stretch;gap:10px;margin:0 0 14px;padding:0 0 12px}
+  .phead h1{font-size:23px}
+  .phead>.row{width:100%}.phead>.row .btn,.phead>.btn{flex:1 1 40%;min-height:50px;font-size:16px}
+  .pbar{margin:-4px 0 14px}.pbar .btn{flex:1 1 40%;min-height:46px}
+  .tipcard{flex-direction:column;gap:8px}.tipcard .btn{align-self:flex-end;min-height:44px}
+  .btn{min-height:44px}.btn.sm,.est .btn.sm{min-height:42px}
+  /* Jobs: one list, biggest cards */
+  .jobtools input[type=search]{min-width:0;min-height:50px}
+  .jobtools .seg{display:none}
+  .stagechips{flex-wrap:nowrap;overflow-x:auto;margin:0 -14px 14px;padding:0 14px 4px;scrollbar-width:none}
+  .stagechip{flex:none;min-width:0;padding:8px 14px}
+  .board{grid-template-columns:minmax(0,1fr);overflow:visible;gap:14px}
+  .col{min-height:0;padding:10px}
+  .col h3{font-size:18px;margin:2px 4px 4px}
+  .colhelp{margin:0 4px 10px}
+  .jobgrid{grid-template-columns:minmax(0,1fr)}
+  .job{font-size:16px;padding:14px 16px;margin-bottom:10px;cursor:default}
+  .jobname{font-size:19px}
+  .jobnums b{font-size:19px}
+  .jobbtns .btn{flex:1 1 auto;min-height:50px;font-size:16px}
+  .newjob{min-height:80px}
+  /* a job's page */
+  .jobtop .btn.big{min-height:48px;font-size:16px}
+  .stepper{grid-template-columns:1fr 1fr}.step{padding:10px}.step span{font-size:13px}
+  .jobcols{grid-template-columns:minmax(0,1fr)}
+  .jobcols .card{padding:14px}
+  .money b{font-size:18px}
+  .joblog li .mut{display:block}
+  /* the Final bill: the list of what to buy as stacked rows, the count big on the left */
+  .est{font-size:16px}
+  .est .sum{grid-template-columns:1fr 1fr}
+  .est .sum>div{padding:12px 14px;border-left:0!important;border-top:1px solid var(--line)}
+  .est .sum>div:nth-child(-n+2){border-top:0}
+  .est .sum>div:nth-child(even){border-left:1px solid var(--line)!important}
+  .est .sum b{font-size:24px}.est .sum span{font-size:15px}
+  .est .sum .tot{grid-column:1/-1;grid-row:auto;border-left:0!important}.est .sum .tot b{font-size:34px}
+  .billsum{font-size:15px}
+  table.bill.final,.bill.final tbody,.bill.final tfoot{display:block}
+  .bill.final thead{display:none}
+  .bill.final tr.grp,.bill.final tr.grp td{display:block}
+  .bill.final tbody tr:not(.grp){display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:8px 12px;align-items:center;padding:12px 10px;border-bottom:1px solid var(--line)}
+  .bill.final tbody tr:not(.grp) td{display:block;padding:0;border:0;white-space:normal}
+  .bill.final tbody td:nth-child(1){grid-column:1;grid-row:1/span 3;align-self:start}
+  .bill.final tbody td:nth-child(2){grid-column:2/4;grid-row:1}
+  .bill.final tbody td:nth-child(3){grid-column:2;grid-row:2}
+  .bill.final tbody td:nth-child(5){grid-column:3;grid-row:2;font-size:19px!important;font-weight:700}
+  .bill.final tbody td:nth-child(4){grid-column:2;grid-row:3}
+  .bill.final tbody td:nth-child(6){grid-column:3;grid-row:3;text-align:right}
+  .bill.final tbody td:nth-child(3),.bill.final tbody td:nth-child(4){display:flex!important;align-items:center;gap:8px;text-align:left}
+  .bill.final tbody td:nth-child(3)::before{content:'Each $';font-size:14px;color:var(--mut);white-space:nowrap}
+  .bill.final tbody td:nth-child(4)::before{content:'Headache $';font-size:14px;color:var(--mut);white-space:nowrap}
+  .bill.final tbody input.pr{width:92px;min-height:44px}
+  .bill.final .mpic{display:none}
+  .qbadge{min-width:70px}.qbadge b{font-size:28px!important}
+  .bill.final tfoot tr{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:6px 10px}
+  .bill.final tfoot td{padding:0!important;border:0}.bill.final tfoot td:empty{display:none}
+  .bill.final tfoot tr:first-child{border-top:1px solid var(--line);padding-top:12px}
+  /* the fence runs on the Final bill: one block each */
+  .est table.runs,.est table.runs tbody,.est table.runs tfoot{display:block}
+  .est table.runs thead{display:none}
+  .est table.runs tr{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding:10px;border-bottom:1px solid var(--line)}
+  .est table.runs td{border:0;padding:0}.est table.runs td:empty{display:none}
+  .est table.runs tbody td:nth-child(1){flex:1 1 calc(100% - 60px)}
+  .est table.runs tbody td:nth-child(8){order:-1;margin-left:auto}
+  .est table.runs tbody td:nth-child(2){flex:1 1 100%}.est table.runs select{width:100%;min-width:0}
+  .est table.runs tbody td:nth-child(3)::before{content:'Length ';color:var(--mut)}
+  .est table.runs tbody td:nth-child(4)::before{content:'Corners ';color:var(--mut)}
+  .est table.runs tbody td:nth-child(5)::before{content:'Gates ';color:var(--mut)}
+  .est table.runs tbody td:nth-child(6){display:none}
+  .est table.runs tbody td:nth-child(7)::before{content:'Without gates ';color:var(--mut)}
+  .est table.runs tbody td:nth-child(n+3){display:flex;align-items:center;gap:4px;text-align:left}
+  .est table.runs tbody td input[type=number]{width:84px}
+  .est table.runs tfoot tr{justify-content:space-between}
+  .est table.runs tfoot td:nth-child(4),.est table.runs tfoot td:nth-child(6){display:none}
+  .est table.runs tfoot td:nth-child(2)::before{content:'Length '}
+  /* the Builder: the map is the screen. The left bar is a panel that slides up from the bottom */
+  body.pg-build main{display:block}
+  body.pg-build #split{display:none}
+  body.pg-build #mapwrap{position:absolute;inset:0 0 66px;border:0}
+  body.pg-build.walk #mapwrap{inset:0}
+  #mapbox{height:auto;flex:1}
+  body.pg-build:not(.walk) #sheetBar{display:flex;align-items:center;gap:10px;position:absolute;z-index:1500;left:0;right:0;bottom:var(--sheetH);height:66px;padding:12px 14px 6px;background:var(--pan);color:var(--ink);border:1px solid var(--line);border-bottom:0;border-radius:16px 16px 0 0;box-shadow:0 -3px 14px #0003;font:inherit;text-align:left;cursor:pointer}
+  main{--sheetH:0px}body.sheet main{--sheetH:min(68%,calc(100% - 140px))}
+  #sheetBar .grip{position:absolute;top:5px;left:50%;width:44px;height:5px;margin-left:-22px;border-radius:3px;background:var(--line)}
+  #sheetBar .sbtext{flex:1;min-width:0}
+  #sheetBar .sbtext b{display:block;font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
+  #sheetBar .sbtext span{display:block;font-size:13.5px;color:var(--mut)}
+  #sheetBar .sbmore{flex:none;font-size:15px;font-weight:600;color:var(--acc);border:1px solid var(--accLine);border-radius:999px;padding:6px 14px}
+  #sheetBar:focus-visible{outline:3px solid var(--focus);outline-offset:-3px}
+  body.pg-build #side{display:none;position:absolute;z-index:1500;left:0;right:0;bottom:0;height:var(--sheetH);overflow:auto;padding:10px 14px 30px;background:var(--bg);border:1px solid var(--line);border-top:0;-webkit-overflow-scrolling:touch}
+  body.pg-build.sheet:not(.walk) #side{display:block}
+  #side .sumbtns{flex-wrap:wrap}#side .sumbtns .btn{white-space:normal;min-height:50px}
+  .drawbtns .btn.big{min-height:50px}
+  /* the map's toolbar: the few big buttons a phone needs; the rest are under More */
+  #mapbar{flex-wrap:wrap;gap:6px;padding:6px 8px}
+  #mapbar .mgroup{display:contents}
+  #bBrace,#bHR,#b3d,#mShow,#search{display:none!important}
+  body.psearch #search{display:flex!important;order:9;flex:1 1 100%;max-width:none;margin:0}
+  #bDraw,#bGate,#bHU,#mMore{flex:1 1 0}
+  #mapbar .btn,#mapbar .menu>summary{min-height:50px;font-size:15px!important;padding:0 6px!important;white-space:normal;line-height:1.15;text-align:center}
+  #mMore>summary{width:100%}
+  #mapbar .phoneonly{display:flex!important}
+  .menupop{max-height:60vh;overflow:auto}
+  #mapbar .mitem{min-height:56px}
+  #drawbar{left:8px;right:8px;bottom:8px;transform:none;width:auto;max-width:none;padding:8px}
+  #drawMsg{flex:1 1 100%;text-align:center;font-size:15px}
+  #drawbar .btn{flex:1 1 28%;min-height:50px;font-size:15px;white-space:normal;line-height:1.15}
+  #b3dMap{bottom:76px}
+  /* dialogs fit the screen */
+  #jobDlg,#matDlg,#billDlg,#shopDlg,#askDlg{padding:14px 16px}
+  .leaflet-control-layers-expanded{max-height:60vh;overflow:auto}
+}

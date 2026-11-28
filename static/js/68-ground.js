@@ -9,7 +9,7 @@ const gRate=()=>({trees:Math.max(0,+(S.settings.clearTrees??4)||0),brush:Math.ma
 // the line's shape: its corners, leaving out points on a straight run (gates and braces added later), so adding
 // those doesn't ask the maps again
 function groundShape(l){
-  const P=l?.pts;if(!P||l.manual||P.length<2)return null;
+  const P=l?.pts;if(!P||l.manual||P.length<2||walkingNow(l))return null;
   const lat0=P[0].lat,mx=111320*Math.cos(lat0*Math.PI/180),my=110574,xy=p=>[(p.lng-P[0].lng)*mx,(p.lat-lat0)*my],keep=[P[0]];
   for(let i=1;i<P.length-1;i++){const a=xy(keep[keep.length-1]),b=xy(P[i]),c=xy(P[i+1]),L2=Math.hypot(c[0]-a[0],c[1]-a[1]);
     const off=L2?Math.abs((c[0]-a[0])*(b[1]-a[1])-(c[1]-a[1])*(b[0]-a[0]))/L2:Math.hypot(b[0]-a[0],b[1]-a[1]);

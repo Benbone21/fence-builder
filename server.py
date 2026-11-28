@@ -716,6 +716,21 @@ class Assets:
                 if c and c[0] == sig:
                     return c[1]
             a = Asset(app_js(self.version("view3d.js")), TYPES[".js"])
+        elif rel == "sw.js":
+            # the phone's offline copy of the app (static/sw.js) is named after the app's own files, so a new
+            # version of the app makes the phone fetch it again
+            full = os.path.join(STATIC, "sw.js")
+            if not os.path.isfile(full):
+                return None
+            sig = self._sig([full] + app_files())
+            with self.lock:
+                c = self.cache.get(rel)
+                if c and c[0] == sig:
+                    return c[1]
+            with open(full, "rb") as f:
+                raw = f.read()
+            ver = hashlib.sha256("|".join(self.version(x) for x in ("index.html", "app.js", "app.css", "look.js")).encode()).hexdigest()[:16]
+            a = Asset(raw.replace(b"__APP_VERSION__", ver.encode()), TYPES[".js"])
         else:
             full = safe_path(STATIC, rel)
             if not full or not os.path.isfile(full):
@@ -950,7 +965,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Referrer-Policy", "strict-origin-when-cross-origin")
         self.send_header("Cross-Origin-Resource-Policy", "same-origin")
         if getattr(self, "_page", True):   # pages only: these say what a page may do (the small API answers skip them)
-            self.send_header("Permissions-Policy", "geolocation=(self), camera=(), microphone=(), payment=(), usb=()")
+            self.send_header("Permissions-Policy", "geolocation=(self), screen-wake-lock=(self), camera=(), microphone=(), payment=(), usb=()")
             self.send_header("Content-Security-Policy", csp())
         if MULTI and self.is_https():
             self.send_header("Strict-Transport-Security", "max-age=31536000")

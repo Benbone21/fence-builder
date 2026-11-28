@@ -26,6 +26,7 @@ function renderPanel(){
   const fn={jobs:jobsView,build:sideView,est:estView,types:typesView,braces:bracesView,prices:pricesView,settings:settingsView}[S.tab];
   out.innerHTML=tipCard(S.tab==='jobs'&&jobOpen?'job':S.tab)+fn();box.scrollTop=st;
   if(fk){const el=out.querySelector(fk);if(el){el.focus({preventScroll:true});if(el.select&&/text|number/.test(el.type))el.select()}}
+  phoneSync();   // the phone's bottom bar, the Builder's slide-up panel and Walk the fence (92-phone.js)
 }
 // labor and fee lines (used on the Final bill)
 // labor, headache and fee lines at the bottom of the bill

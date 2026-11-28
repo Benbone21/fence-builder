@@ -33,7 +33,7 @@ function hillSpots(l,t){
 }
 // put braces at those spots on the line (skipping any near a corner, brace or gate); returns how many went in
 function hillBraces(l){
-  if(!l||l.manual||l.pts.length<2||!(autoOn('hillTop')||autoOn('hillLow'))||!evOf(l))return 0;
+  if(!l||l.manual||l.pts.length<2||walkingNow(l)||!(autoOn('hillTop')||autoOn('hillLow'))||!evOf(l))return 0;
   const t=S.fenceTypes.find(x=>x.id===l.type)||S.fenceTypes[0],kit=braceFor(t);if(!kit)return 0;
   const spots=hillSpots(l,t).filter(s=>autoOn(s.kind==='top'?'hillTop':'hillLow')).sort((a,b)=>b.d-a.d);   // far end first
   let n=0;

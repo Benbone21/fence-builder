@@ -125,6 +125,143 @@ def add_job(base):
         raise RuntimeError("saving the test job answered %s" % st)
 
 
+def phone_check(browser, base, args, problems):
+    """A phone-sized page: the bottom bar, the slide-up panel on the map, and Walk the fence with fake GPS readings
+    near Emmett, Idaho: two corners, a gate, then one more corner with no signal, the page opened again with no
+    signal, the line finished, and the points checked on the server once the signal is back."""
+    from playwright.sync_api import Error as PwError
+    # the page's security headers let it ask for the location (its own pages only)
+    req = urllib.request.Request(base + "/", headers={"Cookie": SIGNED_IN["cookie"]} if SIGNED_IN else {})
+    with urllib.request.urlopen(req, timeout=20) as r:
+        pp = r.headers.get("Permissions-Policy") or ""
+    if "geolocation=(self)" not in pp:
+        problems.append("phone: the Permissions-Policy header does not let the page use the location (%r)" % pp)
+    st, sw = http(base, "/sw.js")
+    if st != 200 or b"__APP_VERSION__" in sw or b"fb-app-" not in sw:
+        problems.append("phone: sw.js is not served with the app's version in it")
+    ctx = browser.new_context(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True,
+                              geolocation={"latitude": 43.88, "longitude": -116.50, "accuracy": 4},
+                              permissions=["geolocation"])
+    if SIGNED_IN:
+        k, _, v = SIGNED_IN["cookie"].partition("=")
+        ctx.add_cookies([{"name": k, "value": v, "url": base + "/"}])
+    if not args.online:
+        ctx.route(re.compile(r"^(?!%s)" % re.escape(base)), lambda route: route.abort())
+    page = ctx.new_page()
+    page.set_default_timeout(15000)
+    errors = []
+    page.on("pageerror", lambda e: errors.append("JS exception: %s" % e))
+
+    def on_console(m):
+        src = (m.location or {}).get("url") or ""
+        if m.type == "error" and not NET_NOISE.search(m.text or "") and (not src or src.startswith(base)):
+            errors.append("console error: %s" % m.text)
+    page.on("console", on_console)
+    page.goto(base + "/")
+    page.wait_for_load_state("load")
+    page.wait_for_timeout(2500)
+    if not page.locator("#phonebar").is_visible():
+        problems.append("phone: no bar of pages at the bottom of the screen")
+        ctx.close()
+        return
+    for k in ("jobs", "build", "est"):
+        page.click('#phonebar [data-ph="%s"]' % k)
+        page.wait_for_timeout(700)
+        if page.evaluate("document.documentElement.scrollWidth") > 392:
+            problems.append("phone: the %s page is wider than the screen" % k)
+    page.click('#phonebar [data-ph="build"]')
+    page.wait_for_timeout(500)
+    page.click("#sheetBar")
+    page.wait_for_timeout(500)
+    if not page.locator("#side").is_visible():
+        problems.append("phone: the Builder's panel does not slide up")
+    page.click("#sheetBar")
+    print("  phone pages ok" if not errors else "  phone pages had errors")
+    # the service worker keeps the app's files, so the page opens with no signal
+    try:
+        page.evaluate("navigator.serviceWorker.ready.then(()=>true)")
+        page.wait_for_timeout(1500)
+        if not page.evaluate("!!navigator.serviceWorker.controller"):
+            page.reload()
+            page.wait_for_load_state("load")
+            page.wait_for_timeout(2500)
+    except PwError:
+        pass
+    # walk a line
+    page.click('#phonebar [data-ph="walk"]')
+    page.wait_for_timeout(800)
+    page.click('[data-w="start"]')
+
+    def at(lat, lng):
+        ctx.set_geolocation({"latitude": lat, "longitude": lng, "accuracy": 4})
+        page.wait_for_timeout(700)
+
+    def tap(w):
+        page.click('[data-w="%s"]' % w)
+        page.wait_for_timeout(3700)   # it holds still for 3 seconds to steady the reading
+
+    at(43.8800, -116.5000); tap("drop")
+    at(43.8800, -116.4975); tap("drop")
+    at(43.8803, -116.4975); tap("gate")
+    at(43.88034, -116.4975); tap("drop")
+    ctx.set_offline(True)
+    page.wait_for_timeout(500)
+    at(43.8815, -116.4975); tap("drop")
+    if "No signal" not in (page.locator("#wNet").inner_text() if page.locator("#wNet").is_visible() else ""):
+        problems.append("phone: walking with no signal does not say the points are kept on the phone")
+    page.reload()
+    page.wait_for_load_state("load")
+    page.wait_for_timeout(3500)
+    if not page.locator("#walkbox").is_visible() or "5 points" not in (page.locator("#wPts").inner_text() if page.locator("#wPts").count() else ""):
+        problems.append("phone: with no signal the page did not open again on the line being walked")
+    else:
+        print("  opened again with no signal, still walking")
+    tap("finish")
+    ctx.set_offline(False)
+    page.wait_for_timeout(7000)
+    data = json.loads(http(base, "/api/data")[1])
+    job = next((p for p in data.get("projects", []) if p.get("id") == "p_smoke"), {"lines": []})
+    walked = [l for l in job["lines"] if l.get("id") != "l_smoke"]
+    if len(walked) != 1:
+        problems.append("phone: expected 1 walked line saved on the server, found %d" % len(walked))
+    else:
+        l = walked[0]
+        ft = sum(_dist(l["pts"][i - 1], l["pts"][i]) for i in range(1, len(l["pts"]))) * 3.28084
+        # braces added for you (at a creek or ditch, a road or a hill, when the line is finished) may come on top
+        own = [q for q in l["pts"] if not q.get("auto")]
+        gates = [q for q in own if q.get("brace") == "gate"]
+        if len(own) != 6 or len(gates) != 1 or "walking" in l or not 1150 < ft < 1260 or not 10 <= (gates[0].get("gw") or 0) <= 20:
+            problems.append("phone: the walked line is not right: %d points (%d added for you), %d gates, %.0f ft, still walking: %s"
+                            % (len(own), len(l["pts"]) - len(own), len(gates), ft, "walking" in l))
+        else:
+            print("  walked line saved: %d points (and %d added for you), a %s ft gate, %.0f ft"
+                  % (len(own), len(l["pts"]) - len(own), gates[0]["gw"], ft))
+    page.click('#phonebar [data-ph="est"]')
+    page.wait_for_timeout(1200)
+    m = re.search(r"Fence length\s*([\d,]+)\s*ft", page.evaluate("document.body.innerText"))
+    if not m or int(m.group(1).replace(",", "")) < 1800:
+        problems.append("phone: the Final bill does not count the walked line (%r)" % (m.group(0) if m else None))
+    # a page that isn't secure (plain http to another computer) can't use the location: it says so plainly
+    page.add_init_script("Object.defineProperty(window,'isSecureContext',{get:()=>false})")
+    page.reload()
+    page.wait_for_load_state("load")
+    page.wait_for_timeout(2000)
+    page.click('#phonebar [data-ph="walk"]')
+    page.wait_for_timeout(600)
+    if "secure (https)" not in (page.locator("#walkbox").inner_text() if page.locator("#walkbox").is_visible() else ""):
+        problems.append("phone: an insecure page does not explain that the location needs https")
+    for e in errors:
+        problems.append("phone: %s" % e)
+    ctx.close()
+
+
+def _dist(a, b):
+    import math
+    f1, f2 = math.radians(a["lat"]), math.radians(b["lat"])
+    h = math.sin((f2 - f1) / 2) ** 2 + math.cos(f1) * math.cos(f2) * math.sin(math.radians(b["lng"] - a["lng"]) / 2) ** 2
+    return 2 * 6371000 * math.asin(math.sqrt(h))
+
+
 def run(args, multi=False):
     from playwright.sync_api import sync_playwright, Error as PwError
 
@@ -283,6 +420,10 @@ def run(args, multi=False):
                     problems.append("api/ground/soil answered %s to a bad line, not 400" % e.code)
             if problems and args.shot:
                 page.screenshot(path=args.shot, full_page=True)
+            # 4. on a phone: the page bar, the Builder's slide-up panel, and walking a fence line with fake GPS,
+            # part of it with no signal (the page must open again from the phone's copy, and the points must arrive)
+            print("on a phone:")
+            phone_check(browser, base, args, problems)
             browser.close()
     except Exception as e:  # anything unexpected is a failure too
         problems.append("%s: %s" % (type(e).__name__, e))

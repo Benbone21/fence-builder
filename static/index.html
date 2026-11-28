@@ -2,10 +2,14 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Fence Builder</title>
 <link rel="icon" href="icon-256.png" type="image/png">
 <link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-256.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Fence Builder">
 <meta name="theme-color" content="#ffffff">
 <link rel="stylesheet" href="vendor/leaflet.css">
 <script type="importmap">{"imports":{"three":"./vendor/three.module.js","three/addons/":"./vendor/jsm/"}}</script>
@@ -61,6 +65,10 @@
             <button class="btn mitem" id="bRefresh" title="Recalculate with your latest prices, materials and fence types"><b>Refresh</b><span>Work it out again with your latest prices, materials and fence types</span></button>
             <button class="btn mitem" id="bLoc" title="Go to my location"><b>My location</b><span>Move the map to where you are</span></button>
             <button class="btn mitem" id="bOff" title="Save the map, aerial photo and LiDAR for an area, to use with no internet"><b>Save area for offline</b><span>Keep the map of an area to use with no internet</span></button>
+            <button class="btn mitem phoneonly" id="pmBrace"><b>Add brace</b><span>Tap a fence line or a point to put a brace there</span></button>
+            <button class="btn mitem phoneonly" id="pmRedo"><b>Redo</b><span>Put back what Undo took away</span></button>
+            <button class="btn mitem phoneonly" id="pmFind"><b>Find a place</b><span>Search for an address or a place</span></button>
+            <button class="btn mitem phoneonly" id="pm3d"><b>3D view</b><span>See the fence on the ground in 3D</span></button>
             <button class="btn mitem del" id="bClear" title="Remove every fence line drawn on the map for this job"><b>Clear map</b><span>Remove every fence line in this job</span></button>
           </div>
         </details>
@@ -71,10 +79,19 @@
       <div id="map"></div>
       <div id="mapsum"></div>
       <div id="offbar" hidden></div>
+      <div id="walkbox" hidden aria-label="Walk the fence"></div>
       <div id="drawbar" hidden><span id="drawMsg"></span><button class="btn" id="bUndo">Undo last point</button><button class="btn pri" id="bFinish">Finish line</button><button class="btn" id="bCancel">Cancel</button></div>
     </div>
   </aside>
+  <button type="button" id="sheetBar" aria-controls="side" aria-expanded="false"><i class="grip" aria-hidden="true"></i><span class="sbtext"><b id="sheetSum">Fence</b><span id="sheetHint">Tap for the details</span></span><span class="sbmore" id="sheetMore">Details</span></button>
 </main>
+<nav id="phonebar" aria-label="Pages">
+  <button type="button" data-ph="jobs"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1M8.5 10h7M8.5 14h7M8.5 18h4"/></svg><span>Jobs</span></button>
+  <button type="button" data-ph="build"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6.5 9 4l6 2.5L21 4v13.5L15 20l-6-2.5L3 20z"/><path d="M9 4v13.5M15 6.5V20"/></svg><span>Map</span></button>
+  <button type="button" data-ph="est"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18l-2-1.5L14 21l-2-1.5-2 1.5-2-1.5L6 21z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg><span>Final bill</span></button>
+  <button type="button" data-ph="walk"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-6-5.6-6-10.5a6 6 0 0 1 12 0C18 15.4 12 21 12 21z"/><circle cx="12" cy="10.5" r="2.2"/></svg><span>Walk the fence</span></button>
+  <button type="button" data-ph="more" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg><span>More</span></button>
+</nav>
 <dialog id="keys" aria-labelledby="keysT">
   <div class="row" style="justify-content:space-between;margin-bottom:6px"><h2 id="keysT" style="margin:0">Keyboard shortcuts</h2><button class="btn sm" id="keysClose">Close</button></div>
   <div class="kcols">
@@ -86,6 +103,7 @@
 </dialog>
 <dialog id="jobDlg" aria-label="Job details"></dialog>
 <dialog id="askDlg" aria-label="Question"></dialog>
+<dialog id="moreDlg" aria-label="More pages"></dialog>
 <dialog id="matDlg" aria-label="Material details"></dialog>
 <dialog id="shopDlg" aria-label="Find materials in a store"></dialog>
 <div id="quoteView" hidden aria-label="Customer quote"></div>

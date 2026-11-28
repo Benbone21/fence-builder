@@ -21,9 +21,9 @@ const inApp=()=>!!window.pywebview?.api?.use_local;
 async function whoami(){
   try{
     const r=await fetch('api/auth/me',{cache:'no-store'});
-    if(r.ok){const j=await r.json();if(j&&j.mode){ME=j;CSRF=j.csrf||''}}
+    if(r.ok){const j=await r.json();if(j&&j.mode){ME=j;CSRF=j.csrf||'';offMeSeen(j)}}
     else if(r.status===401){location.replace('login');return new Promise(()=>{})}
-  }catch(e){}
+  }catch(e){const m=await offMe();if(m)ME=m}   // no signal: who signed in on this phone last (08-offline.js)
   return ME;
 }
 const mePromise=whoami();
@@ -32,8 +32,10 @@ function forgetHere(){
   try{for(const k of Object.keys(localStorage))if(k.startsWith('fence'))localStorage.removeItem(k)}catch(e){}
   try{sessionStorage.clear()}catch(e){}
   try{indexedDB.deleteDatabase('fence3d')}catch(e){}
+  offForget();   // the copy kept for working with no signal, and map pieces kept on this phone
 }
 async function signOut(){
+  if(netDown&&!await ask('Some of your work has not reached the server yet (no signal). If you sign out now, it is lost.\n\nSign out anyway?'))return;
   if(saveT){clearTimeout(saveT);saveT=null;await pushSave()}   // your last change goes to the server first
   for(let i=0;i<40&&saving;i++)await new Promise(r=>setTimeout(r,100));
   try{await fetch('api/auth/logout',{method:'POST'})}catch(e){}
