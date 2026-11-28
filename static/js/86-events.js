@@ -180,16 +180,6 @@ async function act(a,d){
   case 'import':$('#importFile').click();break;
   }
 }
-// Stores built on Shopify (kencove.com is one) publish each product as data at /products/<name>.js.
-// That is read straight from this browser, so it works where the store turns away the server's request.
-async function shopLookup(url){
-  let u;try{u=new URL(url)}catch(e){return null}
-  const m=u.pathname.match(/\/products\/([^\/?#]+)/);if(!m)return null;
-  let d;try{const r=await fetch(u.origin+'/products/'+m[1].replace(/\.js(on)?$/,'')+'.js');if(!r.ok)return null;d=await r.json()}catch(e){return null}
-  if(!d||!Array.isArray(d.variants)||!d.variants.length)return null;
-  const vid=u.searchParams.get('variant'),v=d.variants.find(x=>String(x.id)===vid)||d.variants[0],vt=v.title&&v.title!=='Default Title'?v.title:'';
-  return {price:v.price/100,name:d.title+(vt?', '+vt:''),sku:v.sku||'',source:u.hostname.replace(/^www\./,''),options:d.variants.length,image:imgOf(v.featured_image)||imgOf(d.featured_image)||imgOf((d.images||[])[0]),...shopParse(d.title,vt)};
-}
 function shopParse(title,vt){
   const text=(title+' '+vt).replace(/½/g,'.5').replace(/¼/g,'.25').replace(/¾/g,'.75').replace(/(\d+)-(\d+)\/(\d+)/g,(m,a,b,c)=>String(+a+b/c)),out={};   // "6-1/2'" reads as 6.5
   let x;

@@ -1,6 +1,7 @@
 /* ---------- find products in a store's catalog and add them as materials ---------- */
 // Kencove is a Shopify store: its public product list is read in this browser.
-// D&B Supply is an Adobe Commerce store: its public product search is asked through the Fence Builder server.
+// D&B Supply is an Adobe Commerce store: its public product search (/graphql) is also asked from this browser.
+// The Fence Builder server is not needed for either one.
 const STORES=[{host:'kencove.com',name:'Kencove',kind:'shopify'},{host:'www.dbsupply.com',name:'D&B Supply (fencing only)',kind:'magento',catPath:'shop/farm-ranch'}];
 const storeList=()=>{const own=String(S.settings.shop||'').trim().replace(/^https?:\/\//,'').replace(/\/.*$/,'').toLowerCase();
   return own&&!STORES.some(x=>x.host.replace(/^www\./,'')===own.replace(/^www\./,''))?[...STORES,{host:own,name:own,kind:'shopify'}]:STORES};
@@ -10,12 +11,83 @@ const shopHost=()=>curStore().host;
 const imgOf=x=>{const u=typeof x==='string'?x:(x?.src||x?.url||'');return u?(u.startsWith('//')?'https:'+u:u):''};
 const shopSlim=p=>{const im=(p.images||[]);return {title:p.title,handle:p.handle,image:imgOf(im[0]),variants:(p.variants||[]).map(v=>({id:v.id,title:v.title==='Default Title'?'':(v.title||''),price:+v.price||0,sku:v.sku||'',image:imgOf(im.find(i=>(i.variant_ids||[]).includes(v.id)))||imgOf(v.featured_image)}))}};
 const magSlim=it=>({title:it.name,handle:it.sku,url:it.url,image:it.image||'',variants:[{id:it.sku,title:'',price:+it.price||0,sku:it.sku}]});
-async function shopGet(path){const r=await fetch('https://'+shopHost()+path);if(!r.ok)throw Error('The store answered with error '+r.status);return r.json()}
-async function storeApi(op,params){
-  const r=await fetch('api/store?'+new URLSearchParams({host:shopHost(),op,path:curStore().catPath||'',...params}));
-  let j={};try{j=await r.json()}catch(e){throw Error('This store needs the Fence Builder server running')}
-  if(!r.ok)throw Error(j.error||'The store did not answer');return j;
+// Going easy on the stores: one request at a time to each store, a pause after each one, and when a store
+// says "too many requests" (429) a longer wait before trying again. After the third 429 that store is left
+// alone for 5 minutes.
+const nap=ms=>new Promise(r=>setTimeout(r,ms));
+const storeLine={},storeBusy={};
+function storeFetch(url,opt,gap){
+  const host=new URL(url).hostname;
+  const go=async()=>{for(let n=0;;n++){
+    if(Date.now()<(storeBusy[host]||0))return new Response(null,{status:429});
+    const r=await fetch(url,opt);if(r.status!==429)return r;
+    if(n>=2){storeBusy[host]=Date.now()+5*60e3;return r}
+    await nap(4e3*2**n)}};   // 4 s, then 8 s
+  const p=(storeLine[host]||Promise.resolve()).then(go);
+  storeLine[host]=p.then(()=>nap(gap||0),()=>nap(gap||0));
+  return p;
 }
+const storeErr=r=>Error(r.status===429?'The store is busy (too many requests). Try again in a few minutes.':'The store answered with error '+r.status);
+async function shopGet(path){const r=await storeFetch('https://'+shopHost()+path,{},250);if(!r.ok)throw storeErr(r);return r.json()}
+// Adobe Commerce stores (D&B Supply): only these fixed questions are asked of the store's /graphql.
+const MAG_ITEMS='total_count items { name sku url_key url_suffix small_image { url } price_range { minimum_price { final_price { value } } } }';
+const MAG_Q={
+  // one branch of the store only (for example "shop/farm-ranch"); the whole tree is too slow to ask for
+  cats:'query($path: String!) { categories(filters: {url_path: {eq: $path}}) { items { children { uid name product_count children { uid name product_count } } } } }',
+  topcats:'{ categories { items { children { uid name product_count } } } }',
+  cat:'query($uid: String!) { products(filter: {category_uid: {eq: $uid}}, pageSize: 80) { '+MAG_ITEMS+' } }',
+  search:'query($q: String!, $uids: [String]) { products(search: $q, filter: {category_uid: {in: $uids}}, pageSize: 50) { '+MAG_ITEMS+' } }',
+  // one product, by the last part of its page address
+  key:'query($uid: String!) { products(filter: {url_key: {eq: $uid}}, pageSize: 1) { '+MAG_ITEMS+' } }',
+};
+async function magGQL(host,op,variables){
+  const r=await storeFetch('https://'+host+'/graphql',{method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json',Store:'default'},
+    body:JSON.stringify({query:MAG_Q[op],variables})},300);
+  if(!r.ok)throw storeErr(r);
+  let j;try{j=await r.json()}catch(e){throw Error('The store did not answer')}
+  if(!j?.data&&j?.errors?.length)throw Error('The store did not answer ('+String(j.errors[0].message||'').slice(0,120)+')');
+  return j?.data||{};
+}
+// the categories in a store's answer, each named with its parent: "Fencing › Gates"
+function magCats(data){
+  const out=[],walk=(nodes,trail)=>{for(const c of nodes||[]){const name=[...trail,c.name||''];
+    if(c.product_count)out.push({uid:c.uid,title:name.slice(-2).join(' › '),n:c.product_count});walk(c.children,name)}};
+  for(const top of data.categories?.items||[])walk(top.children,[]);
+  return out;
+}
+// Only the fencing part of a general farm store is shown: categories whose name matches this,
+// found under the branch given (D&B Supply: Farm & Ranch). Everything else in the store is left out.
+// The list is kept in this browser for a week, so it is asked for only now and then.
+const FENCE_CATS=/fenc|gate|panel/i,fenceMem={};
+async function fenceUids(host,path){
+  const k='fb-store-cats:'+host+'|'+path;if(fenceMem[k])return fenceMem[k];
+  let keep=null;
+  try{const c=JSON.parse(localStorage.getItem(k)||'null');if(c&&Array.isArray(c.cats)&&c.cats.length&&Date.now()-c.at<7*864e5)keep=c.cats}catch(e){}
+  if(!keep){
+    keep=magCats(await magGQL(host,'cats',{uid:'',q:'',path:path.slice(0,120)})).filter(c=>FENCE_CATS.test(c.title.split(' › ')[0]));
+    if(keep.length)try{localStorage.setItem(k,JSON.stringify({at:Date.now(),cats:keep}))}catch(e){}
+  }
+  const tops=keep.filter(c=>!c.title.includes(' › ')&&FENCE_CATS.test(c.title));
+  return fenceMem[k]={tops:tops.map(c=>c.uid),all:new Set(keep.map(c=>c.uid)),cats:keep};
+}
+async function magApi(host,op,{uid='',q='',path=''}={}){
+  if(!MAG_Q[op])throw Error('That store or request is not allowed');
+  if(op==='cats'&&!path)op='topcats';
+  let fence=null;
+  if(path){fence=await fenceUids(host,path);
+    if(op==='cats')return {cats:fence.cats};
+    if(op==='cat'&&!fence.all.has(uid))throw Error('That category is not part of fencing')}
+  // a page address (op "key") can be long, like D&B's "bfc-22200-126-fence-tubing-…-polyester-coated"
+  const v={uid:String(uid).slice(0,op==='key'?255:80),q:String(q).slice(0,120),path:String(path).slice(0,120)};
+  if(op==='search')v.uids=fence?fence.tops:null;
+  const data=await magGQL(host,op,v);
+  if(op==='topcats')return {cats:magCats(data)};
+  const prods=data.products||{};
+  const items=(prods.items||[]).map(it=>({name:it.name||'',sku:it.sku||'',price:it.price_range?.minimum_price?.final_price?.value||0,
+    image:it.small_image?.url||'',url:'https://'+host+'/'+(it.url_key||'')+(it.url_suffix||'')}));
+  return {items,total:prods.total_count||items.length};
+}
+function storeApi(op,params){const st=curStore();return magApi(st.host,op,{path:st.catPath||'',...params})}
 const FENCEY=/wire|fenc|post|gate|brace|insul|clip|staple|energ|strain|tension|ground|netting|panel/i;
 function shopRender(){
   const dlg=$('#shopDlg'),st=curStore(),host=st.host;
@@ -126,16 +198,45 @@ function takeGrab(){
   }
 }
 addEventListener('hashchange',takeGrab);
+const BOOKMARK_TIP=' Or open the page and click your "Add to Fence Builder" bookmark (see "Add from Premier 1 or any store page" on the Materials page).';
+const sameHost=(u,h)=>u.hostname.replace(/^www\./,'').toLowerCase()===h.replace(/^www\./,'').toLowerCase();
+const shortName=st=>st.name.replace(/\s*\(.*\)$/,'');
+// Stores built on Shopify (kencove.com is one) publish each product as data at /products/<name>.js.
+// That is read straight from this browser. For a store in the list (Kencove, your own shop) a problem is
+// reported; for any other store null is returned, and the price is asked through the server instead.
+async function shopLookup(url,known){
+  let u;try{u=new URL(url)}catch(e){return null}
+  const name=known?shortName(known):u.hostname.replace(/^www\./,'');
+  const m=u.pathname.match(/\/products\/([^\/?#]+)/);
+  if(!m){if(known)throw Error('That '+name+' link is not a product page. Open the product, pick the size, and copy the link from there.'+BOOKMARK_TIP);return null}
+  let r;try{r=await storeFetch(u.origin+'/products/'+m[1].replace(/\.js(on)?$/,'')+'.js',{},1000)}
+  catch(e){if(known)throw Error('Could not reach '+name+'. Check the internet connection.'+BOOKMARK_TIP);return null}
+  if(!r.ok){if(!known)return null;
+    throw Error(r.status===429?name+' is busy (too many price checks). Try again in a few minutes.'+BOOKMARK_TIP:r.status===404?name+' does not have that product any more, so the link may be old.'+BOOKMARK_TIP:name+' answered with error '+r.status+'.'+BOOKMARK_TIP)}
+  let d=null;try{d=await r.json()}catch(e){}
+  if(!d||!Array.isArray(d.variants)||!d.variants.length){if(known)throw Error('No price found for that product at '+name+'.'+BOOKMARK_TIP);return null}
+  const vid=u.searchParams.get('variant'),v=d.variants.find(x=>String(x.id)===vid)||d.variants[0],vt=v.title&&v.title!=='Default Title'?v.title:'';
+  return {price:v.price/100,name:d.title+(vt?', '+vt:''),sku:v.sku||'',source:u.hostname.replace(/^www\./,''),options:d.variants.length,image:imgOf(v.featured_image)||imgOf(d.featured_image)||imgOf((d.images||[])[0]),...shopParse(d.title,vt)};
+}
+// The price (and details) for a store link. D&B Supply and Kencove (and your own Shopify shop) are asked
+// straight from this browser. Only links to other stores are read through the Fence Builder server (api/price).
 async function lookupLink(url){
-  try{if(PEOPLE_ONLY.test(new URL(url).hostname))throw Error('PEOPLE_ONLY')}catch(e){if(e.message==='PEOPLE_ONLY')throw Error('This store only lets people see its pages, so the app cannot read it. Open the page and click your "Add to Fence Builder" bookmark instead.')}
+  let u;try{u=new URL(url)}catch(e){throw Error('That does not look like a web link. Paste the whole address of the product page.')}
+  if(PEOPLE_ONLY.test(u.hostname))throw Error('This store only lets people see its pages, so the app cannot read it. Open the page and click your "Add to Fence Builder" bookmark instead.');
   // a product page on D&B Supply (or another Adobe Commerce store in the list): ask the store for that one product
-  try{const u=new URL(url),st=STORES.find(x=>x.kind==='magento'&&x.host.replace(/^www\./,'')===u.hostname.replace(/^www\./,'')),key=u.pathname.split('/').filter(Boolean).pop()?.replace(/\.html?$/,'');
-    if(st&&key){const r=await fetch('api/store?'+new URLSearchParams({host:st.host,op:'key',uid:key}));const j=await r.json();const it=j.items?.[0];
-      if(r.ok&&it&&it.price)return {price:+it.price,name:it.name,sku:it.sku,image:it.image||'',source:st.host.replace(/^www\./,''),...shopParse(it.name,'')}}}catch(e){}
-  const sh=await shopLookup(url);if(sh)return sh;
+  const mag=STORES.find(x=>x.kind==='magento'&&sameHost(u,x.host));
+  if(mag){
+    const name=shortName(mag),key=u.pathname.split('/').filter(Boolean).pop()?.replace(/\.html?$/,'');
+    if(!key)throw Error('That '+name+' link is not a product page. Open the product and copy the link from there.'+BOOKMARK_TIP);
+    let it;try{it=(await magApi(mag.host,'key',{uid:key})).items[0]}catch(e){throw Error('Could not reach '+name+'. '+(e.message||'')+BOOKMARK_TIP)}
+    if(!it||!it.price)throw Error('No price found for that product at '+name+'.'+BOOKMARK_TIP);
+    return {price:+it.price,name:it.name,sku:it.sku,image:it.image||'',source:mag.host.replace(/^www\./,''),...shopParse(it.name,'')};
+  }
+  const sh=await shopLookup(url,storeList().find(x=>x.kind==='shopify'&&sameHost(u,x.host)));if(sh)return sh;
+  // any other store: the server reads the page (stores don't let other websites read their pages)
   const r=await fetch('api/price?url='+encodeURIComponent(url));
-  let j={};try{j=await r.json()}catch(e){throw Error('Price links need the Fence Builder server running')}
-  if(!r.ok||!j.price)throw Error(j.error||'No price found on that page');
+  let j={};try{j=await r.json()}catch(e){throw Error('Price links need the Fence Builder server running.'+BOOKMARK_TIP)}
+  if(!r.ok||!j.price)throw Error((j.error||'No price found on that page.').replace(/([^.])$/,'$1.')+BOOKMARK_TIP);
   return {price:j.price,name:(j.title||'').split(/\s[|–-]\s/)[0].trim(),source:j.source};
 }
 // fill in details the store gave us, without overwriting anything you typed
