@@ -238,19 +238,22 @@ function pricesView(){
   const need=Object.fromEntries(A.rows.map(r=>[r.m.id,r]));
   let g='',body='';
   for(const {m,uses,cat,kind} of rows){
-    if(cat!==g){g=cat;body+=`<tr class="grp"><td colspan="8">${esc(cat)}</td></tr>`}
-    const when=m.checked||m.updated,r=need[m.id];
+    if(cat!==g){g=cat;body+=`<tr class="grp"><td colspan="6">${esc(cat)}</td></tr>`}
+    const when=m.checked||m.updated,r=need[m.id],spec=matSpec(m,kind),usedIn=uses.length?esc([...new Set(uses)].join(', ')):'–';
     let host='';try{host=new URL(m.url).hostname.replace(/^www\./,'')}catch(e){}
+    const moved=m.prevPrice!=null&&Date.now()-Date.parse(m.priceMoved||0)<14*86400e3?`<span class="${m.price>m.prevPrice?'up':'down'}">${m.price>m.prevPrice?'▲ up':'▼ down'} from ${money(m.prevPrice)}</span>`:'';
+    const day=when?new Date(when).toLocaleDateString():'–',src=m.checked&&m.src?`<span class="msrc" title="${esc(m.src)}">${esc(m.src)}</span>`:'';
+    // wide screens: one column each. Narrower: "Used in" and "Price checked" move under the name (.mmore), see app.css
     body+=`<tr data-name="${esc((m.name+' '+uses.join(' ')).toLowerCase())}">
-      <td><div class="mrow">${thumb(m.image)}<b>${esc(m.name)}</b></div></td>
-      <td style="white-space:nowrap"><button class="btn sm" data-act="matInfo" data-id="${m.id}">Edit</button> <span class="small mut">${esc(matSpec(m,kind))}</span></td>
-      <td>${esc(m.unit)}</td>
-      <td class="num">${money(+m.price)}</td>
-      <td class="small mut">${uses.length?esc([...new Set(uses)].join(', ')):'–'}</td>
-      <td>${m.url?`<div class="row" style="flex-wrap:nowrap"><a class="small" href="${esc(m.url)}" target="_blank" rel="noopener">${esc(host||'store page')}</a><button class="btn sm" data-act="fetchPrice" data-id="${m.id}"${busy[m.id]?' disabled':''}>${busy[m.id]?'Checking…':'Get price'}</button></div>`:'<span class="mut">–</span>'}
+      <td class="c-mat"><div class="mrow">${thumb(m.image)}<div class="mtxt"><b>${esc(m.name)}</b>${spec?`<div class="small mut mspec">${esc(spec)}</div>`:''}
+        <div class="mmore small"><div><span class="mut">Used in:</span> ${usedIn}</div><div><span class="mut">Price checked:</span> ${day}${src?' · '+src:''}${moved?' · '+moved:''}</div></div></div>
+        <button class="btn sm" data-act="matInfo" data-id="${m.id}">Edit</button></div></td>
+      <td class="num c-pr">${money(+m.price)}<span class="small mut">${esc(m.unit)}</span></td>
+      <td class="small mut c-use">${usedIn}</td>
+      <td class="c-link">${m.url?`<div class="mlink"><button class="btn sm" data-act="fetchPrice" data-id="${m.id}"${busy[m.id]?' disabled':''}>${busy[m.id]?'Checking…':'Get price'}</button><a class="small" href="${esc(m.url)}" target="_blank" rel="noopener" title="${esc(m.url)}">${esc(host||'store page')}</a></div>`:'<span class="mut">–</span>'}
         ${errs[m.id]?`<div class="err">${esc(errs[m.id])}</div>`:''}</td>
-      <td class="small mut" style="white-space:nowrap">${when?new Date(when).toLocaleDateString():'–'}${m.checked&&m.src?`<br>${esc(m.src)}`:''}${m.prevPrice!=null&&Date.now()-Date.parse(m.priceMoved||0)<14*86400e3?`<br><span class="${m.price>m.prevPrice?'up':'down'}">${m.price>m.prevPrice?'▲ up':'▼ down'} from ${money(m.prevPrice)}</span>`:''}</td>
-      <td><button class="btn x" data-act="delMat" data-id="${m.id}" aria-label="Remove ${esc(m.name)}" title="Remove">×</button></td></tr>`;
+      <td class="small mut c-chk">${day}${src}${moved}</td>
+      <td class="c-act"><button class="btn x" data-act="delMat" data-id="${m.id}" aria-label="Remove ${esc(m.name)}" title="Remove">×</button></td></tr>`;
   }
   return `<div class="phead"><div><h1>Materials</h1><p>Everything you buy, with its price. Press <b>Edit</b> to change one: nothing changes until you press Save in its window.</p></div><button class="btn pri big" data-act="addMat">+ Add material</button></div>
   <div class="jobtools"><input type="search" id="matQ" placeholder="Find a material by name or fence type" aria-label="Find a material">
@@ -261,7 +264,7 @@ function pricesView(){
       <li>Open a product on the store, pick the size you want, and click the bookmark.</li>
       <li>This app opens with the product filled in. Check it and press Save. If you already have that product, its new price is filled in for you to save.</li></ol>
     <p class="small mut" style="margin:0">Use it again on the same page any time to update that price.</p></details>
-  <div class="box scroll"><table class="mats"><thead><tr><th>Material</th><th>Details</th><th>Sold by</th><th class="num">Price</th><th>Used in</th><th>Store link</th><th>Price checked</th><th></th></tr></thead><tbody>${body}</tbody></table></div>
+  <div class="box scroll"><table class="mats"><thead><tr><th>Material and details</th><th class="num">Price, sold by</th><th class="c-use">Used in</th><th>Store link</th><th class="c-chk">Price checked</th><th></th></tr></thead><tbody>${body}</tbody></table></div>
   <p class="small mut">${autoLine()} Get price reads the price off the store page. Kencove and other Shopify stores are read directly and also fill in roll length, gauge and height when the page has them. Some big stores block this, so a typed price always works.</p>`;
 }
 let typeSel=null;
