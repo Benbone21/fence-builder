@@ -178,18 +178,23 @@ function coverText(c){
   return `Trees on ${fmtFt(c.trees_ft)}, brush on ${fmtFt(c.brush_ft)}.${cost?` About ${money(Math.round(cost))} to clear at your rates.`:''}`}
 const GROW=[['soil','Soil and rock',soilText],['streams','Streams and ditches',streamText],['flood','Flood zone',floodText],['wetlands','Wetlands',wetText],['cover','Trees and brush',coverText]];
 // the "Ground along this fence" part of a line's page
+// A section of the line's page that starts closed: its heading says the gist ("Mostly easy digging."), and inside is
+// what it means for posts, a "Show each soil" switch for the soil cards, then water, flood, wetlands and trees.
 function groundView(l){
   const g=groundOf(l);if(!g)return '';
-  if(!serverOK)return `<h3>Ground along this fence</h3><p class="small mut">${gCalm('server')}</p>`;
+  const box=(sum,body)=>`<details class="sbox ground" data-keep="lnGround"${openKeep.lnGround?' open':''}><summary><b>Ground along this fence</b><span class="sboxsum">${sum}</span></summary><div class="sboxbody">${body}</div></details>`;
+  if(!serverOK)return box('soil, water, trees',`<p class="small mut" style="margin:0">${gCalm('server')}</p>`);
   if(g.busy.length)scheduleGround();
-  const rows=GROW.map(([t,name,fn])=>{const r=g.res[t];
-    return `<div class="gline"><b>${name}</b><span>${r?fn(r):t in g.fail?`<span class="mut">${esc(gCalm(g.fail[t]))}</span>`:'<span class="mut">Checking the ground…</span>'}</span></div>`}).join('');
+  const line=(t,name,fn)=>{const r=g.res[t];
+    return `<div class="gline"><b>${name}</b><span>${r?fn(r):t in g.fail?`<span class="mut">${esc(gCalm(g.fail[t]))}</span>`:'<span class="mut">Checking the ground…</span>'}</span></div>`};
   const s=g.res.soil,units=s?.units?.filter(u=>u.ft>0)||[];
-  const soils=units.length?`<details class="help" data-keep="groundSoilCards"${openKeep.groundSoilCards!==false?' open':''}><summary>What the ground is like, soil by soil</summary><div class="gsoils">${soilCards(units)}</div></details>`:'';
+  const first=s?(s.covered&&units.length?(soilSum(units).match(/^[^.]*\./)||[''])[0]:'No soil survey here'):'soil' in g.fail?'':'checking…';
+  const soils=units.length?`<details class="help gmore" data-keep="groundSoilCards"${openKeep.groundSoilCards?' open':''}><summary>Show each soil (${units.length})</summary><div class="gsoils">${soilCards(units)}</div></details>`:'';
   const failed=Object.keys(g.fail).length;
-  return `<h3>Ground along this fence</h3><div class="box ground">${rows}${soils}
+  return box(esc(first||'soil, water, trees'),`<div class="gsoil1">${line('soil','Soil and rock',soilText)}${soils}</div>
+    ${GROW.filter(([t])=>t!=='soil').map(([t,n,fn])=>line(t,n,fn)).join('')}
     ${failed?`<button class="btn noprint" data-act="groundRetry" data-id="${l.id}" style="margin-top:6px">Try again</button>`:''}
-    <p class="small mut" style="margin:6px 0 0">From USDA soil survey, USGS, FEMA, US Fish and Wildlife and LANDFIRE maps. A guide for planning, not a survey: check on site.</p></div>`}
+    <p class="small mut" style="margin:8px 0 0">From USDA soil survey, USGS, FEMA, US Fish and Wildlife and LANDFIRE maps. A guide for planning, not a survey: check on site.</p>`)}
 // the job as a whole, on the Final bill, with the two suggestions
 const siteSuggest=(rocky,shallow,ft)=>ft?Math.min(30,Math.round((15*rocky/ft+15*shallow/ft)/5)*5):null;
 function groundJob(){

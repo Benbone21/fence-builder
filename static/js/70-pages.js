@@ -124,22 +124,29 @@ function lineView(){
     const sel=`<select data-f="node.brace" data-id="${l.id}" data-i="${i}" aria-label="Brace at point ${i+1}">${opt('',autoLbl,cur)}${S.braces.map(b=>opt(b.id,b.name,cur)).join('')}${opt('none','No brace (line post)',cur)}${opt('gate','Gate opening',cur)}</select>`;
     const gate=o.brace==='gate'&&p.brace==='gate'?`<div class="g2" style="margin-top:6px"><label class="small mut">Width ft<input type="number" min="1" step="1" value="${+p.gw||0}" data-f="node.gw" data-id="${l.id}" data-i="${i}"></label><label class="small mut">Gate<select data-f="node.gm" data-id="${l.id}" data-i="${i}">${matOpts(p.gm)}</select></label></div>`:'';
     return `<tr class="${on?'on':''}"><td class="num">${i+1}</td><td>${o.role}${o.refs.length>1?'<br><span class="small mut">shared</span>':''}</td><td>${sel}${gate}</td><td><button class="btn x" data-act="delPt" data-id="${l.id}" data-i="${i}" aria-label="Remove point ${i+1}" title="Remove">×</button></td></tr>`}).join('');
-  return `<div class="jobtop" style="margin-top:14px"><button class="btn big" data-act="back">← Back to fence setup</button></div>
-  <h2 style="margin:0 0 8px">One fence line</h2><div class="row noprint"><button class="btn" data-act="zoom" data-id="${l.id}">Zoom to it</button></div>
-  <label class="f">Line name</label><input type="text" value="${esc(l.name)}" data-f="line.name" data-id="${l.id}">
-  <label class="f">Fence type</label><select data-f="line.type" data-id="${l.id}">${S.fenceTypes.map(t=>opt(t.id,t.name,l.type)).join('')}</select>
-  <p class="big" style="margin:14px 0 2px">${fmtFt(r.len)}</p><p class="small mut" style="margin:0">of wire run${r.gateW?`, after ${fmtFt(r.gateW)} of gate openings`:''}. ${postText(r)}${r.pulls?`, ${r.pulls} pull braces`:''}.</p>
-  ${r.area?`<div class="areabox"><span>Fenced in</span><b>${fmtAcres(r.area)}</b><span>${fmtSqFt(r.area)}</span></div>`:''}
-  <p class="small" style="margin:4px 0 0">${gapText(r)}</p>
-  ${(()=>{const ps=stretchParts(r);return ps.length?`<div class="box" style="margin-top:10px"><table class="strs"><thead><tr><th>Section</th><th class="num">Length</th><th>Which roll</th><th>Wire pulled</th></tr></thead><tbody>${ps.map((q,i)=>`<tr><td>${i+1}</td><td class="num">${fmtFt(q.len)}</td><td>${q.on?(q.on.q1>q.on.q0?`Rolls ${q.on.q0+1}–${q.on.q1+1}`:`Roll ${q.on.q0+1}`)+` <span class="mut">(${q.on.sizes.map(fmtQ).join(' + ')} ft)</span>`:'–'}</td><td>${q.split?'Into the pull brace':'From the end brace'}</td></tr>`).join('')}</tbody></table></div>`:''})()}
-  <p class="small mut" style="margin:4px 0 0">Zoom in on the map to drag any post or pull brace along the fence, or click one to change it, delete it or add another.</p>
-  ${r.stretches.some(x=>x.custom)?`<button class="btn sm" data-act="resetCust" data-id="${l.id}" style="margin-top:6px">Put all posts back to automatic</button>`:''}
-  ${evh}
+  // the few things needed right away up top; the rest in sections that start closed and remember how you left them
+  const e=evOf(l)||evAny(l),gates=l.pts.filter(q=>q.brace==='gate').length;
+  const k3=[[`Length`,fmtFt(r.len),r.gateW?`plus ${fmtFt(r.gateW)} of gate${gates>1?'s':''}`:'of wire run'],['Line posts',fmtQ(r.tposts),r.pulls?`${r.pulls} pull brace${r.pulls>1?'s':''}`:'no pull braces'],
+    r.area?['Fenced in',fmtAcres(r.area),fmtSqFt(r.area)]:e?['Steepest',`${(+e.grade||0).toFixed(0)}%`,`climbs ${fmtFt(e.climb)}`]:['Gates',String(gates),'']];
+  const ps=stretchParts(r);
+  const sec=(key,title,sum,body,open)=>`<details class="sbox" data-keep="${key}"${open??openKeep[key]?' open':''}><summary><b>${title}</b><span class="sboxsum">${sum}</span></summary><div class="sboxbody">${body}</div></details>`;
+  const posts=`<p style="margin:0 0 6px">${postText(r)}${r.pulls?`, ${r.pulls} pull braces`:''}.</p><p class="small" style="margin:0 0 8px">${gapText(r)}</p>
+    ${ps.length?`<div class="box"><table class="strs"><thead><tr><th>Section</th><th class="num">Length</th><th>Which roll</th><th>Wire pulled</th></tr></thead><tbody>${ps.map((q,i)=>`<tr><td>${i+1}</td><td class="num">${fmtFt(q.len)}</td><td>${q.on?(q.on.q1>q.on.q0?`Rolls ${q.on.q0+1}–${q.on.q1+1}`:`Roll ${q.on.q0+1}`)+` <span class="mut">(${q.on.sizes.map(fmtQ).join(' + ')} ft)</span>`:'–'}</td><td>${q.split?'Into the pull brace':'From the end brace'}</td></tr>`).join('')}</tbody></table></div>`:''}
+    <p class="small mut" style="margin:8px 0 0">Zoom in on the map to drag a post or pull brace, or click one to change it.</p>
+    ${r.stretches.some(x=>x.custom)?`<button class="btn sm" data-act="resetCust" data-id="${l.id}" style="margin-top:6px">Put all posts back to automatic</button>`:''}`;
+  const est=e?'':elevState(l),hillSum=e?`climbs ${fmtFt(e.climb)}, steepest ${(+e.grade||0).toFixed(0)}%`:est==='fail'?'<span class="warn">heights did not load</span>':'getting heights…';
+  const onPt=!!(selNode&&selNode.l===l.id);
+  return `<div class="jobtop sideback"><button class="btn" data-act="back">← All fence lines</button><button class="btn" data-act="zoom" data-id="${l.id}">Zoom to it</button></div>
+  <div class="linehead"><label class="f" for="lnName">Line name</label><input id="lnName" type="text" value="${esc(l.name)}" data-f="line.name" data-id="${l.id}">
+  <label class="f" for="lnType">Fence type</label><select id="lnType" data-f="line.type" data-id="${l.id}">${S.fenceTypes.map(t=>opt(t.id,t.name,l.type)).join('')}</select></div>
+  <div class="sum three">${k3.map(([a,b,c])=>`<div><span>${a}</span><b>${b}</b>${c?`<span class="small mut">${c}</span>`:''}</div>`).join('')}</div>
+  ${sec('lnPosts','Posts and braces',ps.length?`${ps.length} section${ps.length===1?'':'s'}: post spacing and wire rolls`:'post spacing',posts)}
   ${groundView(l)}
-  <h3>Points, braces and gates</h3>
-  <div class="box"><table class="nodes"><thead><tr><th>#</th><th>Spot</th><th>What goes here</th><th></th></tr></thead><tbody>${nodes}</tbody></table></div>
-  <div class="row" style="margin-top:12px"><button class="btn" data-act="cont" data-id="${l.id}">Keep drawing from the end</button><button class="btn" data-act="rev" data-id="${l.id}">Flip direction</button><button class="btn" data-act="cross" data-id="${l.id}" title="Put a gate where it crosses a road and braces on both banks of a river or creek">Find roads and rivers</button><button class="btn del" data-act="delLine" data-id="${l.id}">Delete line</button></div>
-  <p class="small mut">Drag points on the map to move them. A point shared with another line counts as one corner.</p>`;
+  ${sec('lnHills','Hills and height',hillSum,evh)}
+  ${sec('lnPoints','Points on this line',`${l.pts.length} points${gates?`, ${gates} gate${gates>1?'s':''}`:''}`,
+    `<div class="box"><table class="nodes"><thead><tr><th>#</th><th>Spot</th><th>What goes here</th><th></th></tr></thead><tbody>${nodes}</tbody></table></div>
+    <p class="small mut" style="margin:8px 0 0">Drag points on the map to move them. A point shared with another line counts as one corner.</p>`,openKeep.lnPoints||onPt)}
+  <div class="row linetools"><button class="btn" data-act="cont" data-id="${l.id}">Keep drawing from the end</button><button class="btn" data-act="rev" data-id="${l.id}">Flip direction</button><button class="btn" data-act="cross" data-id="${l.id}" title="Put a gate where it crosses a road and braces on both banks of a river or creek">Find roads and rivers</button><button class="btn del" data-act="delLine" data-id="${l.id}">Delete line</button></div>`;
 }
 const KINDS=[['wire','Wire'],['board','Boards and pickets'],['rail','Rails and panels'],['post','Posts'],['hw','Hardware'],['gate','Gates'],['other','Other']];
 // a post used in a brace counts as a post; everything else in a brace is hardware

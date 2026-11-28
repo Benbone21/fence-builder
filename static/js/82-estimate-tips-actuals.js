@@ -47,7 +47,7 @@ function tipCard(k){const t=TIPS[k];if(!t||tipsSeen[k])return '';
 /* ---------- builder sidebar helpers ---------- */
 function typeSummary(t){const w=(t.wires||[]).reduce((s,x)=>s+(+x.strands||0),0);
   return [`${w} strand${w===1?'':'s'} of wire`,`posts every ${fmtQ(+t.spacing||12)} ft`,`${kitName(t.braceCorner)} at corners`].join(' · ')}
-function drawnNote(){const n=P().lines.filter(l=>!l.manual&&l.pts?.length>1).length;return n?`<span class="stpdone">✓ ${n} line${n>1?'s':''}, ${fmtFt(A.totalFt)}</span>`:''}
+function drawnNote(){const n=P().lines.filter(l=>!l.manual&&l.pts?.length>1).length;return n?`<span class="stpdone">✓ ${n} line${n>1?'s':''} drawn</span>`:''}
 
 /* ---------- what the job really took, and what to charge for labor next time ---------- */
 // the crew's cost per hour: average pay of the people on the job, plus taxes and insurance

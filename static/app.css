@@ -720,7 +720,7 @@ details.menu[open]>summary{background:var(--accSoft);border-color:var(--acc)}
 #drawbar .btn{min-height:42px}
 /* the top bar on narrower windows: it wraps into two tidy rows */
 .hlbl{font-size:13px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--hdrMut);margin:0 -2px 0 6px}
-@media (max-width:1320px){header .hlbl{display:none}header h1{font-size:17px}body.pg-build main{grid-template-columns:min(400px,42%) minmax(0,1fr)}#mapbar .btn,#mapbar .menu>summary{padding:0 11px}}
+@media (max-width:1320px){header .hlbl{display:none}header h1{font-size:17px}#mapbar .btn,#mapbar .menu>summary{padding:0 11px}}
 @media (max-width:1240px){header{padding:8px 12px}header nav.tabs button{padding:0 12px}#tabs2 button{padding:0 11px}}
 @media (max-width:1100px){.hright{margin-left:0;flex-basis:100%;justify-content:flex-start}header .hlbl{display:inline}}
 @media (max-width:860px){
@@ -747,3 +747,54 @@ details.menu[open]>summary{background:var(--accSoft);border-color:var(--acc)}
 [data-theme="contrast"] .mut,[data-theme="contrast"] .small.mut{color:#262626}
 /* Dark: the map toolbar and cards keep a little more edge */
 [data-theme="dark"] .btn:disabled{opacity:.5}
+/* ---- the Builder's left bar: a few things up top, everything else in sections that open and close ---- */
+/* the line between the left bar and the map can be dragged (double-click puts it back); it is remembered on this computer */
+body.pg-build main{grid-template-columns:minmax(300px,1fr) 8px min(var(--mapw,calc(100% - min(420px,42%) - 8px)),calc(100% - 348px))}
+body.pg-build #split{display:block;cursor:col-resize;background:var(--line);border-left:3px solid var(--bg);border-right:3px solid var(--bg)}
+body.pg-build #split:hover,body.resizing #split{background:var(--acc)}
+#side{border-right:0}
+#side .tipcard{font-size:14px;padding:10px 12px;gap:10px;margin:0 0 12px}
+#side .tipcard b:first-child{font-size:15px}#side .tipcard ol{padding-left:18px;margin-top:4px}#side .tipcard li{margin:2px 0}
+#side .sum{margin:0}
+#side .sum>div{padding:10px 14px}
+#side .sum b,#side .sum .tot b{font-size:24px}
+#side .sum span{font-size:14px;margin-bottom:2px}
+#side .sum .small{font-size:13px;margin:2px 0 0}
+#side .sum.three{grid-template-columns:repeat(3,minmax(0,1fr));margin:0 0 14px}
+#side .sum.three b{font-size:20px}
+#side .sumbtns{margin:8px 0 4px;flex-wrap:nowrap}
+#side .sumbtns .btn{min-height:44px;font-size:15px;font-weight:600}
+#side .stp{margin:22px 0 10px}
+.drawbtns .btn.big{flex:1 1 auto;padding:0 12px}
+.sidehelp{margin:4px 0 14px}
+details.sbox{background:var(--pan);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);margin:0 0 10px;padding:0}
+details.sbox>summary{display:flex;align-items:center;gap:6px 10px;min-height:52px;padding:8px 14px;list-style:none;cursor:pointer;flex-wrap:wrap;border-radius:var(--r)}
+details.sbox>summary::-webkit-details-marker{display:none}
+details.sbox>summary::before{content:'';width:8px;height:8px;border-right:2.5px solid var(--mut);border-bottom:2.5px solid var(--mut);transform:rotate(-45deg);flex:none;margin:0 4px 0 0}
+details.sbox[open]>summary::before{transform:rotate(45deg);margin-top:-4px}
+details.sbox>summary b{font-size:16px}
+.sboxsum{margin-left:auto;font-size:14px;color:var(--mut);text-align:right}
+details.sbox>summary:hover{background:var(--pan2)}
+details.sbox[open]>summary{border-bottom:1px solid var(--line);border-radius:var(--r) var(--r) 0 0}
+.sboxbody{padding:12px 14px 14px}
+.sboxbody .sum,.sboxbody .box{box-shadow:none}
+.sboxbody .sum{margin:0}
+.sboxbody .prof{margin:10px 0 4px}
+#side .sbox .sidecross{background:none;border:0;border-top:1px solid var(--line);border-radius:0;box-shadow:none;margin:0;padding:10px 0!important}
+#side .sbox .sidecross:first-child{border-top:0;padding-top:0!important}
+#side .sideback{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:0 0 10px}
+#side .sideback .btn{margin:0;padding:0 8px;min-height:40px}
+.linehead{margin:0 0 14px}.linehead label.f:first-child{margin-top:0}
+.linehead input{font-size:17px;font-weight:600}
+.linetools{margin:14px 0 0;gap:8px}
+details.sbox.ground{padding:0}
+.sbox .gline{padding:9px 0}.sbox .gline>b{flex:0 0 120px}
+.sbox .gsoil1 .gline{border-bottom:0;padding-top:0}
+.gmore{margin:0 0 8px;padding:0 0 8px;border-bottom:1px solid var(--line)}.gmore>summary{font-size:15px}
+#side .stepbox{margin-top:6px}
+@media (max-width:1320px){body.pg-build main{grid-template-columns:minmax(300px,1fr) 8px min(var(--mapw,calc(100% - min(400px,40%) - 8px)),calc(100% - 348px))}}
+@media (max-width:860px){body.pg-build #split{display:none}}
+details.sbox>summary{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:0 10px;min-height:56px;padding:8px 14px;list-style:none;cursor:pointer;border-radius:var(--r)}
+details.sbox>summary::before{grid-row:1/span 2;align-self:center}
+details.sbox>summary b{grid-column:2}
+.sboxsum{grid-column:2;margin:1px 0 0;font-size:14px;color:var(--mut);text-align:left;line-height:1.35}

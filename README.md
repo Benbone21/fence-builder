@@ -303,7 +303,10 @@ for the app, `data/offline` for the web server. About 4 MB per 50 acres at full 
   of a shared server. `static/js/05-account.js` is the app's side of accounts.
 - `ground.py` looks up the ground along a fence line (soil, water, trees) on public federal maps for the
   app; `static/js/68-ground.js` shows it.
-- `static/index.html` is the page, `static/app.css` its look, and `static/view3d.js` the 3D view.
+- `static/index.html` is the page, `static/app.css` its look, and `static/view3d.js` the 3D view. The colours of
+  each look in **Settings → Look and text size** (Clean, Warm, Ranch, High contrast, Dark) are at the top of `app.css`;
+  `static/look.js` puts the one picked on this computer on the page before it shows (the app, sign-in and Accounts
+  pages all load it). Pictures of each look are in `docs/looks/`.
 - The app's script is kept in pieces in `static/js/`, numbered in the order they run
   (`00-basics.js` … `95-start.js`). The server joins them into one script, `app.js`, so the
   pieces share everything, as if they were one file.

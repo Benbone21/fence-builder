@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fence Builder looks</title>
+<style>
+  :root{--bg:#f4f5f7;--pan:#fff;--line:#d3d8df;--ink:#1d2228;--mut:#4f5762;--acc:#1f5fbf}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  main{max-width:1500px;margin:0 auto;padding:28px 24px 80px}
+  h1{font-size:30px;margin:0 0 6px}
+  h2{font-size:23px;margin:40px 0 6px;padding-top:18px;border-top:1px solid var(--line)}
+  h3{font-size:18px;margin:22px 0 8px}
+  p.lead{font-size:18px;max-width:75ch;margin:0 0 8px;color:var(--mut)}
+  a{color:var(--acc)}
+  .styles{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px;margin:18px 0 0}
+  .style{background:var(--pan);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+  .style b{font-size:18px}.style p{margin:4px 0 10px;color:var(--mut);font-size:15px}
+  .sw{display:flex;gap:6px;flex-wrap:wrap}.sw span{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--mut)}
+  .sw i{display:inline-block;width:22px;height:22px;border-radius:5px;border:1px solid #0003}
+  .row{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px}
+  @media (max-width:1100px){.row{grid-template-columns:repeat(3,minmax(0,1fr))}}
+  @media (max-width:640px){.row{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  figure{margin:0;background:var(--pan);border:1px solid var(--line);border-radius:8px;padding:8px}
+  figure img{display:block;width:100%;height:auto;border-radius:4px;border:1px solid var(--line)}
+  figcaption{font-weight:700;margin:6px 2px 0;font-size:15px}
+  figcaption span{display:block;font-weight:400;color:var(--mut);font-size:13px}
+  figure.before{background:#eceef1}
+  .side{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start}
+  .side figure{width:300px}
+  .side figure.tall{width:300px}
+  table{border-collapse:collapse;width:100%;max-width:1100px;background:var(--pan);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  th,td{text-align:left;vertical-align:top;padding:10px 14px;border-bottom:1px solid var(--line);font-size:15px}
+  th{background:#eef1f5;font-size:14px}
+  td:first-child{font-weight:700;white-space:nowrap}
+  .note{background:#fff5d6;border:1px solid #e3c46a;border-radius:8px;padding:10px 14px;max-width:75ch}
+</style>
+</head>
+<body>
+<main>
+<h1>Fence Builder: pick a look</h1>
+<p class="lead">Five looks for the app. Fence Builder now opens in the light <b>Clean</b> look, whatever the computer's own dark setting is.
+To change it: <b>Settings → Look and text size</b>. The look is kept on each computer, so the office computer and a laptop can each have their own.
+Click any picture to see it full size.</p>
+
+<div class="styles">
+  <div class="style"><b>Clean</b> <small>(the new standard)</small><p>White and very light grey, dark grey words. Blue only on the main button of each page, the page you are on, and links.</p>
+    <div class="sw"><span><i style="background:#f4f5f7"></i>page</span><span><i style="background:#fff"></i>cards</span><span><i style="background:#1d2228"></i>words</span><span><i style="background:#1f5fbf"></i>blue</span></div></div>
+  <div class="style"><b>Warm</b><p>Cream background and warm grey lines, with a soft slate blue.</p>
+    <div class="sw"><span><i style="background:#f5f1e8"></i>page</span><span><i style="background:#fffdf9"></i>cards</span><span><i style="background:#2a251f"></i>words</span><span><i style="background:#3e5d80"></i>slate blue</span></div></div>
+  <div class="style"><b>Ranch</b><p>A dark brown top bar with a wheat-gold marker, earthy colours, and a deep teal instead of blue.</p>
+    <div class="sw"><span><i style="background:#3d3125"></i>top bar</span><span><i style="background:#f2efe8"></i>page</span><span><i style="background:#d9a441"></i>marker</span><span><i style="background:#1d6766"></i>teal</span></div></div>
+  <div class="style"><b>High contrast</b><p>Black on white with bold 2-pixel lines, a dark blue, and links always underlined. The easiest to read.</p>
+    <div class="sw"><span><i style="background:#fff"></i>page</span><span><i style="background:#000"></i>words</span><span><i style="background:#555"></i>lines</span><span><i style="background:#0a3a8c"></i>dark blue</span></div></div>
+  <div class="style"><b>Dark</b><p>What the app looked like before, toned down: softer blue, fewer solid blue blocks.</p>
+    <div class="sw"><span><i style="background:#16191d"></i>page</span><span><i style="background:#1e2227"></i>cards</span><span><i style="background:#e5e7ea"></i>words</span><span><i style="background:#6d9ad6"></i>blue</span></div></div>
+</div>
+
+<h2>Builder</h2>
+<div class="row">
+  <figure class="before"><a href="before-build.png"><img src="before-build.png" alt="Builder before" loading="lazy"></a><figcaption>Before<span>1.8.1, dark</span></figcaption></figure>
+  <figure><a href="clean-build.png"><img src="clean-build.png" alt="Builder, Clean" loading="lazy"></a><figcaption>Clean</figcaption></figure>
+  <figure><a href="warm-build.png"><img src="warm-build.png" alt="Builder, Warm" loading="lazy"></a><figcaption>Warm</figcaption></figure>
+  <figure><a href="ranch-build.png"><img src="ranch-build.png" alt="Builder, Ranch" loading="lazy"></a><figcaption>Ranch</figcaption></figure>
+  <figure><a href="contrast-build.png"><img src="contrast-build.png" alt="Builder, High contrast" loading="lazy"></a><figcaption>High contrast</figcaption></figure>
+  <figure><a href="dark-build.png"><img src="dark-build.png" alt="Builder, Dark" loading="lazy"></a><figcaption>Dark</figcaption></figure>
+</div>
+
+<h2>Final bill</h2>
+<div class="row">
+  <figure class="before"><a href="before-est.png"><img src="before-est.png" alt="Final bill before" loading="lazy"></a><figcaption>Before<span>1.8.1, dark</span></figcaption></figure>
+  <figure><a href="clean-est.png"><img src="clean-est.png" alt="Final bill, Clean" loading="lazy"></a><figcaption>Clean</figcaption></figure>
+  <figure><a href="warm-est.png"><img src="warm-est.png" alt="Final bill, Warm" loading="lazy"></a><figcaption>Warm</figcaption></figure>
+  <figure><a href="ranch-est.png"><img src="ranch-est.png" alt="Final bill, Ranch" loading="lazy"></a><figcaption>Ranch</figcaption></figure>
+  <figure><a href="contrast-est.png"><img src="contrast-est.png" alt="Final bill, High contrast" loading="lazy"></a><figcaption>High contrast</figcaption></figure>
+  <figure><a href="dark-est.png"><img src="dark-est.png" alt="Final bill, Dark" loading="lazy"></a><figcaption>Dark</figcaption></figure>
+</div>
+
+<h2>Jobs board</h2>
+<div class="row">
+  <figure class="before"><a href="before-jobs.png"><img src="before-jobs.png" alt="Jobs before" loading="lazy"></a><figcaption>Before<span>1.8.1, dark</span></figcaption></figure>
+  <figure><a href="clean-jobs.png"><img src="clean-jobs.png" alt="Jobs, Clean" loading="lazy"></a><figcaption>Clean</figcaption></figure>
+  <figure><a href="warm-jobs.png"><img src="warm-jobs.png" alt="Jobs, Warm" loading="lazy"></a><figcaption>Warm</figcaption></figure>
+  <figure><a href="ranch-jobs.png"><img src="ranch-jobs.png" alt="Jobs, Ranch" loading="lazy"></a><figcaption>Ranch</figcaption></figure>
+  <figure><a href="contrast-jobs.png"><img src="contrast-jobs.png" alt="Jobs, High contrast" loading="lazy"></a><figcaption>High contrast</figcaption></figure>
+  <figure><a href="dark-jobs.png"><img src="dark-jobs.png" alt="Jobs, Dark" loading="lazy"></a><figcaption>Dark</figcaption></figure>
+</div>
+
+<h2>Settings (where you pick the look)</h2>
+<div class="row">
+  <figure class="before"><a href="before-settings.png"><img src="before-settings.png" alt="Settings before" loading="lazy"></a><figcaption>Before<span>1.8.1, dark</span></figcaption></figure>
+  <figure><a href="clean-settings.png"><img src="clean-settings.png" alt="Settings, Clean" loading="lazy"></a><figcaption>Clean</figcaption></figure>
+  <figure><a href="warm-settings.png"><img src="warm-settings.png" alt="Settings, Warm" loading="lazy"></a><figcaption>Warm</figcaption></figure>
+  <figure><a href="ranch-settings.png"><img src="ranch-settings.png" alt="Settings, Ranch" loading="lazy"></a><figcaption>Ranch</figcaption></figure>
+  <figure><a href="contrast-settings.png"><img src="contrast-settings.png" alt="Settings, High contrast" loading="lazy"></a><figcaption>High contrast</figcaption></figure>
+  <figure><a href="dark-settings.png"><img src="dark-settings.png" alt="Settings, Dark" loading="lazy"></a><figcaption>Dark</figcaption></figure>
+</div>
+
+<h2>The Builder's left bar</h2>
+<p class="lead">Less at once: the few things you need right then up top, and everything else in big labelled sections that start closed.
+A section you open stays open the next time. The line between the left bar and the map can now be dragged to make the bar wider
+(double-click it to put it back); that is remembered on the computer.</p>
+<h3>Setting up and drawing</h3>
+<div class="side">
+  <figure class="before"><a href="side-before-setup.png"><img src="side-before-setup.png" alt="Left bar before, setting up" loading="lazy"></a><figcaption>Before<span>1.8.2: the four brace switches open at the top</span></figcaption></figure>
+  <figure><a href="side-after-setup.png"><img src="side-after-setup.png" alt="Left bar after, setting up" loading="lazy"></a><figcaption>After<span>Pick the fence, draw it. The switches are in "Braces added for you, 4 of 4 on", lower down.</span></figcaption></figure>
+</div>
+<h3>One fence line, with the ground loaded</h3>
+<div class="side">
+  <figure class="before tall"><a href="side-before-line.png"><img src="side-before-line.png" alt="A fence line's left bar before" loading="lazy"></a><figcaption>Before<span>1.8.2: this is less than half of it; the whole bar was over 5,000 pixels tall</span></figcaption></figure>
+  <figure><a href="side-after-line.png"><img src="side-after-line.png" alt="A fence line's left bar after" loading="lazy"></a><figcaption>After<span>Name, fence type, three key numbers, then sections that open</span></figcaption></figure>
+  <figure><a href="side-after-ground.png"><img src="side-after-ground.png" alt="The ground section open" loading="lazy"></a><figcaption>After, Ground opened<span>"What this means for posts" first; the soil cards behind "Show each soil"</span></figcaption></figure>
+</div>
+
+<h2>What changed in the layout</h2>
+<table>
+  <tr><th>Where</th><th>Before</th><th>After</th></tr>
+  <tr><td>Colours</td><td>Followed the computer's dark setting, so it showed dark. Bright blue blocks on buttons, tabs, step numbers and the how-to cards.</td><td>Opens light (Clean). Blue only on the main button of a page, the page you are on and links. Steps, tabs, switches and picked items use a light tint or an outline. Five looks to pick from in Settings.</td></tr>
+  <tr><td>Top bar</td><td>All the page buttons looked the same, the page you were on was a solid blue block, and "Saved" sat between the two groups.</td><td>Two clear groups: the job pages (Jobs, Builder, Final bill) with the job picker and "Saved" on the left, and the "Setup" pages (Fence types, Braces, Materials, Settings) on the right. The page you are on is white with a line under it. On a narrower window the setup group moves to a second row instead of squeezing; on a phone each group fills the width.</td></tr>
+  <tr><td>Map toolbar</td><td>14 small buttons in two rows, with the search first.</td><td>One row, in groups: <b>Draw fence</b> (big, blue), Add gate, Add brace | Undo, Redo | 3D view, <b>Show</b> (Rolls and Dimensions, with ticks) and <b>More</b> (Refresh, My location, Save area for offline, and Clear map in red at the bottom). Search is on the right. All buttons are at least 40 pixels tall.</td></tr>
+  <tr><td>Builder, setting up</td><td>The four brace switches open at the top, big totals, a long paragraph of drawing help, the lines list with "Clear map" in it.</td><td>The job's two numbers and the Final bill button, then 1. Pick the kind of fence and 2. Draw it on the map. Drawing help is behind "How to draw". The lines list and "Braces added for you (4 of 4 on)" are sections that open and close. Clear map is in the map's More menu.</td></tr>
+  <tr><td>Builder, one line</td><td>Job totals and switches again, then everything about the line in one long column (rolls table, hills, ground, every soil, every point).</td><td>"← All fence lines" and "Zoom to it", the line's name and fence type, then three key numbers (length, line posts, fenced in or steepest). Then sections that start closed: Posts and braces, Ground along this fence (its heading says the gist, like "Mostly easy digging."), Hills and height, Points on this line (opens by itself when you click a point on the map). The line's buttons are at the bottom.</td></tr>
+  <tr><td>Every page</td><td>Page titles, widths and card corners differed from page to page.</td><td>The same page top everywhere: title and one line on the left, the main button on the right, a thin line under it. The same width, padding, card corners and spacing on every page.</td></tr>
+  <tr><td>Final bill</td><td>Six big buttons squeezed next to the title.</td><td>Save estimate and <b>Customer quote</b> next to the title; Job details, Fence map, Copy list and Print my copy in a row just under it.</td></tr>
+  <tr><td>Jobs board</td><td>A solid blue "Open job" on every card.</td><td>"Open job" is outlined, so the board is calmer; the "+ New job" card is a light dashed box.</td></tr>
+  <tr><td>Job page</td><td>"← All jobs" was a big button; the stage you were at was a solid blue block.</td><td>"← All jobs" is a plain link above the title; the stage you are at is tinted with a line under it.</td></tr>
+  <tr><td>How-to cards</td><td>Blue boxes.</td><td>White cards with a thin coloured line down the side, smaller in the Builder's left bar. "Got it" still hides each one.</td></tr>
+</table>
+<p class="note">Nothing about the estimating, the prices or the saved jobs changed. The customer quote stays white in every look.</p>
+</main>
+</body>
+</html>
