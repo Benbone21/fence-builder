@@ -108,7 +108,12 @@ const EDIT_CSS = `#v3d .v3tools{display:flex;gap:8px;flex-wrap:wrap}#v3d .v3tool
 #v3d .v3help{flex:1 1 280px;font-size:16px;font-weight:600}
 #v3d .v3mode .btn{font-size:15px;padding:7px 14px}
 #v3d .v3mode .v3fin{background:#2f7d3b;border-color:#2f7d3b;color:#fff}
-#v3d .v3draw{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}`;
+#v3d .v3draw{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+#v3d .v3nav{position:absolute;right:14px;bottom:14px;z-index:5;display:grid;grid-template-columns:repeat(3,48px);gap:6px;user-select:none;touch-action:none}
+#v3d .v3nav[hidden]{display:none}
+#v3d .v3nav button{width:48px;height:48px;font-size:22px;line-height:1;border-radius:10px;border:1px solid #0006;background:#fffffff0;color:#1b1e22;box-shadow:0 2px 8px #0005;cursor:pointer;padding:0}
+#v3d .v3nav button:active{background:#ffd21f}
+#v3d .v3nav .gap{visibility:hidden}`;
 
 export async function open3D({bounds, lines, types, nodes, key, focus, braces, materials, postRule, layoutOf, edit}) {
   if (open) open.close();
@@ -125,6 +130,7 @@ export async function open3D({bounds, lines, types, nodes, key, focus, braces, m
     <label class="v3l"><input type="checkbox" class="v3fences" checked> Fences</label>
     <label class="v3l"><input type="checkbox" class="v3bld" checked> <span class="v3bldt">Buildings</span></label>
     <span class="v3counts v3l"></span>
+    <label class="v3l" title="What two fingers on a trackpad, or the mouse wheel, do">Scrolling <select class="v3scroll" aria-label="What scrolling does"><option value="auto">Automatic</option><option value="zoom">Zooms in and out</option><option value="pan">Slides the ground</option></select></label>
     <button class="btn sm v3walk" title="Stand at the start of the fence at eye level (V)">Walk the fence</button>
     <button class="btn sm v3over" title="Back to the view from above">Overview</button>
     <button class="btn sm v3close">Close</button></div>
@@ -132,9 +138,11 @@ export async function open3D({bounds, lines, types, nodes, key, focus, braces, m
       <button class="btn v3fin">Finish line</button>
       <button class="btn v3undo">Undo last point</button>
       <button class="btn v3cancel">Cancel</button></div>
-    <div class="v3c"></div>
+    <div class="v3c"><div class="v3nav" aria-label="Turn, tilt and zoom">
+      <button data-nav="turn" data-v="1" title="Turn left">⟲</button><button data-nav="tilt" data-v="-1" title="Tilt to look more from above">▲</button><button data-nav="turn" data-v="-1" title="Turn right">⟳</button>
+      <button data-nav="zoom" data-v="-1" title="Zoom in">+</button><button data-nav="tilt" data-v="1" title="Tilt to look more from the side">▼</button><button data-nav="zoom" data-v="1" title="Zoom out">−</button></div></div>
     <div class="v3note v3src" hidden></div>
-    <div class="v3note">Drag to slide the ground. Right-drag (or <kbd>Ctrl</kbd>-drag) to turn and tilt. Scroll to zoom in where the mouse points. Keys: <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> or arrows to move, <kbd>Q</kbd> <kbd>E</kbd> to turn, <kbd>R</kbd> <kbd>F</kbd> up and down, hold <kbd>Shift</kbd> to go faster. Lost? Press Overview. Click a post to see what it is and the spacing.</div>`;
+    <div class="v3note">Drag to slide the ground. Right-drag (or <kbd>Ctrl</kbd>-drag) to turn and tilt. The mouse wheel zooms in where the mouse points. <b>Trackpad:</b> pinch to zoom, two fingers to slide the ground, <kbd>Shift</kbd> + two fingers to turn and tilt, or use the buttons in the corner. Keys: <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> or arrows to move, <kbd>Q</kbd> <kbd>E</kbd> to turn, <kbd>R</kbd> <kbd>F</kbd> up and down, hold <kbd>Shift</kbd> to go faster. Lost? Press Overview. Click a post to see what it is and the spacing.</div>`;
   document.body.appendChild(ov);
   const msg = ov.querySelector('.v3msg'), box = ov.querySelector('.v3c'), note = ov.querySelector('.v3note:not(.v3src)'), counts = ov.querySelector('.v3counts');
   let raf = 0, renderer, disposed = false;
@@ -667,7 +675,7 @@ export async function open3D({bounds, lines, types, nodes, key, focus, braces, m
   const NOTE_WALK = 'Move the mouse to look around (hold it near the edge to keep turning). <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> walk, <kbd>Shift</kbd> run, <kbd>Space</kbd> jump. <kbd>Esc</kbd> frees the mouse, <kbd>V</kbd> leaves walk mode. Click a post to see what it is.';
   function setWalk(on) {
     if (on && tool) setTool(null);   // building tools work from above, not on foot
-    walking = on; walkBtn.classList.toggle('on', on); walkBtn.textContent = on ? 'Leave walk mode' : 'Walk the fence';
+    walking = on; ov.querySelector('.v3nav').hidden = on; walkBtn.classList.toggle('on', on); walkBtn.textContent = on ? 'Leave walk mode' : 'Walk the fence';
     controls.enabled = !on; hud.hidden = !on; cvs.style.cursor = on ? 'none' : ''; note.innerHTML = on ? NOTE_WALK : NOTE_FLY;
     if (on) {
       const l = lines.find(x => x.id === focus && x.pts.length > 1) || lines.find(x => x.pts.length > 1), L = l && layouts.get(l.id);
@@ -787,15 +795,86 @@ export async function open3D({bounds, lines, types, nodes, key, focus, braces, m
     if (camera.position.y < floor) mv.y = floor - camera.position.y; else if (camera.position.y > top) mv.y = top - camera.position.y;
     if (mv.lengthSq()) shift(mv);
   }
-  // scroll: zoom toward the spot under the mouse, which stays under the mouse
+  // zoom toward the spot under the mouse, which stays under the mouse
+  function zoomBy(ev, amount) {
+    const r = cursorRay(ev);
+    if (!groundHit(r.origin, r.direction, zoomAt)) zoomAt.copy(controls.target);
+    zoomLeft = clamp(zoomLeft + amount, -3, 3);
+  }
+  // turn (left and right) and tilt (up and down) around the spot in the middle of the screen
+  const orbS = new THREE.Spherical(), orbV = new THREE.Vector3();
+  function orbit(dTurn, dTilt) {
+    orbV.subVectors(camera.position, controls.target); orbS.setFromVector3(orbV);
+    orbS.theta += dTurn; orbS.phi = clamp(orbS.phi + dTilt, controls.minPolarAngle, controls.maxPolarAngle); orbS.makeSafe();
+    orbV.setFromSpherical(orbS); camera.position.copy(controls.target).add(orbV); camera.lookAt(controls.target);
+  }
+  // slide the ground the way two fingers move, like dragging it: the spot under the mouse follows the fingers
+  const slideP = new THREE.Vector3(), slideO = new THREE.Vector3();
+  function slideBy(ev, dx, dy) {
+    const r = cursorRay(ev);
+    if (!groundHit(r.origin, r.direction, slideP)) slideP.copy(controls.target);
+    const r2 = cursorRay({clientX: ev.clientX - dx, clientY: ev.clientY - dy});
+    if (r2.direction.y > -0.02) return;   // pointing at the sky
+    const t = (slideP.y - r2.origin.y) / r2.direction.y;
+    slideO.copy(r2.direction).multiplyScalar(t).add(r2.origin);
+    mv.set(slideP.x - slideO.x, 0, slideP.z - slideO.z);
+    const most = Math.max(5, camH() * 3); if (mv.length() > most) mv.setLength(most);
+    shift(mv);
+  }
+  // Scrolling: a mouse wheel zooms; on a trackpad two fingers slide the ground, Shift (or Alt) + two fingers turns and
+  // tilts, and a pinch zooms (browsers send a pinch as Ctrl + scroll). Which one is scrolling is told from the scroll
+  // itself: a mouse wheel moves in big even steps straight up and down, a trackpad in small, uneven ones.
+  const scrollSel = ov.querySelector('.v3scroll');
+  let scrollPref = 'auto'; try { scrollPref = localStorage.getItem('fence-3d-scroll') || 'auto'; } catch (e) {}
+  scrollSel.value = scrollPref;
+  scrollSel.onchange = () => { scrollPref = scrollSel.value; try { localStorage.setItem('fence-3d-scroll', scrollPref); } catch (e) {} cvs.focus?.(); };
+  let burstEnd = 0, burstPad = false;
+  const fromPad = ev => {
+    const now = performance.now(), fresh = now > burstEnd; burstEnd = now + 350;
+    const wheel = ev.deltaMode !== 0 || (!ev.deltaX && Number.isInteger(ev.deltaY) && Math.abs(ev.deltaY) >= 50);
+    if (fresh) burstPad = !wheel; else if (!wheel) burstPad = true;
+    return burstPad;
+  };
   cvs.addEventListener('wheel', ev => {
     if (walking) return;
     ev.preventDefault();
-    const r = cursorRay(ev);
-    if (!groundHit(r.origin, r.direction, zoomAt)) zoomAt.copy(controls.target);
-    const px = ev.deltaY * (ev.deltaMode === 1 ? 33 : ev.deltaMode === 2 ? 400 : 1);
-    zoomLeft = clamp(zoomLeft + clamp(px, -250, 250) * 0.0016, -3, 3);   // one wheel notch is about 15%
+    const k = ev.deltaMode === 1 ? 33 : ev.deltaMode === 2 ? 400 : 1, dx = (ev.deltaX || 0) * k, dy = (ev.deltaY || 0) * k;
+    if (ev.ctrlKey || ev.metaKey) return zoomBy(ev, clamp(dy * 0.012, -0.5, 0.5));   // a pinch, or Ctrl + wheel
+    const pad = scrollPref === 'pan' || (scrollPref === 'auto' && fromPad(ev));
+    if (!pad) return zoomBy(ev, clamp(ev.shiftKey && !dy ? dx : dy, -250, 250) * 0.0016);   // one wheel notch is about 15%
+    zoomLeft = 0;
+    if (ev.shiftKey || ev.altKey) {
+      // some systems turn Shift + scroll into a sideways scroll: then up and down arrives as dx
+      const sideOnly = ev.shiftKey && !dy;
+      orbit(-(sideOnly ? 0 : dx) * 0.006, (sideOnly ? dx : dy) * 0.004);
+    } else slideBy(ev, dx, dy);
   }, {passive: false});
+  // Safari on a Mac sends pinches and two-finger turns as gestures
+  let gest = null;
+  cvs.addEventListener('gesturestart', ev => { ev.preventDefault(); gest = {s: ev.scale || 1, r: ev.rotation || 0}; });
+  cvs.addEventListener('gesturechange', ev => {
+    ev.preventDefault(); if (!gest || walking) return;
+    zoomBy(ev, clamp(-Math.log((ev.scale || 1) / gest.s), -0.5, 0.5)); orbit(-((ev.rotation || 0) - gest.r) * Math.PI / 180, 0);
+    gest = {s: ev.scale || 1, r: ev.rotation || 0};
+  });
+  cvs.addEventListener('gestureend', ev => { ev.preventDefault(); gest = null; });
+  // the buttons in the corner: hold one down to keep turning, tilting or zooming
+  const nav = {turn: 0, tilt: 0, zoom: 0}, navBox = ov.querySelector('.v3nav');
+  const navStop = () => { nav.turn = nav.tilt = nav.zoom = 0; };
+  navBox.addEventListener('pointerdown', ev => {
+    const b = ev.target.closest('[data-nav]'); if (!b) return;
+    ev.preventDefault(); navStop(); nav[b.dataset.nav] = +b.dataset.v;
+    try { navBox.setPointerCapture(ev.pointerId); } catch (e) {}
+  });
+  for (const t of ['pointerup', 'pointercancel', 'lostpointercapture']) navBox.addEventListener(t, navStop);
+  addEventListener('pointerup', navStop); addEventListener('blur', navStop);
+  trash.push({dispose: () => { removeEventListener('pointerup', navStop); removeEventListener('blur', navStop); }});
+  navBox.addEventListener('contextmenu', ev => ev.preventDefault());
+  function stepNav(dt) {
+    if (nav.turn) orbit(nav.turn * dt * 1.1, 0);
+    if (nav.tilt) orbit(0, nav.tilt * dt * 0.7);
+    if (nav.zoom) { zoomAt.copy(controls.target); zoomLeft = clamp(zoomLeft + nav.zoom * dt * 1.6, -3, 3); }
+  }
   function stepZoom(dt) {
     if (!zoomLeft) return;
     let k = zoomLeft * Math.min(1, dt * 14); if (Math.abs(zoomLeft) < 1e-3) k = zoomLeft;
@@ -1103,7 +1182,7 @@ export async function open3D({bounds, lines, types, nodes, key, focus, braces, m
     const dt = Math.min(0.1, (now - last) / 1000 || 0); last = now;
     moveBy(dt);
     if (!walking) {
-      stepZoom(dt); controls.update(); keepInRange(); anchor();
+      stepNav(dt); stepZoom(dt); controls.update(); keepInRange(); anchor();
       // keep close-up posts from being clipped when you're right next to them
       const near = clamp(camera.position.distanceTo(controls.target) / 100, 0.05, Math.max(0.5, size / 2000));
       if (Math.abs(near - camera.near) / camera.near > 0.2) { camera.near = near; camera.updateProjectionMatrix(); }
