@@ -7,9 +7,9 @@ function saveEstimate(){
 }
 function estNote(p){
   if(!A.rows.length)return '';
-  if(!p.est)return `<div class="note noprint estnote">This estimate is not saved to the jobs board yet. <button class="btn sm pri" data-act="saveEst">Save estimate</button></div>`;
+  if(!p.est)return `<div class="note noprint estnote">This estimate is not saved to the jobs board yet. <button class="btn sm soft" data-act="saveEst">Save estimate</button></div>`;
   const ch=Math.abs(p.est.total-A.total)>0.5;
-  return `<div class="note noprint estnote${ch?' warnbox':''}">Estimate saved ${esc(new Date(p.est.at).toLocaleDateString())}: ${money(p.est.total)} for ${fmtFt(p.est.ft)}.${ch?` The job has changed since and is now ${money(A.total)}. <button class="btn sm pri" data-act="saveEst">Save it again</button>`:''}</div>`;
+  return `<div class="note noprint estnote${ch?' warnbox':''}">Estimate saved ${esc(new Date(p.est.at).toLocaleDateString())}: ${money(p.est.total)} for ${fmtFt(p.est.ft)}.${ch?` The job has changed since and is now ${money(A.total)}. <button class="btn sm soft" data-act="saveEst">Save it again</button>`:''}</div>`;
 }
 
 /* ---------- add a material: from a store, from a link, or your own ---------- */

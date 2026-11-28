@@ -660,7 +660,7 @@ COMPRESSIBLE = ("text/", "application/json", "application/manifest+json", "image
 PAGES = {"": "index.html", "index.html": "index.html", "login": "login.html", "login.html": "login.html",
          "admin": "admin.html", "admin.html": "admin.html"}
 # what the sign-in page needs before anyone has signed in (multi mode); everything else needs a sign-in
-PUBLIC_FILES = {"login.html", "login.js", "app.css", "icon-256.png", "icon-512.png", "manifest.webmanifest"}
+PUBLIC_FILES = {"login.html", "login.js", "look.js", "app.css", "icon-256.png", "icon-512.png", "manifest.webmanifest"}
 REF_RE = re.compile(r'((?:href|src)="|"\./)((?:vendor/)?[\w./-]+?\.(?:js|css))"')
 IMPORTMAP_RE = re.compile(r'<script type="importmap">(.*?)</script>', re.S)
 
@@ -774,7 +774,7 @@ def app_js(view3d_ver=""):
 
 def app_files():
     """The app's own files: when one changes, an open window offers to refresh."""
-    names = [os.path.join(STATIC, f) for f in ("index.html", "app.css", "view3d.js")]
+    names = [os.path.join(STATIC, f) for f in ("index.html", "app.css", "look.js", "view3d.js")]
     return [f for f in names + glob.glob(os.path.join(STATIC, "js", "*.js")) if os.path.exists(f)]
 
 

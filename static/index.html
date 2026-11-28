@@ -6,10 +6,11 @@
 <title>Fence Builder</title>
 <link rel="icon" href="icon-256.png" type="image/png">
 <link rel="manifest" href="manifest.webmanifest">
-<meta name="theme-color" content="#1b1e22">
+<meta name="theme-color" content="#ffffff">
 <link rel="stylesheet" href="vendor/leaflet.css">
 <script type="importmap">{"imports":{"three":"./vendor/three.module.js","three/addons/":"./vendor/jsm/"}}</script>
 <link rel="stylesheet" href="app.css">
+<script src="look.js"></script>
 </head>
 <body>
 <header>
@@ -17,8 +18,9 @@
   <nav class="tabs" id="tabs" aria-label="Job pages"></nav>
   <label class="jobpick"><span>Job</span><select id="proj" aria-label="Job"></select></label>
   <button class="btn pri" id="newProj" hidden>+ New job</button>
+  <span id="status"></span>
   <div class="hright">
-    <span id="status"></span>
+    <span class="hlbl" aria-hidden="true">Setup</span>
     <nav class="tabs" id="tabs2" aria-label="Setup pages"></nav>
     <button class="btn" id="bMe" hidden>Account</button>
     <button class="btn" id="bKeys" title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts">?</button>
@@ -33,22 +35,37 @@
   <aside id="side" aria-label="Fence setup"></aside>
   <div id="split" role="separator" aria-orientation="vertical" title="Drag to resize the map, double-click to reset"></div>
   <aside id="mapwrap" aria-label="Map">
-    <div id="mapbar">
-      <form id="search"><input id="q" type="search" placeholder="Search an address or place" aria-label="Search the map"><button class="btn">Go</button></form>
-      <span class="vsep"></span>
-      <button class="btn sm pri" id="bDraw" title="Draw a fence line (F)">Draw fence <kbd>F</kbd></button>
-      <button class="btn sm" id="bGate" title="Add a gate (G)">Add gate <kbd>G</kbd></button>
-      <button class="btn sm" id="bBrace" title="Add a brace (B)">Add brace <kbd>B</kbd></button>
-      <button class="btn sm" id="b3d" title="See the fence in 3D">3D view</button>
-      <span class="sp"></span>
-      <button class="btn sm" id="bHU" title="Undo (Ctrl+Z)" disabled>Undo</button>
-      <button class="btn sm" id="bHR" title="Redo (Ctrl+Y)" disabled>Redo</button>
-      <button class="btn sm" id="bRefresh" title="Recalculate with your latest prices, materials and fence types">Refresh</button>
-      <span class="maplbl">Show:</span><button class="btn sm" id="bRolls" title="Show each roll of the main wire laid along the fence, using the roll length set on the fence type">Rolls</button>
-      <button class="btn sm" id="bDims" title="Show the length of each stretch between braces, like dimensions on a drawing">Dimensions</button>
-      <button class="btn sm del" id="bClear" title="Remove every fence line drawn on the map for this job">Clear map</button>
-      <button class="btn sm" id="bLoc" title="Go to my location">My location</button>
-      <button class="btn sm" id="bOff" title="Save the map, aerial photo and LiDAR for an area, to use with no internet">Save area for offline</button>
+    <div id="mapbar" role="toolbar" aria-label="Map tools">
+      <div class="mgroup" role="group" aria-label="Draw">
+        <button class="btn pri" id="bDraw" title="Draw a fence line (F)">Draw fence <kbd>F</kbd></button>
+        <button class="btn" id="bGate" title="Add a gate (G)">Add gate <kbd>G</kbd></button>
+        <button class="btn" id="bBrace" title="Add a brace (B)">Add brace <kbd>B</kbd></button>
+      </div>
+      <div class="mgroup" role="group" aria-label="Undo and redo">
+        <button class="btn" id="bHU" title="Undo (Ctrl+Z)" disabled>Undo</button>
+        <button class="btn" id="bHR" title="Redo (Ctrl+Y)" disabled>Redo</button>
+      </div>
+      <div class="mgroup" role="group" aria-label="View">
+        <button class="btn" id="b3d" title="See the fence in 3D">3D view</button>
+        <details class="menu" id="mShow">
+          <summary class="btn" title="What to show along the fence lines">Show <i class="caret" aria-hidden="true"></i></summary>
+          <div class="menupop">
+            <p class="menuhead">Show on the map</p>
+            <button class="btn mitem check" id="bRolls" title="Show each roll of the main wire laid along the fence, using the roll length set on the fence type"><b>Rolls</b><span>Each roll of wire laid along the fence</span></button>
+            <button class="btn mitem check" id="bDims" title="Show the length of each stretch between braces, like dimensions on a drawing"><b>Dimensions</b><span>The length of each stretch between braces</span></button>
+          </div>
+        </details>
+        <details class="menu" id="mMore">
+          <summary class="btn" title="More map tools">More <i class="caret" aria-hidden="true"></i></summary>
+          <div class="menupop">
+            <button class="btn mitem" id="bRefresh" title="Recalculate with your latest prices, materials and fence types"><b>Refresh</b><span>Work it out again with your latest prices, materials and fence types</span></button>
+            <button class="btn mitem" id="bLoc" title="Go to my location"><b>My location</b><span>Move the map to where you are</span></button>
+            <button class="btn mitem" id="bOff" title="Save the map, aerial photo and LiDAR for an area, to use with no internet"><b>Save area for offline</b><span>Keep the map of an area to use with no internet</span></button>
+            <button class="btn mitem del" id="bClear" title="Remove every fence line drawn on the map for this job"><b>Clear map</b><span>Remove every fence line in this job</span></button>
+          </div>
+        </details>
+      </div>
+      <form id="search" role="search"><input id="q" type="search" placeholder="Find a place" title="Search an address or place" aria-label="Search the map for an address or place"><button class="btn">Go</button></form>
     </div>
     <div id="mapbox">
       <div id="map"></div>

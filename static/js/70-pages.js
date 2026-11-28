@@ -106,7 +106,8 @@ function estView(){
     <tr class="tot"><td colspan="5">Total</td><td class="num">${money(A.total)}</td><td></td></tr></tfoot></table></div>
 `
     :`<p class="mut">Once there is some fence, the list of what to buy shows up here.</p>`;
-  return `<div class="phead"><div><h1>Final bill: ${esc(p.name)}</h1><p>${p.customer?esc(p.customer)+'. ':''}What to buy and what to charge for this job. A price you change here is for this job only.</p></div><div class="row noprint"><button class="btn big" data-act="jobPage" data-id="${p.id}">Job details</button><button class="btn big" data-act="showMap">Fence map</button><button class="btn big" data-act="copyBill">Copy list</button><button class="btn big" data-act="print">Print my copy</button><button class="btn big" data-act="saveEst">Save estimate</button><button class="btn pri big" data-act="quote">Customer quote</button></div></div>
+  return `<div class="phead"><div><h1>Final bill: ${esc(p.name)}</h1><p>${p.customer?esc(p.customer)+'. ':''}What to buy and what to charge for this job. A price you change here is for this job only.</p></div><div class="row noprint"><button class="btn big" data-act="saveEst">Save estimate</button><button class="btn pri big" data-act="quote">Customer quote</button></div></div>
+  <div class="pbar noprint"><button class="btn" data-act="jobPage" data-id="${p.id}">Job details</button><button class="btn" data-act="showMap">Fence map</button><button class="btn" data-act="copyBill">Copy list</button><button class="btn" data-act="print">Print my copy</button></div>
   ${estNote(p)}<div class="est"><div class="sum"><div><span>Fence length</span><b>${fmtFt(A.totalFt)}</b>${A.area?`<span class="areanote">${fmtAcres(A.area)} fenced in (${fmtSqFt(A.area)})</span>`:''}</div><div><span>Braces</span><b>${braces}</b></div><div><span>Gates</span><b>${A.gates}</b></div>
     <div><span>Materials</span><b>${money(A.sub)}</b></div><div><span>Labor</span><b>${money(A.lab.cost)}</b></div><div><span>Headache and fees</span><b>${money(A.lab.matHead+A.lab.feeTotal)}</b></div><div class="tot"><span>Total</span><b>${money(A.total)}</b></div></div>
   <div class="wide"><h2>Materials to buy</h2>${bill}</div>
@@ -355,7 +356,7 @@ function typesView(){
         <dt>Labor</dt><dd>${money(+x.labor||0)} a foot</dd>
       </dl>
       <div class="small mut">${nl?`Used on ${nl} fence line${nl===1?'':'s'}`:'Not used on any job yet'}</div>
-      <div class="jobbtns"><button class="btn pri" data-act="selFt" data-id="${x.id}">Open and change</button><button class="btn" data-act="dupFt" data-id="${x.id}">Make a copy</button></div></div>`}).join('');
+      <div class="jobbtns"><button class="btn soft" data-act="selFt" data-id="${x.id}">Open and change</button><button class="btn" data-act="dupFt" data-id="${x.id}">Make a copy</button></div></div>`}).join('');
   return `<div class="phead"><div><h1>Fence types</h1><p>What each kind of fence is made of. The builder uses these when you draw. Click one to open it and make changes.</p></div><button class="btn pri big" data-act="addFt">+ New fence type</button></div>
   ${cards?`<div class="jobgrid tgrid">${cards}</div>`:'<p class="mut">Make a fence type to get started.</p>'}`;
 }
@@ -509,13 +510,17 @@ function bracesView(){
         <dt>Used by</dt><dd>${u.length?u.map(esc).join(', '):'<span class="mut">no fence type yet</span>'}</dd>
       </dl>
       <div class="small mut">${n?`${fmtQ(n)} in the open job`:'None in the open job'}</div>
-      <div class="jobbtns"><button class="btn pri" data-act="selKit" data-id="${b.id}">Open and change</button><button class="btn" data-act="dupKit" data-id="${b.id}">Make a copy</button></div></div>`}).join('');
+      <div class="jobbtns"><button class="btn soft" data-act="selKit" data-id="${b.id}">Open and change</button><button class="btn" data-act="dupKit" data-id="${b.id}">Make a copy</button></div></div>`}).join('');
   return `<div class="phead"><div><h1>Braces</h1><p>What goes into each brace and what it costs. Each fence type picks which brace goes at its ends, corners, gates and long runs. Click one to open it and make changes.</p></div><button class="btn pri big" data-act="addKit">+ New brace</button></div>
   ${cards?`<div class="jobgrid tgrid">${cards}</div>`:'<p class="mut">Make a brace to get started.</p>'}`;
 }
 // Settings: a list of sections down the left, one open at a time
 let setSec='look';
-const SET_ALL=[['account','Your account','Password and signing out'],['look','Text size and help','Bigger words, how-to cards'],['biz','Your business','Name, logo and quote terms'],['crew','Crew','Who works on your jobs'],['money','Sales tax','Tax on materials'],['map','Drawing on the map','Slope, roads and rivers'],['ground','Ground and clearing','Soil, water, trees, clearing $'],['offline','Offline maps','Maps saved for no internet'],['prices','Store prices','Keep prices up to date'],['backup','Backup','Save or load a copy of everything'],['server','Fence Builder server','Use a shared server instead'],['updates','Updates','Your version and new ones']];
+// the looks in Settings, Look and text size (their colours are in app.css, look.js keeps the one picked on this computer)
+const APP_LOOKS=[['clean','Clean','White and light grey, with a little blue'],['warm','Warm','Cream and warm grey, with a soft slate blue'],
+  ['ranch','Ranch','A brown top bar, earthy colours and a deep teal'],['contrast','High contrast','Black on white with bold lines, the easiest to read'],
+  ['dark','Dark','Light words on dark grey, easy on the eyes at night']];
+const SET_ALL=[['account','Your account','Password and signing out'],['look','Look and text size','Colours, bigger words, how-to cards'],['biz','Your business','Name, logo and quote terms'],['crew','Crew','Who works on your jobs'],['money','Sales tax','Tax on materials'],['map','Drawing on the map','Slope, roads and rivers'],['ground','Ground and clearing','Soil, water, trees, clearing $'],['offline','Offline maps','Maps saved for no internet'],['prices','Store prices','Keep prices up to date'],['backup','Backup','Save or load a copy of everything'],['server','Fence Builder server','Use a shared server instead'],['updates','Updates','Your version and new ones']];
 // Your account only on a shared server; the server choice only in the Windows app
 const setSecs=()=>SET_ALL.filter(([k])=>k==='account'?isMulti():k==='server'?ME.desktop:true);
 function settingsView(){
@@ -542,7 +547,9 @@ function settingsView(){
       <div class="setfield" style="max-width:560px"><label class="f" for="srvUrl">The server's address</label><input id="srvUrl" type="url" inputmode="url" value="${esc(ME.server_url||'')}" placeholder="https://fence.example.com"></div>
       <div class="row"><button class="btn pri big" data-act="useServer">Use this server</button>${ME.server_url?'<button class="btn big" data-act="useLocalCopy">Keep using this computer</button>':''}</div>
       <div class="note">Your jobs on this computer stay here, apart from the server's. To come back to them, press <b>Use the copy on this computer</b> on the server's sign-in page or in its Settings, Your account.</div>`,
-    look:`<h2>Text size</h2><p class="lead">Make the words and buttons bigger. It counts on this computer and every other one. The map itself stays the same.</p>
+    look:`<h2>Look</h2><p class="lead">Pick the colours you find easiest to read. The look is kept on this computer only, so each computer can have its own.</p>
+      <div class="lookpick">${APP_LOOKS.map(([k,n,dsc])=>{const on=(window.fbLook?.get()||'clean')===k;return `<button class="lookbtn${on?' on':''}" data-act="look" data-k="${k}"${on?' aria-pressed="true"':' aria-pressed="false"'}><span class="lookprev" data-theme="${k}" aria-hidden="true"><i class="lp-bar"><i class="lp-tab"></i><i class="lp-tab on"></i><i class="lp-tab"></i></i><i class="lp-card"><i class="lp-ln"></i><i class="lp-ln s"></i><i class="lp-row"><i class="lp-btn"></i><i class="lp-btn pri"></i></i></i></span><b>${n}${on?' <span class="lookon">✓ in use</span>':''}</b><span class="lookd">${dsc}</span></button>`}).join('')}</div>
+      <h3>Text size</h3><p class="mut" style="margin-top:0">Make the words and buttons bigger. It counts on this computer and every other one. The map itself stays the same.</p>
       <div class="sizepick">${[['1','Normal'],['1.15','Large'],['1.3','Larger']].map(([v,n])=>`<button class="sizebtn${String(+s.textSize||1)===v?' on':''}" data-act="textSize" data-k="${v}"><span style="font-size:${17*+v}px">Aa</span><b>${n}</b></button>`).join('')}</div>
       <h3>How-to cards</h3><p class="mut" style="margin-top:0">A short card at the top of each page says how it works. Press <b>Got it</b> on a card to hide it.</p>
       <button class="btn big" data-act="tipsReset">Show the how-to cards again</button>`,
