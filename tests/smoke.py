@@ -9,6 +9,9 @@ headless browser, click every page, add a job with a fence line, and check the F
 Exits 0 when everything passed, 1 with a list of problems otherwise. The release workflow runs it
 before building the installer. It never touches the real data: the server gets a new temp folder.
 
+It runs twice: once the way the Windows app runs (single user, no sign-in), and once as a shared
+server with accounts (FENCE_MODE=multi), signed in as a test admin. --only single|multi runs one.
+
 It only relies on things a user sees (the page names on the tab buttons, the job name, the
 "Fence length" and "Total" figures) and on the saved-data format (api/data), not on how
 index.html is put together inside, so the page can be reorganised without breaking it.
@@ -33,8 +36,16 @@ def free_port():
         return s.getsockname()[1]
 
 
+SIGNED_IN = {}   # multi mode: the test admin's cookie and safety token, sent with every request
+
+
 def http(base, path, method="GET", body=None, headers=None, timeout=20):
-    req = urllib.request.Request(base + path, method=method, data=body, headers=headers or {})
+    h = dict(headers or {})
+    if SIGNED_IN:
+        h["Cookie"] = SIGNED_IN["cookie"]
+        if method != "GET":
+            h.update({"X-CSRF-Token": SIGNED_IN["csrf"], "Origin": base})
+    req = urllib.request.Request(base + path, method=method, data=body, headers=h)
     with urllib.request.urlopen(req, timeout=timeout) as r:
         return r.status, r.read()
 
@@ -45,13 +56,38 @@ def wait_for_server(base, proc, seconds=60):
         if proc.poll() is not None:
             raise RuntimeError("server.py exited early with code %s" % proc.returncode)
         try:
-            st, body = http(base, "/api/version", timeout=15)
-            if st == 200 and "version" in json.loads(body):
+            st, body = http(base, "/api/health", timeout=15)
+            if st == 200 and json.loads(body).get("ok"):
                 return
         except (OSError, ValueError):
             pass
         time.sleep(0.5)
-    raise RuntimeError("server did not answer /api/version within %ds" % seconds)
+    raise RuntimeError("server did not answer /api/health within %ds" % seconds)
+
+
+def sign_in(base):
+    """Multi mode: sign in as the test admin made from FENCE_ADMIN_USER, and pick the new password it asks for."""
+    def post(path, body, extra=None):
+        h = {"Content-Type": "application/json", "Origin": base, **(extra or {})}
+        req = urllib.request.Request(base + path, method="POST", data=json.dumps(body).encode(), headers=h)
+        with urllib.request.urlopen(req, timeout=30) as r:
+            return r.headers.get_all("Set-Cookie") or [], json.loads(r.read())
+
+    def cookie_of(lines):
+        return next(c.split(";", 1)[0] for c in lines if c.startswith("fb_session="))
+
+    def me(cookie):
+        req = urllib.request.Request(base + "/api/auth/me", headers={"Cookie": cookie})
+        with urllib.request.urlopen(req, timeout=20) as r:
+            return json.loads(r.read())["csrf"]
+
+    lines, j = post("/api/auth/login", {"username": "smoke", "password": "smoke test first password"})
+    cookie = cookie_of(lines)
+    if j.get("must_change"):
+        lines, _ = post("/api/auth/password", {"old": "smoke test first password", "new": "smoke test real password"},
+                        {"Cookie": cookie, "X-CSRF-Token": me(cookie)})
+        cookie = cookie_of(lines)
+    SIGNED_IN.update(cookie=cookie, csrf=me(cookie))
 
 
 def add_job(base):
@@ -78,26 +114,35 @@ def add_job(base):
         raise RuntimeError("saving the test job answered %s" % st)
 
 
-def run(args):
+def run(args, multi=False):
     from playwright.sync_api import sync_playwright, Error as PwError
 
     problems = []
+    SIGNED_IN.clear()
     tmp = tempfile.mkdtemp(prefix="fence-smoke-")
     port = free_port()
     base = "http://127.0.0.1:%d" % port
     env = dict(os.environ, FENCE_DATA=os.path.join(tmp, "data", "fence-data.json"), PORT=str(port),
                HOST="127.0.0.1", PYTHONUNBUFFERED="1")
-    env.pop("FENCE_PASS", None)
-    env.pop("FENCE_APP", None)
+    for k in ("FENCE_PASS", "FENCE_APP", "FENCE_MODE", "FENCE_ADMIN_USER", "FENCE_ADMIN_PASSWORD"):
+        env.pop(k, None)
+    env["FENCE_MODE"] = "multi" if multi else "single"
+    if multi:
+        env.update(FENCE_ADMIN_USER="smoke", FENCE_ADMIN_PASSWORD="smoke test first password")
     log = open(os.path.join(tmp, "server.log"), "w", encoding="utf-8")
     proc = subprocess.Popen([sys.executable, os.path.join(ROOT, "server.py")], cwd=tmp, env=env,
                             stdout=log, stderr=subprocess.STDOUT)
     try:
         wait_for_server(base, proc)
-        print("server up on", base, "data in", tmp)
+        print("server up on", base, "data in", tmp, "(%s)" % env["FENCE_MODE"])
+        if multi:
+            sign_in(base)
         with sync_playwright() as pw:
             browser = pw.chromium.launch(headless=not args.headed)
             ctx = browser.new_context(viewport={"width": 1400, "height": 900}, service_workers="block")
+            if multi:
+                k, _, v = SIGNED_IN["cookie"].partition("=")
+                ctx.add_cookies([{"name": k, "value": v, "url": base + "/"}])
             if not args.online:
                 ctx.route(re.compile(r"^(?!%s)" % re.escape(base)), lambda route: route.abort())
             page = ctx.new_page()
@@ -231,6 +276,7 @@ def main():
     ap.add_argument("--headed", action="store_true", help="show the browser window")
     ap.add_argument("--online", action="store_true", help="let the page reach other sites (maps, LiDAR)")
     ap.add_argument("--shot", help="save a screenshot here when something fails")
+    ap.add_argument("--only", choices=("single", "multi"), help="run only one of the two ways")
     args = ap.parse_args()
     try:
         import playwright  # noqa: F401
@@ -238,7 +284,11 @@ def main():
         print("SMOKE TEST FAILED: Playwright is not installed. Run:\n"
               "  py -m pip install playwright\n  py -m playwright install chromium")
         return 1
-    problems = run(args)
+    problems = []
+    for mode in ("single", "multi"):
+        if args.only in (None, mode):
+            print("==== %s ====" % ("single user, no sign-in (the Windows app)" if mode == "single" else "shared server with accounts"))
+            problems += ["%s: %s" % (mode, p) for p in run(args, multi=mode == "multi")]
     if problems:
         print("\nSMOKE TEST FAILED (%d problem%s):" % (len(problems), "" if len(problems) == 1 else "s"))
         for p in problems:

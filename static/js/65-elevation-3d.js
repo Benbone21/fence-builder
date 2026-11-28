@@ -161,7 +161,9 @@ async function fetchElev(l,k){
   for(let i=0;i<n;i+=every)prof.push([+(D[i]*FT).toFixed(1),+(zs[i]*FT).toFixed(1)]);
   if((n-1)%every)prof.push([+(D[n-1]*FT).toFixed(1),+(zs[n-1]*FT).toFixed(1)]);
   l.elev={v:EV,key:k,at:Date.now(),down:!!E.down,src:E.src,lidar:E.lidar,flat:acc*FT,surface:Math.max(surf,acc)*FT,min:mn*FT,max:mx*FT,climb:climb*FT,drop:drop*FT,grade:grade*100,prof};
+  const hb=hillBraces(l);   // braces at hilltops and the bottoms of hills, when those switches are on
   if(snapCur===S.cur)snapNow=snapState();save(true);renderAll();
+  if(hb)toast(`Added ${hb} brace${hb===1?'':'s'} on hills along ${l.name}. Drag them to where you want them.`);
 }
 function profileSvg(ev){
   const pr=ev.prof;if(!pr||pr.length<2)return'';
@@ -235,7 +237,7 @@ function edit3D(){
       if(!pts||pts.length<2)return {error:'A fence needs at least two points'};
       const l={id:uid('l'),name:'Fence '+(P().lines.length+1),type:drawTypeId(),pts:pts.map(p=>({lat:p.lat,lng:p.lng,brace:null}))};
       P().lines.push(l);selLine=l.id;selNode=null;S.tab='build';changed();
-      if(S.settings.autoCross!==false){const n0=l.pts.length;
+      if(crossOn()){const n0=l.pts.length;
         findCrossings(l.id,true).then(()=>{const l2=getLine(l.id);if(l2&&l2.pts.length!==n0)ed.onOutsideChange?.(`Added gates at roads and braces at rivers along ${l2.name}. Drag them on the map to move them.`)}).catch(e=>console.error(e))}
       return {...fresh(),id:l.id,msg:l.name+' added'};
     },

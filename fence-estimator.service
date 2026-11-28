@@ -8,7 +8,9 @@ After=network-online.target
 WorkingDirectory=/opt/fence-estimator
 ExecStart=/usr/bin/python3 /opt/fence-estimator/server.py
 Environment=PORT=8787
-Environment=FENCE_PASS=change-me
+# a shared server: everyone signs in with their own account (see README.md and SECURITY.md)
+Environment=FENCE_MODE=multi
+Environment=FENCE_DATA=/opt/fence-estimator/data/fence-data.json
 Restart=on-failure
 User=www-data
 

@@ -8,6 +8,10 @@ You pick an area on the map and Fence Builder downloads, from USGS (public domai
 They live in an "offline" folder next to the data file. The map asks this server for its tiles, and the
 server answers from the saved copy first, so a saved area works the same with or without internet.
 Standard library only.
+
+On a shared (multi-user) server the map pieces are one shared copy of public USGS data, but each saved
+area belongs to the person who saved it: only they see it in their list, and only they can finish or
+delete it. There are limits on how many areas each person keeps and downloads at once.
 """
 import concurrent.futures, json, math, os, re, struct, threading, time, urllib.parse, urllib.request, uuid
 
@@ -30,6 +34,10 @@ PARCELS = [
     {"name": "State of Idaho", "url": "https://services1.arcgis.com/CNPdEkvnGl65jCX8/arcgis/rest/services/Public_Idaho_Parcels_/FeatureServer/7", "id": "PARCEL_ID", "acres": "ASR_ACRES", "county": "County"},
 ]
 MAX_TILES = 60000          # about 100 square km at full detail
+MAX_AREAS_EACH = 10        # shared server: saved areas per person
+MAX_RUNNING_EACH = 1       # shared server: downloads at once per person
+MAX_RUNNING = 2            # shared server: downloads at once in all
+MIN_FREE = 2_000_000_000   # shared server: bytes of disk that must stay free
 DEM_STEP = 1.0             # meters between saved ground heights
 DEM_BLOCK = 2000           # pixels per side of each saved height file
 WORKERS = 6
@@ -37,6 +45,8 @@ WORKERS = 6
 ROOT = None
 LOCK = threading.Lock()
 JOBS = {}                  # area id -> thread, while downloading
+OWNERS = {}                # area id -> who started the download (shared server)
+START_LOCK = threading.Lock()
 
 
 def init(data_file):
@@ -291,25 +301,56 @@ def check_bbox(b):
     return [w, s, e, n]
 
 
-def start(name, bbox, maxz):
+def mine(a, owner, admin):
+    """Shared server: is this saved area this person's? (Areas from before accounts are the admins'.)"""
+    return owner is None or a.get("owner") == owner or (not a.get("owner") and admin)
+
+
+def check_room(owner):
+    """Shared server: refuse a download that would go over the limits."""
+    if owner is None:
+        return
+    if sum(1 for a in areas() if a.get("owner") == owner) >= MAX_AREAS_EACH:
+        raise ValueError("You have %d saved areas, the most you can keep. Delete one in Settings, Offline maps." % MAX_AREAS_EACH)
+    if sum(1 for o in OWNERS.values() if o == owner) >= MAX_RUNNING_EACH:
+        raise ValueError("One area is still downloading. Wait for it to finish, then save the next one.")
+    if len(JOBS) >= MAX_RUNNING:
+        raise ValueError("The server is busy saving other areas. Please try again in a few minutes.")
+    try:
+        import shutil
+        if shutil.disk_usage(ROOT).free < MIN_FREE:
+            raise ValueError("The server is running out of room for map downloads. Ask the person who runs it.")
+    except OSError:
+        pass
+
+
+def start(name, bbox, maxz, owner=None):
     bbox = check_bbox(bbox)
     maxz = max(14, min(19, int(maxz)))
     total = count_tiles(bbox, maxz)
     if total > MAX_TILES:
         raise ValueError("That area is too big to save (%d map pieces). Pick a smaller area or less detail." % total)
-    a = {"id": uuid.uuid4().hex[:10], "name": (name or "Saved area").strip()[:80], "bbox": bbox, "maxz": maxz,
-         "created": time.time(), "status": "downloading", "done": 0, "total": total, "failed": 0, "bytes": 0, "dem": []}
-    save_meta(a, new=True)
-    run(a)
+    with START_LOCK:   # one start at a time, so two can't both squeeze under the limits
+        check_room(owner)
+        a = {"id": uuid.uuid4().hex[:10], "name": re.sub(r"[\x00-\x1f]", "", str(name or "Saved area")).strip()[:80] or "Saved area",
+             "bbox": bbox, "maxz": maxz, "created": time.time(), "status": "downloading", "done": 0, "total": total,
+             "failed": 0, "bytes": 0, "dem": []}
+        if owner:
+            a["owner"] = owner
+        save_meta(a, new=True)
+        run(a)
     return a
 
 
-def resume(aid):
+def resume(aid, owner=None, admin=True):
     a = get_area(aid)
-    if not a:
+    if not a or not mine(a, owner, admin):
         raise ValueError("No such area")
     if aid in JOBS:
         return a
+    if owner is not None:
+        if sum(1 for o in OWNERS.values() if o == owner) >= MAX_RUNNING_EACH or len(JOBS) >= MAX_RUNNING:
+            raise ValueError("Another area is still downloading. Please try again when it is done.")
     a.update(status="downloading", failed=0)
     save_meta(a)
     run(a)
@@ -319,6 +360,7 @@ def resume(aid):
 def run(a):
     t = threading.Thread(target=download, args=(a,), daemon=True)
     JOBS[a["id"]] = t
+    OWNERS[a["id"]] = a.get("owner")
     t.start()
 
 
@@ -409,6 +451,7 @@ def download(a):
             pass
     finally:
         JOBS.pop(aid, None)
+        OWNERS.pop(aid, None)
 
 
 def dem_blocks(bbox):
@@ -532,6 +575,13 @@ def delete(aid):
     return True
 
 
+def delete_owned(owner):
+    """A deleted account's saved areas go too (map pieces other areas use are kept)."""
+    for a in areas():
+        if owner and a.get("owner") == owner:
+            delete(a["id"])
+
+
 def _covers(bbox, layer, z, x, y):
     w, s, e, n = bbox
     N = 2 ** z
@@ -544,8 +594,8 @@ def _covers(bbox, layer, z, x, y):
 TILE_RE = re.compile(r"off/tile/(naip|hill)/(\d+)/(\d+)/(\d+)")
 
 
-def handle_get(h, api, q):
-    """GET api/off/... ; returns True if it answered."""
+def handle_get(h, api, q, owner=None, admin=True, private=False):
+    """GET api/off/... ; returns True if it answered. owner: the signed-in person on a shared server."""
     m = TILE_RE.fullmatch(api)
     if m:
         body = tile(m.group(1), int(m.group(2)), int(m.group(3)), int(m.group(4)))
@@ -557,12 +607,12 @@ def handle_get(h, api, q):
         h.send_response(200)
         h.send_header("Content-Type", LAYERS[m.group(1)]["ctype"])
         h.send_header("Content-Length", str(len(body)))
-        h.send_header("Cache-Control", "max-age=86400")
+        h.send_header("Cache-Control", ("private, " if private else "") + "max-age=86400")
         h.end_headers()
         h.wfile.write(body)
         return True
     if api == "off/areas":
-        h.send(200, {"areas": areas()})
+        h.send(200, {"areas": [{k: v for k, v in a.items() if k != "owner"} for a in areas() if mine(a, owner, admin)]})
         return True
     if api == "off/estimate":
         b = check_bbox((q.get("bbox") or [""])[0].split(","))
@@ -585,11 +635,13 @@ def handle_get(h, api, q):
     return False
 
 
-def handle_post(h, api, body):
+def handle_post(h, api, body, owner=None, admin=True, may_save=True):
     """POST api/off/... with a JSON body; returns True if it answered."""
     if api == "off/areas":
-        a = start(body.get("name"), body.get("bbox") or [], body.get("maxz") or 19)
-        h.send(200, {"area": a})
+        if not may_save:
+            raise ValueError("Saving map areas for offline use is turned off on this server. Ask the person who runs it.")
+        a = start(body.get("name"), body.get("bbox") or [], body.get("maxz") or 19, owner=owner)
+        h.send(200, {"area": {k: v for k, v in a.items() if k != "owner"}})
         return True
     if api == "off/elev":
         pts = body.get("pts") or []
@@ -599,9 +651,12 @@ def handle_post(h, api, body):
         return True
     m = re.fullmatch(r"off/areas/([0-9a-f]{10})/(delete|resume)", api)
     if m:
-        if m.group(2) == "delete":
+        a = get_area(m.group(1))
+        if not a or not mine(a, owner, admin):
+            h.send(404, {"error": "No such area"})
+        elif m.group(2) == "delete":
             h.send(200, {"ok": delete(m.group(1))})
         else:
-            h.send(200, {"area": resume(m.group(1))})
+            h.send(200, {"area": {k: v for k, v in resume(m.group(1), owner, admin).items() if k != "owner"}})
         return True
     return False

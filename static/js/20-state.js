@@ -5,8 +5,13 @@ const busy={}, errs={};
 // older version, so two open windows can't wipe out each other's work; the stale one loads the latest.
 let baseRev=0,saving=false,saveAgain=false,baseJSON=null;
 async function load(){
-  try{const r=await fetch('api/data',{cache:'no-store'});if(r.ok){serverOK=true;const j=await r.json();baseRev=+j?.rev||0;if(j&&j.materials){baseJSON=JSON.stringify(j);return j}}}catch(e){}
-  try{const j=JSON.parse(localStorage.getItem('fence-est'));if(j&&j.materials)return j}catch(e){}
+  try{const r=await fetch('api/data',{cache:'no-store'});if(r.ok){serverOK=true;const j=await r.json();baseRev=+j?.rev||0;
+    await mePromise;const kept=pendingChange(baseRev);   // a change kept when the sign-in ran out
+    if(kept){baseJSON=JSON.stringify(j);setTimeout(()=>{save();toast('Your last change was saved.')},800);return kept}
+    if(j&&j.materials){baseJSON=JSON.stringify(j);return j}}}catch(e){}
+  await mePromise;
+  // a shared server keeps nobody's jobs in the browser (other people may use this computer)
+  if(!isMulti())try{const j=JSON.parse(localStorage.getItem('fence-est'));if(j&&j.materials)return j}catch(e){}
   // nothing saved yet: start from the setup that ships with the app (your fence types, braces and materials)
   try{const r=await fetch('seed.json',{cache:'no-store'});if(r.ok){const j=await r.json();if(j&&Array.isArray(j.materials)&&j.materials.length)return {...defaults(),...j}}}catch(e){}
   return defaults();
@@ -18,19 +23,30 @@ function save(auto){elevOnly=auto===true&&(elevOnly||!saveT);clearTimeout(saveT)
 async function pushSave(){
   if(saving){saveAgain=true;return}
   saving=true;const body=JSON.stringify(S),quiet=elevOnly;elevOnly=false;
-  try{localStorage.setItem('fence-est',body)}catch(e){}
+  if(!isMulti())try{localStorage.setItem('fence-est',body)}catch(e){}
   if(!serverOK){setStatus('Saved on this device');saving=false;return}
   try{
-    const r=await fetch('api/data',{method:'PUT',headers:{'Content-Type':'application/json','X-Base-Rev':String(baseRev)},body});
+    const sent=await packed(body);
+    const r=await fetch('api/data',{method:'PUT',headers:{'Content-Type':'application/json','X-Base-Rev':String(baseRev),...sent.headers},body:sent.body});
     if(r.status===409){saving=false;saveAgain=false;return mergeLatest(quiet)}
-    if(!r.ok)throw 0;
+    if(!r.ok)throw r.status;
     baseRev=+(await r.json()).rev||baseRev;baseJSON=body;setStatus('Saved');
-  }catch(e){setStatus('Saved on this device only, server not reachable')}
+  }catch(e){
+    if(!isMulti())setStatus('Saved on this device only, server not reachable');
+    else if(e===403)setStatus('Not saved. Please refresh the page.');
+    else if(e!==401){setStatus('Not saved yet, the server is not answering. Trying again…');setTimeout(()=>{if(!saveT&&!saving)save()},15000)}
+  }
   saving=false;if(saveAgain){saveAgain=false;pushSave()}
+}
+// a shared server is often far away: a big save goes up compressed (about a fifth of the size)
+async function packed(body){
+  if(!isMulti()||body.length<32768||typeof CompressionStream!=='function')return {body,headers:{}};
+  try{return {body:await new Response(new Blob([body]).stream().pipeThrough(new CompressionStream('gzip'))).blob(),headers:{'Content-Encoding':'gzip'}}}
+  catch(e){return {body,headers:{}}}
 }
 function flush(){
   if(!saveT||!S)return;clearTimeout(saveT);saveT=null;const body=JSON.stringify(S);
-  try{localStorage.setItem('fence-est',body)}catch(e){}
+  if(!isMulti())try{localStorage.setItem('fence-est',body)}catch(e){}
   if(serverOK)try{fetch('api/data',{method:'PUT',headers:{'Content-Type':'application/json','X-Base-Rev':String(baseRev)},body,keepalive:body.length<60000}).then(r=>r.ok?r.json():null).then(j=>{if(j?.rev){baseRev=+j.rev;baseJSON=body}}).catch(()=>{})}catch(e){}
 }
 addEventListener('pagehide',flush);document.addEventListener('visibilitychange',()=>{if(document.hidden)flush()});
@@ -102,6 +118,13 @@ async function checkUpdate(force){
   if(!serverOK)return;
   try{const r=await fetch('api/version'+(force?'?force=1':''),{cache:'no-store'});upd=await r.json()}catch(e){return}
   const bar=$('#updbar');
+  if(upd.server){   // a shared server: whoever runs it updates it; its admins are told when a new version is out
+    if(isAdmin()&&upd.newer&&sessionStorage.getItem('fence-later')!==upd.latest){
+      bar.innerHTML=`<span>Fence Builder ${esc(upd.latest)} is out. This server has ${esc(upd.version)}.</span><a href="https://github.com/Benbone21/fence-builder#updating-the-server" target="_blank" rel="noopener">How to update the server</a><button class="btn sm" id="updLater">Later</button>`;
+      bar.hidden=false;$('#updLater').onclick=()=>{sessionStorage.setItem('fence-later',upd.latest);bar.hidden=true};
+    }else bar.hidden=true;
+    if(S?.tab==='settings')renderPanel();return;
+  }
   if(upd.available&&sessionStorage.getItem('fence-later')!==upd.latest){
     bar.innerHTML=`<span>Fence Builder ${esc(upd.latest)} is out. You have ${esc(upd.version)}.</span><a href="${esc(upd.url)}" target="_blank" rel="noopener">What's new</a><button class="btn sm" id="updGo">Update now</button><button class="btn sm" id="updLater">Later</button>`;
     bar.hidden=false;
@@ -120,7 +143,7 @@ async function installUpdate(){
     // wait for the server to come back, then load the new version (the installer takes longer)
     for(let i=0;i<(j.mode==='installer'?240:60);i++){await new Promise(res=>setTimeout(res,1000));try{const v=await (await fetch('api/version',{cache:'no-store'})).json();if(v.version===j.version)return location.reload()}catch(e){}}
     location.reload();
-  }catch(e){bar.innerHTML=`<span>${esc(e.message||String(e))}</span><button class="btn sm" onclick="this.parentNode.hidden=true">OK</button>`}
+  }catch(e){bar.innerHTML=`<span>${esc(e.message||String(e))}</span><button class="btn sm" id="updOk">OK</button>`;$('#updOk').onclick=()=>{bar.hidden=true}}
 }
 let appVer=null;
 async function checkLatest(){

@@ -2,7 +2,7 @@
 
 Draw fence lines on a satellite map and get the footage (following the ground slope),
 every post, brace and roll of wire you need, what it costs, and a final bill with labor
-and fees. Runs as a Windows app or as a small web server for your whole network.
+and fees. Runs as a Windows app, or as a shared server where each person signs in to their own account.
 
 ## Install on Windows
 
@@ -45,19 +45,135 @@ your jobs from `data/` next to the code). The web server (`python server.py`) ke
 release's source, replaces the app's own files (never `data/`; the replaced files are kept in
 `_previous/`) and restarts.
 
-## Run it as a server for your network
+### Use a shared Fence Builder server from the app
 
-    python server.py
-    # open http://localhost:8787, or http://<this computer's address>:8787 from a phone
+If your business runs a shared Fence Builder server (see below), the app can open it instead of its own copy:
+**Settings → Fence Builder server**, type the server's address (for example `https://fence.example.com` or
+`http://192.168.1.20:8787`) and press **Use this server**. The window then shows the server's sign-in page,
+also the next times the app opens. The jobs on this computer stay where they are. To go back to them, press
+**Use the copy on this computer** on the server's sign-in page or in its **Settings → Your account**. If the
+server can't be reached when the app opens, the app shows this computer's copy and says so.
 
-With Docker (TrueNAS custom app works too):
+## Run it as a shared server (Ubuntu and Docker)
 
+A shared server is Fence Builder on one machine that you and your team open in a web browser. Everyone
+signs in with their own account and has their own jobs, fence types, braces, materials, prices and
+settings, like separate businesses. Nobody sees anyone else's. You, the admin, add people and manage
+their accounts on the **Accounts** page. What protects it is written down in [SECURITY.md](SECURITY.md).
+
+### 1. Install Docker (once)
+
+On the Ubuntu server, in a terminal:
+
+    sudo apt update
+    sudo apt install -y docker.io docker-compose-v2 git
+    sudo usermod -aG docker $USER
+
+Log out and back in (so the last line counts), then check it works: `docker compose version`.
+
+### 2. Get Fence Builder and start it
+
+    git clone https://github.com/Benbone21/fence-builder.git
+    cd fence-builder
     docker compose up -d --build
 
-Your data is saved to `data/fence-data.json`, with hourly copies in `data/backups/`.
-Set `FENCE_PASS` to require a login (user name `fence`) before opening it to other people.
-"My location" on a phone only works over https, so put it behind nginx with a certificate
-(see `nginx-fence.conf`).
+The first start takes a minute or two. `docker compose ps` should then show `fence-builder` as
+`running (healthy)`. It starts again by itself after a restart of the server.
+
+### 3. Make your admin account
+
+Look in the server's log for the setup code:
+
+    docker compose logs fence
+
+It is under **FIRST-TIME SETUP** and looks like `K7MP-Q3XD-9WTE`. Open
+`http://<the server's address>:8787` in a browser (to find the address: `hostname -I`). Fence Builder asks
+for the setup code, your name, a user name and a password. That is the admin account. A new code is made
+each time the server starts, until the first account exists, and it stops working once used.
+
+If a Fence Builder server already ran here before accounts (a `data/fence-data.json` file), its jobs,
+prices and settings become this first admin's. The old file is kept as `data/fence-data.json.moved-to-<name>`.
+
+### 4. Add people
+
+Open **Settings → Your account → Manage accounts** (or go to `/admin`). **+ Add a person**: their name, a
+user name, and either a temporary password you give them (they pick their own when they first sign in) or
+a one-time link to send them (it works for 7 days). The same page resets passwords, turns accounts off and
+on, makes someone an admin, deletes accounts (their data is kept in `data/deleted/`), and shows who signed
+in and every wrong password.
+
+New accounts start with the fence types, braces and materials of the starting setup. To make yours the
+starting setup, set it up in your account, then **Settings → Backup → Save my setup as the starting setup
+for new accounts**. Your jobs, business details and crew are never copied.
+
+### Where your data is, and backups
+
+Everything is in the `data` folder next to `docker-compose.yml`:
+
+- `data/accounts/`: the accounts (passwords only as scrambled hashes), sign-ins and the security log
+- `data/users/<id>/fence-data.json`: each person's jobs, prices and settings, with an hourly copy in
+  `data/users/<id>/backups/` (the last 200 kept)
+- `data/offline/`: saved map areas; `data/deleted/`: data of deleted accounts
+
+The files belong to the server's own user, so use `sudo` to copy them. To back everything up (the
+server can keep running):
+
+    sudo tar czf fence-backup-$(date +%F).tar.gz data
+
+Keep the backup somewhere else too (another computer, a USB drive). To restore: `docker compose down`,
+put the `data` folder back (`sudo tar xzf fence-backup-<date>.tar.gz`), `docker compose up -d`.
+
+### Updating the server
+
+When a new version is out (admins see a green bar in the app), in the `fence-builder` folder:
+
+    git pull
+    docker compose build --pull
+    docker compose up -d
+
+Nobody's jobs, prices or settings are touched. The in-app **Update now** is only for the Windows app; a
+shared server is always updated this way.
+
+### Settings
+
+Put settings in a file called `.env` next to `docker-compose.yml` (start from `.env.example`:
+`cp .env.example .env`), then `docker compose up -d` again. The ones you might use: `FENCE_PUBLISH` (the
+port, default 8787), `FENCE_OFFLINE` (who may save map areas for offline: `all`, `admin` or `off`), and the
+https ones below. More are listed at the top of `server.py`.
+
+### Later: a domain name and https
+
+Inside your own network, plain `http://` is fine. **Before people sign in from outside it, turn on https**:
+over plain http their passwords and jobs travel unencrypted. Fence Builder warns about this on the sign-in
+page and the Accounts page.
+
+1. Get a domain name (or a subdomain, like `fence.yourbusiness.com`) and point it at the server's public
+   address (an `A` record at your domain seller). On a VPS that is the VPS's address; at home, forward ports
+   80 and 443 on your router to the server.
+2. Make sure ports 80 and 443 are open (on Ubuntu with ufw: `sudo ufw allow 80,443/tcp`).
+3. In `.env` set:
+
+       FENCE_DOMAIN=fence.yourbusiness.com
+       FENCE_PUBLIC_URL=https://fence.yourbusiness.com
+       FENCE_PUBLISH=127.0.0.1:8787
+       FENCE_ALLOWED_HOSTS=fence.yourbusiness.com
+
+4. Start it with Caddy, which gets and renews the certificate by itself:
+
+       docker compose --profile https up -d --build
+
+Open `https://fence.yourbusiness.com`. From now on add `--profile https` to the `docker compose up -d` of an update too.
+
+**Moving to a VPS**: install Docker and clone Fence Builder there (steps 1 and 2), stop the old server
+(`docker compose down`), copy the whole `data` folder over (for example
+`sudo tar czf data.tgz data`, copy `data.tgz`, then `sudo tar xzf data.tgz` in the new `fence-builder`
+folder), set up the domain and https as above, and start it. Everyone signs in as before.
+
+### Without Docker
+
+`FENCE_MODE=multi python3 server.py` runs the same shared server (Python 3.10 or newer, nothing to
+install); `fence-estimator.service` is a systemd example, `nginx-fence.conf` an nginx one. Plain
+`python server.py` is the single-user way, with no sign-in: only for your own computer.
 
 ## Using it
 
@@ -112,6 +228,11 @@ Set `FENCE_PASS` to require a login (user name `fence`) before opening it to oth
   fence or a brace, **Fence this property** (one parcel), **Fence this owner's land** (the owner's
   neighbouring parcels as one fence; owner names are used only to group parcels and are never shown or
   saved), or **Pick several parcels to fence together**.
+- **Braces added for you** (top of the Builder, and Settings → Drawing on the map): four switches,
+  **Gates at roads**, **Braces at rivers and creeks**, **Braces at hilltops** and **Braces at the
+  bottoms of hills**. Hill braces go where the ground's slope bends by at least the fence type's
+  "Hill braces: slope change %" (15% to start) over 50 ft, using the LiDAR ground heights. Turning a
+  switch off takes out only what it added.
 - The 3D view has **Draw fence**, **Add brace** and **Add gate** too.
 - 3D view shows the terrain with the satellite photo, every post, wire, brace and gate at
   real size, and nearby buildings. Move with W A S D or the arrow keys.
@@ -132,12 +253,15 @@ for the app, `data/offline` for the web server. About 4 MB per 50 acres at full 
 ## How the code is laid out
 
 - `server.py` runs the app (the Windows app starts it inside its window), with `offline.py` for
-  saved offline areas.
+  saved offline areas and `auth.py` for the accounts of a shared server (`FENCE_MODE=multi`).
+- `static/login.html`/`login.js` is the sign-in page and `static/admin.html`/`admin.js` the Accounts page
+  of a shared server. `static/js/05-account.js` is the app's side of accounts.
 - `static/index.html` is the page, `static/app.css` its look, and `static/view3d.js` the 3D view.
 - The app's script is kept in pieces in `static/js/`, numbered in the order they run
   (`00-basics.js` … `95-start.js`). The server joins them into one script, `app.js`, so the
   pieces share everything, as if they were one file.
-- `tests/smoke.py` opens the app in a hidden browser and checks every page (see `tests/README.md`).
+- `tests/smoke.py` opens the app in a hidden browser and checks every page, the single-user way and as a
+  shared server; `tests/test_multiuser.py` checks the shared server's sign-in and security (see `tests/README.md`).
 
 ## Making a release
 

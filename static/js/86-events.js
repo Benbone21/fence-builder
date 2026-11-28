@@ -21,7 +21,7 @@ async function setField(t){
   else if(sc==='kit')kit()[k]=v;
   else if(sc==='kiti')kit().items[i][k]=v;
   else if(sc==='kits'){const b=kit();b.shape={...braceShape(b),[k]:v}}
-  else if(sc==='set'){S.settings[k]=v;if(k==='autoCross'){applyAutoCross(v);return}}
+  else if(sc==='set'){S.settings[k]=v;if(AUTO_KINDS.some(x=>x[0]===k)){applyAuto(k,v);return}}
   else if(sc==='joblab'){const p=P();p.labor={...LABOR_BASE,...(S.settings.laborDefaults||{}),...(p.labor||{}),[k]:v}}
   else if(sc==='jobhead'){const p=P();p.headache=p.headache||{};if(t.value===''||!(+t.value>0))delete p.headache[id];else p.headache[id]=+t.value}
   else if(sc==='fee'){const p=P();if(p.fees?.[i])p.fees[i][k]=v}
@@ -45,7 +45,11 @@ async function setField(t){
   if(['ft','fti','ftw','ftwalt','ftwsp','fto','fte','kit','kiti','kits'].includes(sc)){setTimeout(renderPanel,0);return}   // a draft: wait for Save
   setTimeout(changed,0);
 }
-for(const el of [$('#panel'),$('#side')])el.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(b)act(b.dataset.act,b.dataset)});
+for(const el of [$('#panel'),$('#side')])el.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b)return;if(b.tagName==='A'&&b.dataset.act==='grabHint')e.preventDefault();act(b.dataset.act,b.dataset)});
+// a store picture that won't load is hidden, not shown broken
+document.addEventListener('error',e=>{if(e.target?.classList?.contains('mpic'))e.target.style.visibility='hidden'},true);
+$('#staleGo').onclick=()=>location.reload();
+$('#bMe').onclick=()=>{setSec='account';gotoTab('settings')};
 $('#panel').addEventListener('input',e=>{if(e.target.id==='jobQ'){jobQ=e.target.value;const at=e.target.selectionStart;renderPanel();const q=$('#jobQ');if(q){q.focus();q.setSelectionRange(at,at)}return}});
 $('#panel').addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='jobLogT'){e.preventDefault();$('#panel').querySelector('[data-act="jobLog"]')?.click()}});
 $('#panel').addEventListener('input',e=>{if(e.target.id!=='matQ')return;const q=e.target.value.trim().toLowerCase();for(const tr of $('#panel').querySelectorAll('table.mats tbody tr[data-name]'))tr.hidden=!!q&&!tr.dataset.name.includes(q);
@@ -94,6 +98,12 @@ async function act(a,d){
       toast(`Saved as the starting setup: ${j.fenceTypes} fence types, ${j.braces} braces, ${j.materials} materials`)}catch(e){toast('Could not save the starting setup')}break}
   case 'checkUpd':sessionStorage.removeItem('fence-later');await checkUpdate(true);toast(upd?.available?upd.latest+' is out':upd?.reason||'You have the newest version');break;
   case 'installUpd':installUpdate();break;
+  case 'pwChange':changePassword();break;
+  case 'signOut':signOut();break;
+  case 'useServer':useServer();break;
+  case 'useLocalCopy':useLocalCopy();break;
+  case 'useLocal':try{window.pywebview.api.use_local()}catch(e){toast('Could not switch back')}break;
+  case 'grabHint':toast('Drag it to your bookmarks bar, then click it on a store page.');break;
   case 'addFee':(P().fees=P().fees||[]).push({name:'',amount:0});changed();setTimeout(()=>{const el=[...document.querySelectorAll('#body [data-f="fee.name"]')].pop();el?.focus()},50);break;
   case 'delFee':P().fees?.splice(i,1);changed();break;
   case 'laborSaveDefault':S.settings.laborDefaults={...LABOR_BASE,...(S.settings.laborDefaults||{}),...(P().labor||{})};delete P().labor;changed();toast('Saved as your usual labor rates. New jobs start with these.');break;

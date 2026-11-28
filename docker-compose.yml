@@ -1,11 +1,90 @@
+# Fence Builder as a shared server for you and your team. Step by step: README.md,
+# "Run it as a shared server (Ubuntu and Docker)". The everyday commands, in this folder:
+#
+#   docker compose up -d --build              start it
+#   git pull; docker compose build --pull; docker compose up -d     update it
+#   docker compose logs fence                 the first-time setup code is in here
+#   docker compose ps                         is it running and healthy?
+#   docker compose --profile https up -d      with a domain name: also start Caddy for https (see .env.example)
+#
+# Everything it saves is in the data folder next to this file: accounts, everyone's jobs, backups.
 services:
+  # Runs once at each start and stops: lets the server's own user (10001) write to ./data
+  data-owner:
+    image: busybox:1.36
+    user: "0:0"
+    command: ["chown", "-R", "10001:10001", "/data"]
+    volumes:
+      - ./data:/data
+    network_mode: none
+    restart: "no"
+
   fence:
     build: .
-    container_name: fence-estimator
+    image: fence-builder:local
+    container_name: fence-builder
     restart: unless-stopped
+    depends_on:
+      data-owner:
+        condition: service_completed_successfully
     ports:
-      - "8787:8787"
+      # the address and port people open. With https (Caddy) set FENCE_PUBLISH=127.0.0.1:8787 in .env
+      # so the plain-http port is not open to the internet.
+      - "${FENCE_PUBLISH:-8787}:8787"
     volumes:
       - ./data:/data
     environment:
-      - FENCE_PASS=change-me   # login password (user name is "fence"); delete this line for no login
+      FENCE_MODE: multi
+      FENCE_PUBLIC_URL: ${FENCE_PUBLIC_URL:-}     # for example https://fence.example.com (used in invite links)
+      FENCE_ALLOWED_HOSTS: ${FENCE_ALLOWED_HOSTS:-}
+      FENCE_OFFLINE: ${FENCE_OFFLINE:-all}          # who may save map areas for offline: all, admin or off
+      FENCE_TRUSTED_PROXY: 172.30.87.10             # only the Caddy container below may say a visitor used https
+      # FENCE_ADMIN_USER / FENCE_ADMIN_PASSWORD: another way to make the first admin (used once). The
+      # setup code in the log is safer: nothing to remember to delete afterwards.
+    # locked down: nothing in the container can be changed except the data folder
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      fence-net:
+        ipv4_address: 172.30.87.2
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # https with a free certificate, for when the server has a domain name. Off unless started with
+  # --profile https. Needs FENCE_DOMAIN in .env and ports 80 and 443 open to the internet.
+  caddy:
+    image: caddy:2
+    profiles: ["https"]
+    restart: unless-stopped
+    depends_on:
+      - fence
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      FENCE_DOMAIN: ${FENCE_DOMAIN:-}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      fence-net:
+        ipv4_address: 172.30.87.10
+
+networks:
+  fence-net:
+    ipam:
+      config:
+        - subnet: 172.30.87.0/24
+
+volumes:
+  caddy-data:
+  caddy-config:

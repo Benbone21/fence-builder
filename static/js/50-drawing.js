@@ -104,6 +104,6 @@ function finishDraw(){
   }else if(draft.pts.length)toast('A fence needs at least two points');
   const done=selLine;
   draft=null;setMode('idle');draftLayer.clearLayers();S.tab='build';changed();
-  if(done&&S.settings.autoCross!==false)findCrossings(done,true);
+  if(done&&crossOn())findCrossings(done,true);
 }
 function cancelDraw(){draft=null;setMode('idle');draftLayer.clearLayers();drawMap()}

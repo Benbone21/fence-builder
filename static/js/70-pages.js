@@ -242,7 +242,7 @@ function pricesView(){
     <button class="btn big" data-act="addFromLink">Add from a store link</button><button class="btn big" data-act="shop">Find at Kencove or D&amp;B</button><button class="btn big" data-act="fetchAll"${autoBusy?' disabled':''}>${autoBusy?'Checking prices…':'Update store prices now'}</button></div>
   <details class="note grab"><summary><b>Add from Premier 1 or any store page</b> <span class="small mut">with a bookmark</span></summary>
     <p class="small" style="margin:8px 0">Some stores, like Premier 1 Supplies, only let people see their pages, so the app cannot read them on its own. This bookmark reads the page you have open instead: name, price, SKU and the specifications table, and sends it here.</p>
-    <ol class="small" style="margin:0 0 8px;padding-left:18px"><li>Drag this button to your bookmarks bar: <a class="btn sm pri" href="${grabHref()}" onclick="event.preventDefault();toast('Drag it to your bookmarks bar, then click it on a store page.')">Add to Fence Builder</a></li>
+    <ol class="small" style="margin:0 0 8px;padding-left:18px"><li>Drag this button to your bookmarks bar: <a class="btn sm pri" href="${grabHref()}" data-act="grabHint">Add to Fence Builder</a></li>
       <li>Open a product on the store, pick the size you want, and click the bookmark.</li>
       <li>This app opens with the product filled in. Check it and press Save. If you already have that product, its new price is filled in for you to save.</li></ol>
     <p class="small mut" style="margin:0">Use it again on the same page any time to update that price.</p></details>
@@ -251,7 +251,7 @@ function pricesView(){
 }
 let typeSel=null;
 const postText=x=>`${x.tposts} line posts`+(x.t.posts||[]).map((r,i)=>x.other?.[i]?`, ${x.other[i]} ${esc(matName(r.m))}`:'').join('');
-const thumb=(u,px=40)=>u?`<img class="mpic" src="${esc(u)}" alt="" loading="lazy" referrerpolicy="no-referrer" style="width:${px}px;height:${px}px" onerror="this.style.visibility='hidden'">`:`<span class="mpic none" style="width:${px}px;height:${px}px"></span>`;
+const thumb=(u,px=40)=>u?`<img class="mpic" src="${esc(u)}" alt="" loading="lazy" referrerpolicy="no-referrer" style="width:${px}px;height:${px}px">`:`<span class="mpic none" style="width:${px}px;height:${px}px"></span>`;
 const unitOf=id=>(S.materials.find(m=>m.id===id)||{}).unit||'';
 const priceOf=id=>+(S.materials.find(m=>m.id===id)||{}).price||0;
 // price and unit boxes for a product, right where it's used (they change that product everywhere)
@@ -395,6 +395,8 @@ function typeEditor(t){
     <div><label class="f">Each side of a gate</label>${kitSel('braceGate')}</div>
     <div><label class="f">Pull spots on long stretches</label>${kitSel('bracePull')}</div>
     ${stretchFields(t)}</div>
+    <div class="g3" style="margin-top:10px"><div><label class="f">Hill braces: slope change, %</label>${inp('hillGrade',t.hillGrade??15)}</div></div>
+    <p class="small mut" style="margin:4px 0 0">With <b>Braces at hilltops</b> or <b>Braces at the bottoms of hills</b> turned on (top of the Builder), a brace goes where the ground's slope bends by at least this much over 50 ft, like going from 10% uphill to 5% downhill (a 15% change). A smaller number means more braces.</p>
     <details class="help"><summary>How does the longest pull work?</summary><p class="small mut">A run up to that length (plus the run-over) is stretched from its end brace in one pull. A longer run gets a pull brace in between to stretch into. Automatic uses the wire: 660 ft for woven wire, 1,320 ft for barbed, 2,640 ft for smooth, or the wire's own number from Materials.</p></details>
     <p class="small mut" style="margin:8px 0 0">What goes into each brace is set on the Braces tab. You can still change any single point on the map.</p></div>
   <div class="sec"><h3>Gates</h3><div class="g3">
@@ -507,14 +509,33 @@ function bracesView(){
 }
 // Settings: a list of sections down the left, one open at a time
 let setSec='look';
-const SET_SECS=[['look','Text size and help','Bigger words, how-to cards'],['biz','Your business','Name, logo and quote terms'],['crew','Crew','Who works on your jobs'],['money','Sales tax','Tax on materials'],['map','Drawing on the map','Slope, roads and rivers'],['offline','Offline maps','Maps saved for no internet'],['prices','Store prices','Keep prices up to date'],['backup','Backup','Save or load a copy of everything'],['updates','Updates','Your version and new ones']];
+const SET_ALL=[['account','Your account','Password and signing out'],['look','Text size and help','Bigger words, how-to cards'],['biz','Your business','Name, logo and quote terms'],['crew','Crew','Who works on your jobs'],['money','Sales tax','Tax on materials'],['map','Drawing on the map','Slope, roads and rivers'],['offline','Offline maps','Maps saved for no internet'],['prices','Store prices','Keep prices up to date'],['backup','Backup','Save or load a copy of everything'],['server','Fence Builder server','Use a shared server instead'],['updates','Updates','Your version and new ones']];
+// Your account only on a shared server; the server choice only in the Windows app
+const setSecs=()=>SET_ALL.filter(([k])=>k==='account'?isMulti():k==='server'?ME.desktop:true);
 function settingsView(){
-  const s=S.settings,sec=SET_SECS.some(x=>x[0]===setSec)?setSec:'look';
+  const SET_SECS=setSecs(),s=S.settings,sec=SET_SECS.some(x=>x[0]===setSec)?setSec:'look';
   const nav=SET_SECS.map(([k,n,d])=>`<button class="setnav${k===sec?' on':''}" data-act="setSec" data-k="${k}"${k===sec?' aria-current="page"':''}><b>${n}</b><span>${d}</span></button>`).join('');
   const check=(f,on,label,help)=>`<label class="setcheck"><span><b>${label}</b>${help?`<span>${help}</span>`:''}</span><span class="switch"><input type="checkbox" role="switch" ${on?'checked':''} data-f="set.${f}" aria-label="${esc(label)}"><i></i><em>${on?'On':'Off'}</em></span></label>`;
   const crew=s.crew||[],b=s.biz||{};
   const bf=(k,label,type='text',ph='')=>`<div class="setfield"><label class="f" for="bz_${k}">${label}</label><input id="bz_${k}" type="${type}" value="${esc(b[k]??'')}" placeholder="${esc(ph)}" data-f="biz.${k}"></div>`;
+  const plainWarn=ME.warn_plain?`<div class="note warnbox"><b>This connection is not private.</b> The address starts with http://, not https://, so your password and jobs travel over the internet unencrypted. Ask the person who runs Fence Builder to turn on https.</div>`:'';
   const body={
+    account:`<h2>Your account</h2><p class="lead">You are signed in as <b>${esc(ME.user?.name||'')}</b>, user name <b>${esc(ME.user?.username||'')}</b>. Your jobs, prices and settings are your own. Other people who use this server can't see them.</p>${plainWarn}
+      <h3>Change your password</h3>
+      <div class="setfield"><label class="f" for="pwOld">Your password now</label><input id="pwOld" type="password" autocomplete="current-password"></div>
+      <div class="setfield"><label class="f" for="pwNew">New password</label><input id="pwNew" type="password" autocomplete="new-password"></div>
+      <div class="setfield"><label class="f" for="pwNew2">New password again</label><input id="pwNew2" type="password" autocomplete="new-password"></div>
+      <p class="mut" style="margin-top:0">At least 10 letters, numbers or spaces. A short sentence you will remember works well, like <i>red barn by the creek</i>.</p>
+      <button class="btn pri big" data-act="pwChange">Change my password</button>
+      <h3>Signing out</h3><p class="mut" style="margin-top:0">On a computer other people use, sign out when you are done. Signing out also clears what this browser kept for you.</p>
+      <button class="btn big" data-act="signOut">Sign out</button>
+      ${isAdmin()?`<h3>Accounts</h3><p class="mut" style="margin-top:0">You are an admin: you can add people, reset passwords and see who signed in.</p><a class="btn pri big" href="admin">Manage accounts</a>`:''}
+      ${inApp()?`<h3>This computer</h3><p class="mut" style="margin-top:0">Go back to the jobs kept on this computer, without the server.</p><button class="btn big" data-act="useLocal">Use the copy on this computer</button>`:''}`,
+    server:`<h2>Fence Builder server</h2><p class="lead">This app keeps your jobs on this computer. If your business runs a shared Fence Builder server, where everyone signs in, this app can open that instead.</p>
+      ${ME.server_url?`<div class="note">The app is set to open <b>${esc(ME.server_url)}</b>, but it could not reach it, so you are using the copy on this computer.</div>`:''}
+      <div class="setfield" style="max-width:560px"><label class="f" for="srvUrl">The server's address</label><input id="srvUrl" type="url" inputmode="url" value="${esc(ME.server_url||'')}" placeholder="https://fence.example.com"></div>
+      <div class="row"><button class="btn pri big" data-act="useServer">Use this server</button>${ME.server_url?'<button class="btn big" data-act="useLocalCopy">Keep using this computer</button>':''}</div>
+      <div class="note">Your jobs on this computer stay here, apart from the server's. To come back to them, press <b>Use the copy on this computer</b> on the server's sign-in page or in its Settings, Your account.</div>`,
     look:`<h2>Text size</h2><p class="lead">Make the words and buttons bigger. It counts on this computer and every other one. The map itself stays the same.</p>
       <div class="sizepick">${[['1','Normal'],['1.15','Large'],['1.3','Larger']].map(([v,n])=>`<button class="sizebtn${String(+s.textSize||1)===v?' on':''}" data-act="textSize" data-k="${v}"><span style="font-size:${17*+v}px">Aa</span><b>${n}</b></button>`).join('')}</div>
       <h3>How-to cards</h3><p class="mut" style="margin-top:0">A short card at the top of each page says how it works. Press <b>Got it</b> on a card to hide it.</p>
@@ -547,9 +568,11 @@ function settingsView(){
       <div class="note">Labor is set as a $ per foot on each fence type, and per brace on the Braces page. Headache charges and other fees are added on each job's Final bill.</div>`,
     map:`<h2>Drawing on the map</h2><p class="lead">How fence lines are measured and what gets added when you draw.</p>
       ${check('useSurface',s.useSurface,'Measure along the ground slope','Footage follows the hills, from the LiDAR ground heights, instead of a flat line on the map.')}
-      ${check('autoCross',s.autoCross!==false,'Add gates and braces at roads and rivers','When you finish a line, a gate goes where it crosses a road, and a brace on each bank of a river or creek. You can move or delete them.')}
+      <h3>Braces added for you</h3>${autoSwitches('')}
+      <div class="note">The rule for hill braces is on each fence type, under Braces. The same four switches are at the top of the Builder.</div>
       <div class="note">Every spot you click gets a brace: a bend gets the corner brace, a spot on a straight run gets the pull brace. You can change any single spot on the map afterwards.</div>`,
-    offline:`<h2>Offline maps</h2><p class="lead">Areas saved on this computer to use with no internet: the aerial photo, the LiDAR bare-earth map and ground heights, and the property lines. With no internet the map switches to them on its own.</p>
+    offline:`<h2>Offline maps</h2><p class="lead">${isMulti()?'Areas saved on the server, for when its internet is slow or down':'Areas saved on this computer to use with no internet'}: the aerial photo, the LiDAR bare-earth map and ground heights, and the property lines. With no internet the map switches to them on its own.</p>
+      ${isMulti()&&ME.offline!=='all'&&!(ME.offline==='admin'&&isAdmin())?'<p class="mut">Saving new areas is turned off on this server. Ask the person who runs it.</p>':''}
       ${serverOK?(offList.length?`<div class="box">${offList.map(a=>{const pct=a.total?Math.floor(a.done/a.total*100):0,st=a.status==='downloading'?`Downloading, ${pct}%`:a.status==='done'?'Ready':a.status==='partly'?`Ready, ${a.failed} pieces missing`:a.status==='stopped'?`Stopped at ${pct}%`:'Did not finish';
         return `<div class="offrow"><div><b>${esc(a.name)}</b><div class="mut">${st} · ${fmtQ(Math.round((a.bytes||0)/1e6))} MB · saved ${new Date(a.created*1000).toLocaleDateString()}</div></div>
           <div class="row" style="flex-wrap:nowrap">${['stopped','partly','error'].includes(a.status)?`<button class="btn" data-act="offResume" data-id="${a.id}">Finish it</button>`:''}<button class="btn" data-act="offShow" data-id="${a.id}">Show on map</button><button class="btn del" data-act="offDel" data-id="${a.id}">Delete</button></div></div>`}).join('')}</div>`:'<p class="mut">None saved yet.</p>'):'<p class="mut">This needs the Fence Builder app or server.</p>'}
@@ -563,9 +586,12 @@ function settingsView(){
       <div class="setfield"><label class="f" for="sshop">Store website (optional)</label><input id="sshop" type="text" value="${esc(s.shop||'')}" data-f="set.shop" placeholder="example.com"></div>`,
     backup:`<h2>Backup</h2><p class="lead">${serverOK?'Everything saves on its own as you work, with a backup copy kept every hour.':'No Fence Builder server found, so everything only saves in this browser.'} You can also keep your own copy.</p>
       <div class="row"><button class="btn pri big" data-act="export">Download a backup</button><button class="btn big" data-act="import">Load a backup</button></div>
-      <h3>Starting setup for new installs</h3><p class="mut" style="margin-top:0">Saves your fence types, braces, materials and prices as what Fence Builder starts with on a new computer. Jobs are not included.</p>
-      <button class="btn big" data-act="saveSeed">Save my setup as the starting setup</button>`,
-    updates:`<h2>Updates</h2><p class="lead">You have <b>Fence Builder ${esc(upd?.version||'…')}</b>.${upd?.available?` <b>${esc(upd.latest)}</b> is out.`:upd&&!upd.reason?' It is the newest version.':''}</p>
+      ${!isMulti()?`<h3>Starting setup for new installs</h3><p class="mut" style="margin-top:0">Saves your fence types, braces, materials and prices as what Fence Builder starts with on a new computer. Jobs are not included.</p>
+      <button class="btn big" data-act="saveSeed">Save my setup as the starting setup</button>`:isAdmin()?`<h3>Starting setup for new accounts</h3><p class="mut" style="margin-top:0">Saves your fence types, braces, materials and prices as what each new account on this server starts with. Your jobs, business details and crew are not included.</p>
+      <button class="btn big" data-act="saveSeed">Save my setup as the starting setup for new accounts</button>`:''}`,
+    updates:upd?.server?`<h2>Updates</h2><p class="lead">This server has <b>Fence Builder ${esc(upd.version||'…')}</b>.${isAdmin()&&upd.newer?` <b>${esc(upd.latest)}</b> is out.`:''}</p>
+      <div class="note">${isAdmin()?'A shared server is updated by whoever runs it, with a new Docker image. The steps are in <a href="https://github.com/Benbone21/fence-builder#updating-the-server" target="_blank" rel="noopener">the guide</a>. Nobody\'s jobs, prices or settings are touched.':'The person who runs this server keeps it up to date.'}</div>`:
+    `<h2>Updates</h2><p class="lead">You have <b>Fence Builder ${esc(upd?.version||'…')}</b>.${upd?.available?` <b>${esc(upd.latest)}</b> is out.`:upd&&!upd.reason?' It is the newest version.':''}</p>
       ${upd?.reason?`<p class="mut">${esc(upd.reason)}</p>`:''}
       <div class="row">${upd?.available?'<button class="btn pri big" data-act="installUpd">Update now</button>':''}<button class="btn big" data-act="checkUpd">Check for updates</button>${upd?.url?`<a class="btn big" href="${esc(upd.url)}" target="_blank" rel="noopener">What's new</a>`:''}</div>
       <div class="note">Fence Builder checks for updates when it opens and every few hours. Updating never touches your jobs, prices or settings.</div>`,

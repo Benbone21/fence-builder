@@ -7,6 +7,11 @@ __pycache__/
 *.tmp
 *.new
 *.lnk
+# docker compose settings (copy of .env.example)
+.env
 # build output
 build/
 dist/
+
+# Claude Code working copies
+.claude/

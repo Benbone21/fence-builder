@@ -35,6 +35,7 @@ function adopt(s){
 load().then(s=>{
   adopt(s);
   setStatus(serverOK?'Saved':'Saving in this browser');
+  accountBar();if(ME.note)setTimeout(()=>toast(ME.note),1200);
   renderAll();record();fitProject();scheduleElev();checkLatest();
   takeGrab();setTimeout(()=>autoPrices(false),5000);loadOffAreas();
   setTimeout(()=>checkUpdate(false),2500);setInterval(()=>checkUpdate(false),6*3600e3);setInterval(()=>autoPrices(false),3600e3);

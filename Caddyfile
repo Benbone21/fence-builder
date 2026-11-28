@@ -1,0 +1,6 @@
+# Caddy gets a certificate for your domain by itself and sends visitors on to Fence Builder.
+# Used by "docker compose --profile https up -d". The domain comes from FENCE_DOMAIN in .env.
+{$FENCE_DOMAIN} {
+	reverse_proxy fence:8787
+	header -Server
+}

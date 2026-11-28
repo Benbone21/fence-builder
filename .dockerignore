@@ -1,0 +1,13 @@
+# not needed inside the Docker image (and your data never goes into it)
+data
+_previous
+.git
+.github
+dist
+build
+installer
+tests
+*.lnk
+*.ico
+.env
+__pycache__

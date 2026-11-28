@@ -18,11 +18,34 @@ function flatLen(pts){let s=0;for(let i=1;i<pts.length;i++)s+=ll(pts[i-1]).dista
 /* ---------- quantity formulas ---------- */
 const fnCache={};
 const VARS=['L','W','roll','spacing','strands','waste','posts','tposts','woodposts','sections','pulls','lines','gates','braces'];
+// A formula is read as plain arithmetic, never run as code: numbers, the names above, + - * / % **, brackets,
+// commas, and ceil floor round max min (or Math.something). It gives the same answer JavaScript would (++ and --
+// are not allowed: in a formula they could only be a typing mistake).
+const QFN={ceil:Math.ceil,floor:Math.floor,round:Math.round,max:Math.max,min:Math.min};
+function compileQ(expr){
+  const t=expr.match(/\d+\.?\d*(?:e[+-]?\d+)?|\.\d+(?:e[+-]?\d+)?|[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)?|\*\*|\+\+|--|\S/gi)||[];
+  let i=0;const peek=()=>t[i],bad=()=>{throw Error('bad')},need=x=>{if(t[i++]!==x)bad()};
+  const seq=()=>{let f=add();while(peek()===','){i++;const a=f,b=add();f=v=>(a(v),b(v))}return f};
+  const add=()=>{let f=mul();for(let o;(o=peek())==='+'||o==='-';){i++;const a=f,b=mul();f=o==='+'?v=>a(v)+b(v):v=>a(v)-b(v)}return f};
+  const mul=()=>{let f=expo();for(let o;(o=peek())==='*'||o==='/'||o==='%';){i++;const a=f,b=expo();f=o==='*'?v=>a(v)*b(v):o==='/'?v=>a(v)/b(v):v=>a(v)%b(v)}return f};
+  const unary=()=>{const o=t[i++],a=peek()==='-'||peek()==='+'?unary():prim();return o==='-'?v=>-a(v):v=>+a(v)};
+  const expo=()=>{if(peek()==='-'||peek()==='+'){const f=unary();if(peek()==='**')bad();return f}
+    const a=prim();if(peek()!=='**')return a;i++;const b=expo();return v=>a(v)**b(v)};
+  const prim=()=>{const x=t[i++];let f;
+    if(x==='('){f=seq();need(')')}
+    else if(/^[\d.]/.test(x||'')){const n=Number(x);if(isNaN(n))bad();f=()=>n}
+    else if(/^[A-Za-z_]/.test(x||'')){if(x.startsWith('Math.')){const m=Math[x.slice(5)];f=()=>m}else if(QFN[x]){const q=QFN[x];f=()=>q}else if(VARS.includes(x))f=v=>v[x];else bad()}
+    else bad();
+    while(peek()==='('){i++;const args=[];while(peek()!==')'){args.push(add());if(peek()===',')i++;else break}need(')');
+      const g=f;f=v=>{const fn=g(v);if(typeof fn!=='function')bad();return fn(...args.map(h=>h(v)))}}
+    return f};
+  const f=seq();if(i<t.length)bad();return f;
+}
 function evalQ(expr,vars){
   expr=String(expr??'').trim()||'0';
   if(!/^[\w\s+\-*/().,%]*$/.test(expr))throw Error('bad');
-  const f=fnCache[expr]||(fnCache[expr]=new Function(...VARS,'ceil','floor','round','max','min','"use strict";return ('+expr+')'));
-  const v=f(...VARS.map(n=>vars[n]),Math.ceil,Math.floor,Math.round,Math.max,Math.min);
+  const f=fnCache[expr]||(fnCache[expr]=compileQ(expr));
+  const v=f(vars);
   if(typeof v!=='number'||!isFinite(v))throw Error('bad');
   return Math.max(0,v);
 }

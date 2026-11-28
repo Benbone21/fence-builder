@@ -38,10 +38,12 @@ jobs:
           "version=$file" >> $env:GITHUB_OUTPUT
 
       - name: Check the Python files compile
-        run: python -m py_compile server.py offline.py app.py
+        run: python -m py_compile server.py offline.py auth.py app.py
 
       # Starts the app on an empty data folder in a hidden browser, clicks every page, adds a test job
-      # and checks the Final bill. If anything is broken the build stops here and no installer is made.
+      # and checks the Final bill, the single-user way and as a shared server with accounts. Then checks
+      # the shared server's security: sign-in, lockouts, each person's data kept apart, admin-only pages,
+      # requests from other websites. If anything is broken the build stops here and no installer is made.
       - name: Smoke test the app
         shell: pwsh
         run: |
@@ -49,6 +51,8 @@ jobs:
           python -m pip install "playwright>=1.40,<2"
           python -m playwright install chromium
           python tests/smoke.py --shot smoke-failure.png
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python tests/test_multiuser.py
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Keep the smoke test screenshot
@@ -67,7 +71,7 @@ jobs:
       - name: Check the exe has the app inside
         shell: pwsh
         run: |
-          foreach ($f in 'FenceBuilder.exe', '_internal\static\index.html', '_internal\static\view3d.js', '_internal\VERSION', '_internal\update.json') {
+          foreach ($f in 'FenceBuilder.exe', '_internal\static\index.html', '_internal\static\view3d.js', '_internal\static\login.html', '_internal\VERSION', '_internal\update.json') {
             if (-not (Test-Path "dist\FenceBuilder\$f")) { Write-Error "missing $f"; exit 1 }
           }
           $v = (Get-Content dist\FenceBuilder\_internal\VERSION -Raw).Trim()

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Accounts - Fence Builder</title>
+<link rel="icon" href="icon-256.png" type="image/png">
+<meta name="theme-color" content="#1b1e22">
+<meta name="referrer" content="no-referrer">
+<link rel="stylesheet" href="app.css">
+</head>
+<body class="page admin">
+<header>
+  <h1>Fence Builder</h1>
+  <span class="htitle">Accounts</span>
+  <div class="hright">
+    <a class="btn big" href="./">Back to Fence Builder</a>
+    <button class="btn big" id="bOut" type="button">Sign out</button>
+  </div>
+</header>
+<main class="adminwrap">
+  <div id="warn" class="note warnbox" hidden></div>
+
+  <section class="box apanel">
+    <div class="row" style="justify-content:space-between"><h2>People</h2><button class="btn pri big" id="bAdd" type="button">+ Add a person</button></div>
+    <p class="mut">Each person has their own jobs, fence types, braces, materials, prices and settings. Nobody can see anyone else's. Admins can also open this page.</p>
+    <div id="people"><p class="mut">Loading…</p></div>
+  </section>
+
+  <section class="box apanel">
+    <h2>Sign-ins and changes</h2>
+    <p class="mut">Who signed in, wrong passwords, and every change made on this page. Newest first.</p>
+    <div class="row"><button class="btn" id="bLog" type="button">Show all</button><button class="btn" id="bLogFails" type="button">Only problems</button></div>
+    <div id="events" class="scroll"><p class="mut">Loading…</p></div>
+  </section>
+
+  <section class="box apanel">
+    <h2>This server</h2>
+    <div id="info"><p class="mut">Loading…</p></div>
+    <h3>What new accounts start with</h3>
+    <p class="mut">New accounts start with the fence types, braces and materials of the starting setup. To change it, set things up in your own account, then in Settings, Backup, press <b>Save my setup as the starting setup for new accounts</b>. Your jobs, business details and crew are never copied.</p>
+  </section>
+</main>
+<dialog id="dlg" aria-label="Accounts"></dialog>
+<div id="toast" role="status"></div>
+<script src="admin.js"></script>
+</body>
+</html>

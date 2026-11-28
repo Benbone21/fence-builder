@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sign in - Fence Builder</title>
+<link rel="icon" href="icon-256.png" type="image/png">
+<meta name="theme-color" content="#1b1e22">
+<meta name="referrer" content="no-referrer">
+<link rel="stylesheet" href="app.css">
+</head>
+<body class="page signin">
+<main class="authbox">
+  <h1 class="brand">Fence Builder</h1>
+  <div id="warn" class="note warnbox" hidden><b>This connection is not private.</b> The address starts with http://, not https://, so your password travels over the internet unencrypted, where others could see it. Ask the person who runs Fence Builder to turn on https.</div>
+  <p id="wait" class="lead">One moment…</p>
+
+  <form id="fSignin" hidden autocomplete="on">
+    <h2>Sign in</h2>
+    <label class="f" for="u">User name</label>
+    <input id="u" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required>
+    <label class="f" for="p">Password</label>
+    <input id="p" name="password" type="password" autocomplete="current-password" required>
+    <label class="check"><input type="checkbox" id="remember"> Keep me signed in on this computer</label>
+    <p class="small mut">Only tick this on your own computer. On a shared computer, sign out when you are done.</p>
+    <button class="btn pri big wide">Sign in</button>
+    <p class="small mut">Forgot your password? Ask the person who runs Fence Builder to reset it for you.</p>
+  </form>
+
+  <form id="fNew" hidden>
+    <h2 id="newT">Choose a new password</h2>
+    <p id="newL" class="lead">This is your first time signing in, or your password was reset. Pick a new password only you know.</p>
+    <div id="oldBox"><label class="f" for="old">The password you were given</label>
+    <input id="old" type="password" autocomplete="current-password"></div>
+    <label class="f" for="n1">New password</label>
+    <input id="n1" type="password" autocomplete="new-password" required>
+    <label class="f" for="n2">New password again</label>
+    <input id="n2" type="password" autocomplete="new-password" required>
+    <p class="small mut">At least 10 letters, numbers or spaces. A short sentence you will remember works well, like <i>red barn by the creek</i>.</p>
+    <button class="btn pri big wide">Save my new password</button>
+  </form>
+
+  <form id="fSetup" hidden>
+    <h2>Set up Fence Builder</h2>
+    <p class="lead">Make the first account. It is the admin: it can add other people later.</p>
+    <label class="f" for="code">Setup code</label>
+    <input id="code" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="XXXX-XXXX-XXXX" required>
+    <p class="small mut">The setup code is in the server's log. With Docker, type <code>docker compose logs fence</code> on the server and look for FIRST-TIME SETUP.</p>
+    <label class="f" for="sn">Your name</label>
+    <input id="sn" autocomplete="name" required>
+    <label class="f" for="su">User name (what you type to sign in)</label>
+    <input id="su" autocomplete="username" autocapitalize="none" spellcheck="false" required placeholder="for example: ben">
+    <label class="f" for="s1">Password</label>
+    <input id="s1" type="password" autocomplete="new-password" required>
+    <label class="f" for="s2">Password again</label>
+    <input id="s2" type="password" autocomplete="new-password" required>
+    <p class="small mut">At least 10 letters, numbers or spaces.</p>
+    <button class="btn pri big wide">Make my account</button>
+  </form>
+
+  <p id="msg" class="err big" role="alert" hidden></p>
+  <p id="local" hidden><button class="btn big wide" id="bLocal" type="button">Use the copy on this computer instead</button></p>
+</main>
+<script src="login.js"></script>
+</body>
+</html>

@@ -15,7 +15,7 @@ a = Analysis(
         (os.path.join(ROOT, "update.json"), "."),
         (os.path.join(ROOT, "fence.ico"), "."),
     ],
-    hiddenimports=["server", "offline"],
+    hiddenimports=["server", "offline", "auth"],  # auth: accounts, only used by a shared server
     excludes=["tkinter", "unittest", "pydoc", "test"],
     noarchive=False,
 )

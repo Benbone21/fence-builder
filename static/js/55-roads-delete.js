@@ -44,11 +44,12 @@ async function findCrossings(lid,quiet){
   if(!ways)ways=await us.catch(()=>null);
   if(!ways){if(!quiet)toast('The street map servers are busy, so roads and rivers could not be checked. Try "Find roads and rivers" again in a minute.');return}
   const L2=getLine(lid);if(!L2)return;   // deleted while we waited
-  if(quiet&&S.settings.autoCross===false)return;   // the road and river switch was turned off while we waited
+  if(quiet&&!crossOn())return;   // the road and river switches were turned off while we waited
   const t=S.fenceTypes.find(x=>x.id===L2.type)||S.fenceTypes[0],P2=L2.pts.map(xy),hits=[];
   for(const w of ways){
     const tg=w.tags||{},road=tg.highway?.replace(/_link$/,''),water=tg.waterway;if(!w.geometry)continue;
     if(road&&tg.tunnel==='yes')continue;   // a road in a tunnel under the fence doesn't need a gate
+    if(quiet&&!autoOn(road?'autoRoads':'autoRivers'))continue;   // that switch is off
     const G=w.geometry.map(g=>xy({lat:g.lat,lng:g.lon}));
     let width=parseFloat(tg.width)||0;   // meters, when the map says
     if(!width)width=road?(ROAD_W[road]||8):(WATER_W[water]||4);
@@ -82,16 +83,6 @@ async function findCrossings(lid,quiet){
   }
   if(!said.length)return;
   changed();toast('Added '+said.reverse().join(', ')+'. Drag them to where you want them.');
-}
-// the road and river switch: off takes out the gates and braces it added on this job's lines; on looks for them again
-async function applyAutoCross(on){
-  const lines=P().lines.filter(l=>!l.manual&&l.pts.length>1);
-  if(!on){let n=0;for(const l of lines){const keep=l.pts.filter(p=>!p.auto);if(keep.length>=2&&keep.length<l.pts.length){n+=l.pts.length-keep.length;l.pts=keep}}
-    changed();toast(n?`Took out ${n} road and river point${n===1?'':'s'}. Turn it back on to add them again.`:'Gates at roads and braces at rivers are off.');return}
-  changed();
-  if(!lines.length)return toast('Gates at roads and braces at rivers are on. They are added when you draw a fence.');
-  toast('Looking for roads and rivers along the fence…');
-  for(const l of lines)await findCrossings(l.id,true);
 }
 // the brace a fence type uses in the middle of a run (its pull brace), else its end brace
 const braceFor=t=>[t?.bracePull,t?.braceEnd,S.braces[0]?.id].find(id=>id&&id!=='none'&&S.braces.some(b=>b.id===id));
@@ -178,7 +169,7 @@ async function fenceProperty(ll2){
   l.name=l.name.trim();P().lines.push(l);selLine=l.id;S.tab='build';changed();
   map.fitBounds(L.latLngBounds(pts.map(q=>[q.lat,q.lng])),{padding:[40,40]});
   toast(`Fenced the property line: ${pts.length-1} corners. Property lines are approximate, so check the corners.`);
-  if(S.settings.autoCross!==false)findCrossings(l.id,true);
+  if(crossOn())findCrossings(l.id,true);
 }
 /* fence several parcels as one loop: an owner's whole land (a ranch split into tax lots), or parcels picked by hand.
    The outlines are merged: corners closer than half a meter become one, a corner of one parcel lying on (or within
@@ -304,7 +295,7 @@ function fencePieces(pieces,what){
   if(!made.length)return made;
   selLine=made[0].id;S.tab='build';changed();
   map.fitBounds(L.latLngBounds(made.flatMap(l=>l.pts.map(q=>[q.lat,q.lng]))),{padding:[40,40]});
-  if(S.settings.autoCross!==false)(async()=>{for(const l of made)await findCrossings(l.id,true)})();
+  if(crossOn())(async()=>{for(const l of made)await findCrossings(l.id,true)})();
   return made}
 const corners=made=>made.reduce((s,l)=>s+l.pts.length-1,0),acTxt=a=>{const v=a<10?Math.round(a*10)/10:Math.round(a);return fmtQ(v)+(v===1?' acre':' acres')};
 /* "Fence this owner's land": the parcel under the spot, and the parcels around it with the same owner on the county map.

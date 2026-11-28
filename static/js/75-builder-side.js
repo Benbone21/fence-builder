@@ -14,8 +14,7 @@ function elevShort(l){
 }
 function sideView(){
   const sel=selLine&&getLine(selLine)&&A.lines.find(x=>x.l.id===selLine);
-  const ac=S.settings.autoCross!==false;
-  const head=`<label class="setcheck sidecross"><span><b>Gates at roads, braces at rivers</b><span>Added for you where a fence crosses a road, river or creek</span></span><span class="switch"><input type="checkbox" role="switch" ${ac?'checked':''} data-f="set.autoCross" aria-label="Gates at roads, braces at rivers"><i></i><em>${ac?'On':'Off'}</em></span></label>
+  const head=`<details class="autobox" data-keep="sideAuto"${openKeep.sideAuto!==false?' open':''}><summary><b>Braces added for you</b> <span class="small mut">${AUTO_KINDS.filter(x=>autoOn(x[0])).length} of 4 on</span></summary>${autoSwitches('sidecross')}</details>
   <div class="sum two"><div><span>Fence length</span><b>${fmtFt(A.totalFt)}</b></div><div class="tot"><span>Materials with tax</span><b>${money(A.sub+A.tax)}</b></div></div>
     <div class="row sumbtns" style="margin-top:8px;flex-wrap:nowrap"><button class="btn grow" data-act="tab" data-tab="est">Final bill: what to buy and the cost</button></div>`;
   const drawn=A.lines.filter(r=>!r.manual);
@@ -52,7 +51,8 @@ function setupView(){
     ${postsEditor(t)}</div>
   <div class="sec"><h3>Braces</h3><div class="g2">
     <div><label class="f">Ends</label>${kitSel('braceEnd')}</div><div><label class="f">Corners</label>${kitSel('braceCorner')}</div>
-    <div><label class="f">Each side of a gate</label>${kitSel('braceGate')}</div><div><label class="f">Pull braces on long runs</label>${kitSel('bracePull')}</div></div></div>
+    <div><label class="f">Each side of a gate</label>${kitSel('braceGate')}</div><div><label class="f">Pull braces on long runs</label>${kitSel('bracePull')}</div>
+    <div><label class="f">Hill braces: slope change %</label>${num('hillGrade',t.hillGrade??15)}</div></div></div>
   <details class="sec more" data-keep="sideMore"${openKeep.sideMore?' open':''}><summary><b>More options</b> <span class="small mut">labor, height, clips, gate width, longest pull</span></summary>
     <div class="g2"><div><label class="f">Labor $ per foot</label>${num('labor',t.labor)}</div><div><label class="f">Fence height ft</label>${num('height',t.height||4.5)}</div>
     <div><label class="f">Clips per normal post</label>${num('clipsPer',t.clipsPer)}</div><div><label class="f">Gate width ft</label>${num('gateW',t.gateW)}</div></div>${adviceHtml(t)}

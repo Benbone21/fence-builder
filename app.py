@@ -11,6 +11,10 @@ Run it with:  pyw app.py     (or double-click the "Fence Builder" shortcut)
 
 The Windows installer packs this file into FenceBuilder.exe with PyInstaller. An in-app update
 closes the app, installs the new version and opens it again (--updated --port=N).
+
+Settings, Fence Builder server can point the app at a shared Fence Builder server instead: the window
+then opens that server's sign-in page (the app's own copy keeps running, and the server's pages have a
+"Use the copy on this computer" button to come back). Start it with --local to skip the server once.
 """
 import importlib, json, os, shutil, socket, subprocess, sys, threading, time, urllib.request, webbrowser
 from http.server import ThreadingHTTPServer
@@ -23,6 +27,7 @@ if sys.stderr is None:  # pythonw has no console; the server logs to stderr
 if sys.stdout is None:
     sys.stdout = open(os.devnull, "w")
 os.environ.setdefault("FENCE_APP", "1")  # the app keeps its own data, apart from any web server
+os.environ["FENCE_MODE"] = "single"      # always one person, no sign-in (the server also insists on this)
 import server  # noqa: E402
 
 if getattr(sys, "frozen", False):  # the installed app keeps a short log, to find out what went wrong if it won't open
@@ -82,6 +87,24 @@ def set_app_id():
         pass
 
 
+_win = {"window": None, "local": None}
+
+
+class AppApi:
+    """What a page in the app window can ask of the app itself (window.pywebview.api). A Fence Builder
+    server's pages see it too, so it does one harmless thing only: go back to the copy on this computer."""
+
+    def use_local(self):
+        try:
+            server.save_desktop_server("")
+        except OSError:
+            pass
+        w = _win["window"]
+        if w and _win["local"]:
+            w.load_url(_win["local"])
+        return True
+
+
 def native_window(url):
     """A real app window. Returns False if it can't be made here (no pywebview or no WebView2)."""
     try:
@@ -96,8 +119,9 @@ def native_window(url):
     store = os.path.join(data_home(), "window")  # keeps the saved 3D ground and photos between runs
     os.makedirs(store, exist_ok=True)
     try:
-        webview.create_window("Fence Builder", url, width=1600, height=1000, min_size=(1000, 640),
-                              text_select=True, background_color="#16181b", maximized=True)  # fills the screen
+        _win["window"] = webview.create_window("Fence Builder", url, width=1600, height=1000, min_size=(1000, 640),
+                                               text_select=True, background_color="#16181b", maximized=True,  # fills the screen
+                                               js_api=AppApi())
         webview.start(gui="edgechromium", private_mode=False, storage_path=store)
         return True
     except Exception:
@@ -166,9 +190,20 @@ def main():
 
     start()
     server.RESTART = restart
-    url = "http://localhost:%d/" % port
+    url = _win["local"] = "http://localhost:%d/" % port
+    remote = (server.desktop_settings().get("server") or "").strip()
+    first = url
+    if remote and arg("local") != "1":
+        # the user chose a Fence Builder server: open its sign-in page, if it answers
+        try:
+            server.probe_server(remote, timeout=4)
+            first = remote + "/login"
+        except Exception:
+            server.DESKTOP_NOTE = ("Could not reach the Fence Builder server at %s, so this is the copy on this "
+                                   "computer. Try again later, or change it in Settings, Fence Builder server." % remote)
     set_app_id()
-    if not native_window(url) and browser_window(url, updated) is None:
+    # the Edge/Chrome fallback has no way back from a server, so it always shows this computer's copy
+    if not native_window(first) and browser_window(url, updated) is None:
         threading.Event().wait()  # opened in the normal browser: keep serving
     state["srv"].shutdown()
 
