@@ -15,9 +15,15 @@ function restore(from,to,word){
   save();renderAll();scheduleElev();histButtons();
 }
 const undo=()=>restore(hist.u,hist.r,'undo'),redo=()=>restore(hist.r,hist.u,'redo');
-function histButtons(){$('#bHU').disabled=!hist.u.length;$('#bHR').disabled=!hist.r.length}
+// while drawing, Undo takes off the last point (a gate comes off whole); a half-placed gate is let go of; otherwise the last change
+function histButtons(){$('#bHU').disabled=!(hist.u.length||(mode==='draw'&&draft?.pts.length)||(mode==='gate'&&gateA));$('#bHR').disabled=!hist.r.length}
+function undoButton(){
+  if(mode==='draw'&&draft){if(draft.pts.length)draftUndo();return}
+  if(mode==='gate'&&gateA){gateA=null;gateMark.remove();rubber.remove();rubberLab.remove();$('#drawMsg').textContent='Click a fence line where the first gate post goes (one side of the road), then the other side';histButtons();return}
+  undo();
+}
 
-$('#bHU').onclick=undo;$('#bHR').onclick=redo;$('#bRefresh').onclick=refreshNow;
+$('#bHU').onclick=undoButton;$('#bHR').onclick=redo;$('#bRefresh').onclick=refreshNow;
 let showDims=localStorage.getItem('fence-dims')!=='0';
 let showRolls=localStorage.getItem('fence-rolls')!=='0';
 const syncDims=()=>{$('#bDims').classList.toggle('on',showDims);$('#bRolls').classList.toggle('on',showRolls)};syncDims();
@@ -68,6 +74,10 @@ function drawMap(){rollEndsBy={};
       h.on('click',e=>{L.DomEvent.stop(e);if(mode==='gate'||mode==='brace')return addOnLine(e.latlng);if(mode==='draw')return addDraftPoint(snap(e.latlng));insertPt(l,i,mid)});
       h.on('dragend',e=>insertPt(l,i,e.target.getLatLng()));
     }
+    // a closed line: how much ground it fences in, in the middle (once it is big enough on screen to fit)
+    const ar=A.lines.find(x=>x.l===l)?.area;
+    if(ar){const b=L.latLngBounds(l.pts.map(ll));if(pxLen(b.getSouthWest(),b.getNorthEast())>110)
+      L.marker(ll(loopMiddle(l)),{interactive:false,keyboard:false,icon:L.divIcon({className:'arealbl',iconSize:[0,0],html:`<span><b>${fmtAcres(ar)}</b><br>${fmtSqFt(ar)}</span>`})}).addTo(layer)}
     // each gate: the opening, a post on each side, and how far each side's brace reaches along the fence
     l.pts.forEach((p,i)=>{if(A.nodes.get(key(p))?.brace==='gate')drawGate(l,i,t)});
     l.pts.forEach((p,i)=>{

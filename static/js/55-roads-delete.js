@@ -40,8 +40,10 @@ async function findCrossings(lid,quiet){
   if(!quiet)toast('Looking for roads and rivers along '+l.name+'…');
   let ways;
   const us=usRoadsRivers(bb);   // asked at the same time, used if OpenStreetMap doesn't answer
+  const nhd=riverWays(l);   // USGS streams and ditches: the main source for braces at rivers (68-ground.js)
   ways=await overpass(q);
   if(!ways)ways=await us.catch(()=>null);
+  ways=useRivers(ways,await nhd,quiet);
   if(!ways){if(!quiet)toast('The street map servers are busy, so roads and rivers could not be checked. Try "Find roads and rivers" again in a minute.');return}
   const L2=getLine(lid);if(!L2)return;   // deleted while we waited
   if(quiet&&!crossOn())return;   // the road and river switches were turned off while we waited
@@ -105,7 +107,7 @@ function addOnLine(latlng){
   const q=map.layerPointToLatLng(best.c),t=typeOfLine(best.l);
   if(kind==='gate'){
     // a gate takes two clicks: one gate post on each side (of a road, say), and the gate fills the gap between them
-    if(!gateA){gateA={l:best.l.id,i:best.i,q};gateMark.setLatLng(q).addTo(map);$('#drawMsg').textContent='Now click where the other gate post goes, across the gap. Press Cancel to stop.';return}
+    if(!gateA){gateA={l:best.l.id,i:best.i,q};gateMark.setLatLng(q).addTo(map);histButtons();$('#drawMsg').textContent='Now click where the other gate post goes, across the gap. Press Cancel to stop.';return}
     const a=gateA;gateA=null;gateMark.remove();rubber.remove();rubberLab.remove();
     if(a.l!==best.l.id||a.i!==best.i){$('#drawMsg').textContent='Click a fence line where the first gate post goes';return toast('Put both gate posts on the same straight stretch of fence (between two corners). Click the first one again.')}
     const w=Math.round(a.q.distanceTo(q)*FT);

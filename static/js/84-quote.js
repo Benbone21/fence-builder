@@ -73,7 +73,7 @@ function quoteHTML(p,a){
     <div class="qtitle"><div class="qword">Quote</div><table class="qmeta"><tr><td>Quote no.</td><td>${esc(q.no)}</td></tr><tr><td>Date</td><td>${dt(today)}</td></tr>${valid?`<tr><td>Good until</td><td>${dt(until)}</td></tr>`:''}</table></div></div>
   <div class="qparties"><div><h4>Prepared for</h4><b>${esc(p.customer||'')}</b>${p.phone?`<div>${esc(p.phone)}</div>`:''}${p.email?`<div>${esc(p.email)}</div>`:''}</div>
     <div><h4>Job site</h4>${p.address?`<div>${esc(p.address)}</div>`:''}<div class="qmut">${esc(p.name)}</div></div>
-    <div class="qtotft"><h4>Fence</h4><b>${fmtFt(a.totalFt)}</b>${a.gates?`<div>${a.gates} gate${a.gates>1?'s':''}</div>`:''}</div></div>
+    <div class="qtotft"><h4>Fence</h4><b>${fmtFt(a.totalFt)}</b>${a.gates?`<div>${a.gates} gate${a.gates>1?'s':''}</div>`:''}${a.area?`<div>${fmtAcres(a.area)} fenced in</div><div class="qmut">${fmtSqFt(a.area)}</div>`:''}</div></div>
   ${q.note?`<p class="qnote">${esc(q.note).replace(/\n/g,'<br>')}</p>`:''}
   <table class="qtable"><thead><tr><th>Work to be done</th><th class="qn">Length</th>${itemized?'<th class="qn">Amount</th>':''}</tr></thead><tbody>${rows}</tbody></table>
   <div class="qtotals"><table><tr class="qgrand"><td>Total</td><td>${money(a.total)}</td></tr>${dep?`<tr><td>Deposit to start (${fmtQ(dep)}%)</td><td>${money(depAmt)}</td></tr><tr><td>Balance when finished</td><td>${money(a.total-depAmt)}</td></tr>`:''}</table></div>

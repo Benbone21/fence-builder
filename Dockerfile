@@ -11,7 +11,7 @@ RUN groupadd --system --gid 10001 fence \
  && mkdir -p /data && chown fence:fence /data && chmod 700 /data
 
 WORKDIR /app
-COPY server.py offline.py auth.py VERSION update.json ./
+COPY server.py offline.py auth.py ground.py VERSION update.json ./
 COPY static ./static
 
 USER fence

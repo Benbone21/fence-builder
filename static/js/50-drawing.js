@@ -33,6 +33,7 @@ function setMode(m){
   pickModeChanged(m);
   if(m!=='idle')map.closePopup();
   if(A){drawMap();if(S.tab==='build'&&!selLine)renderPanel()}
+  histButtons();
 }
 const draftType=()=>S.fenceTypes.find(x=>x.id===(draft?.appendTo?getLine(draft.appendTo)?.type:drawTypeId()))||S.fenceTypes[0];
 const draftAll=()=>[...(draft.appendTo?getLine(draft.appendTo).pts.slice(-1):[]),...draft.pts];
@@ -62,6 +63,7 @@ function draftGate(on){
   draft.gate=on;draft.afterGate=false;drawDraft();
 }
 function drawDraft(){
+  histButtons();
   draftLayer.clearLayers();if(mode!=='draw')return;
   const all=draftAll(),col=draftType()?.color||'#fff';
   if(all.length>1){

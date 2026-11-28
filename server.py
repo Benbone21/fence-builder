@@ -34,6 +34,7 @@ import urllib.error, urllib.parse, urllib.request
 from html import unescape
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import offline
+import ground   # the ground along a fence line: soil, water, trees (public federal map data)
 
 FROZEN = bool(getattr(sys, "frozen", False))  # running as the installed FenceBuilder.exe
 # the app's own files (static/, VERSION, update.json); PyInstaller unpacks them into sys._MEIPASS
@@ -1320,6 +1321,15 @@ class Handler(BaseHTTPRequestHandler):
         return self.send(200, {"ok": True, "rev": rev})
 
     def app_post(self, api, uid, admin):
+        if api.startswith("ground/"):
+            if self.limited(uid, "geo"):
+                return
+            body = self.read_json(400_000)
+            if body is None:
+                return
+            if ground.handle_post(self, api, body):
+                return
+            return self.send(404, {"error": "not found"})
         if api.startswith("off/"):
             kind = "heavy" if api == "off/elev" else "fetch" if api == "off/areas" else None
             if kind and self.limited(uid, kind):

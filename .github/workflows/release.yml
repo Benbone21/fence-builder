@@ -38,7 +38,7 @@ jobs:
           "version=$file" >> $env:GITHUB_OUTPUT
 
       - name: Check the Python files compile
-        run: python -m py_compile server.py offline.py auth.py app.py
+        run: python -m py_compile server.py offline.py auth.py ground.py app.py
 
       # Starts the app on an empty data folder in a hidden browser, clicks every page, adds a test job
       # and checks the Final bill, the single-user way and as a shared server with accounts. Then checks

@@ -88,7 +88,7 @@ parcels.on('add',async()=>{
 const hill=usgs('Hillshade Multidirectional',{opacity:.55}),cont2=usgs('Preset 2ft Contour Interval',{minZoom:15}),cont10=usgs('Preset 10ft Contour Interval',{minZoom:13}),slope=usgs('Slope Map',{opacity:.5});
 const BASE={'Satellite':sat,'Aerial photo (USGS, works offline when saved)':aerial,'Streets (house numbers when zoomed in)':streets,'LiDAR bare earth (no trees or buildings, works offline when saved)':hillBase,'Topo with contour lines':topo};
 const OVL={'Property lines (approximate, not a survey)':parcels,'Section lines (BLM survey)':plss,'Areas saved for offline':offAreas,'Roads and street names':roads,'State lines and place names':labels,'LiDAR shading over the photo':hill,'2 ft contour lines (zoomed in)':cont2,'10 ft contour lines':cont10,'Slope map':slope};
-L.control.layers(BASE,OVL,{position:'topright'}).addTo(map);
+const layCtl=L.control.layers(BASE,OVL,{position:'topright'}).addTo(map);   // 68-ground.js adds the soil, water and tree layers
 /* remember which layers are on; roads and state lines start on */
 const lay={base:'Satellite',on:['Roads and street names','State lines and place names','Areas saved for offline']};
 try{Object.assign(lay,JSON.parse(localStorage.getItem('fence-layers')))}catch(e){}

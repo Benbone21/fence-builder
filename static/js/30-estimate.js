@@ -2,6 +2,22 @@
 const ll=p=>L.latLng(p.lat,p.lng);
 const key=p=>p.lat.toFixed(6)+','+p.lng.toFixed(6);
 const geomKey=l=>l.pts.map(key).join('|');
+// the ground a closed fence line (its last point back on its first) goes around, in square feet; 0 for an open line
+function loopSqFt(l){
+  const p=l.pts||[];if(p.length<4||key(p[0])!==key(p[p.length-1]))return 0;
+  const lat0=p[0].lat,lng0=p[0].lng,kx=111320*Math.cos(lat0*Math.PI/180),ky=110574,X=q=>(q.lng-lng0)*kx,Y=q=>(q.lat-lat0)*ky;
+  let s=0;for(let i=1;i<p.length;i++)s+=X(p[i-1])*Y(p[i])-X(p[i])*Y(p[i-1]);
+  return Math.abs(s)/2*10.7639104;   // square meters to square feet
+}
+// the middle of the ground inside a closed line, for its label on the map
+function loopMiddle(l){
+  const p=l.pts,lat0=p[0].lat,lng0=p[0].lng;let a=0,cx=0,cy=0;
+  for(let i=1;i<p.length;i++){const x0=p[i-1].lng-lng0,y0=p[i-1].lat-lat0,x1=p[i].lng-lng0,y1=p[i].lat-lat0,c=x0*y1-x1*y0;a+=c;cx+=(x0+x1)*c;cy+=(y0+y1)*c}
+  return a?{lat:lat0+cy/(3*a),lng:lng0+cx/(3*a)}:p[0];
+}
+const sqftAcres=sf=>{const ac=sf/43560;return ac>=100?Math.round(ac).toLocaleString('en-US'):ac.toFixed(ac>=10?1:2)};
+const fmtAcres=sf=>sqftAcres(sf)+(Math.abs(sf/43560-1)<0.005?' acre':' acres');
+const fmtSqFt=sf=>Math.round(sf).toLocaleString('en-US')+' sq ft';
 // stored ground heights for a line: evOf only when they match the line as it is now (used for pricing),
 // evAny also returns the last good ones from before the line was moved (shown while new ones load)
 // EV is the newest way of working the numbers out. Older (v2) numbers still count, so a copy of the app
@@ -115,7 +131,7 @@ function analyze(proj){
       stretches.push({len:s,key:kk,items,custom:Array.isArray(cust),n:np,gmin,gmax,mids:midPosts(t,items,ra/s,1-rb/s,rp/s)});
     });
     const len=secs.reduce((a,b)=>a+b,0);
-    lines.push({l,t,...o,len,posts,wood,other,tposts:posts-wood,pulls,sections:secs.length+pulls,stretches});
+    lines.push({l,t,...o,len,posts,wood,other,tposts:posts-wood,pulls,sections:secs.length+pulls,stretches,area:loopSqFt(l)});
     // every stretch of wire (brace to brace, split at pull braces) on this line
     for(const st of stretches){const bs=[0,...st.items.filter(x=>x.k==='p').map(x=>x.f),1];for(let q=0;q<bs.length-1;q++){const pl=st.len*(bs[q+1]-bs[q]);if(pl>0)TT(t).parts.push(pl)}}
     const T=TT(t);T.L+=len;T.posts+=posts;T.wood+=wood;T.tposts+=posts-wood;T.sections+=secs.length+pulls;T.pulls+=pulls;T.lines++;other.forEach((n,i)=>T.other[i]=(T.other[i]||0)+n);
@@ -199,6 +215,7 @@ function analyze(proj){
   // other fees on this job: travel, permits, rough ground, anything
   lab.fees=(proj.fees||[]).filter(f=>+f.amount);lab.feeTotal=lab.fees.reduce((a,f)=>a+(+f.amount||0),0);
   const extra=lab.cost+lab.matHead+lab.feeTotal;
-  return {nodes,lines,types,kits,kitById,gates,rows,bad,totalFt,sub,tax,labor:lab.cost,lab,total:sub+tax+extra};
+  const area=lines.reduce((a,r)=>a+(r.area||0),0);   // square feet inside closed fence lines
+  return {nodes,lines,types,kits,kitById,gates,rows,bad,totalFt,area,sub,tax,labor:lab.cost,lab,total:sub+tax+extra};
 }
 

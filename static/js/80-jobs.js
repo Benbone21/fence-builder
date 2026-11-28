@@ -60,7 +60,7 @@ function jobPage(p){
   const crew=S.settings.crew||[],mine=Array.isArray(p.crew)?p.crew:crew.map(c=>c.id);
   const paid=+p.paid||0,bal=a.total-paid;
   const where=p.address?encodeURIComponent(p.address):(()=>{const pt=p.lines.find(l=>l.pts?.length)?.pts[0];return pt?`${pt.lat},${pt.lng}`:''})();
-  const lines=a.lines.map(r=>`<tr><td>${esc(r.l.name)}</td><td><span class="dot" style="background:${esc(r.t?.color||'#fff')}"></span> ${esc(r.t?.name||'')}</td><td class="num">${fmtFt(r.len)}</td></tr>`).join('');
+  const lines=a.lines.map(r=>`<tr><td>${esc(r.l.name)}${r.area?`<div class="small mut">fences in ${fmtAcres(r.area)}</div>`:''}</td><td><span class="dot" style="background:${esc(r.t?.color||'#fff')}"></span> ${esc(r.t?.name||'')}</td><td class="num">${fmtFt(r.len)}</td></tr>`).join('');
   const log=[...(p.log||[])].reverse().map(x=>`<li><span class="mut">${esc(new Date(x.at).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}))}</span> ${esc(x.text)}</li>`).join('');
   return `<div class="jobtop noprint"><button class="btn big" data-act="jobBack">← All jobs</button></div>
   <div class="phead"><div><h1>${esc(p.name)} <span class="stagepill s-${st}">${stageName(st)}</span></h1><p>${esc([p.customer,p.address].filter(Boolean).join(' · ')||'Add the customer below.')}</p></div>
@@ -87,7 +87,7 @@ function jobPage(p){
       <p class="small mut">Materials ${money(a.sub+a.tax)} with tax · labor ${money(a.lab?.cost||0)}${a.lab?.feeTotal?` · fees ${money(a.lab.feeTotal)}`:''}${p.est?`<br>Estimate saved ${esc(new Date(p.est.at).toLocaleDateString())}: ${money(p.est.total)}${Math.abs(p.est.total-a.total)>0.5?' (the job has changed since)':''}`:''}</p>
     </div>
     <div class="card"><h2>The fence</h2>
-      ${lines?`<table class="mini2"><tbody>${lines}</tbody><tfoot><tr><td colspan="2">Total</td><td class="num"><b>${fmtFt(a.totalFt)}</b></td></tr></tfoot></table>`:'<p class="mut">No fence drawn yet. Press <b>Fence map</b> to draw it.</p>'}
+      ${lines?`<table class="mini2"><tbody>${lines}</tbody><tfoot><tr><td colspan="2">Total</td><td class="num"><b>${fmtFt(a.totalFt)}</b></td></tr>${a.area?`<tr><td colspan="2">Fenced in</td><td class="num"><b>${fmtAcres(a.area)}</b><div class="small mut">${fmtSqFt(a.area)}</div></td></tr>`:''}</tfoot></table>`:'<p class="mut">No fence drawn yet. Press <b>Fence map</b> to draw it.</p>'}
     </div>
     ${actualCard(p,a)}
     <div class="card wide"><h2>Notes</h2><textarea rows="5" data-f="job.notes" ${d} aria-label="Notes" placeholder="Anything to remember about this job">${esc(p.notes||'')}</textarea></div>

@@ -244,8 +244,32 @@ def run(args, multi=False):
                     problems.append("the Final bill shows no total above $0 (found %r)" % tot)
                 else:
                     print("  Final bill total: $%.2f" % max(tot))
+                if "The ground" not in txt:
+                    problems.append("the Final bill has no 'The ground' part (soil, water, trees)")
             for e in errors:
                 problems.append("Final bill check: %s" % e)
+            errors.clear()
+
+            # 3. the ground along a fence line (soil, water, trees): the line's page shows it, and it stays calm
+            # when the outside map services can't be reached (they are blocked here unless --online)
+            b = tab("Builder")
+            if b:
+                b.click()
+                settle()
+                page.locator("#side").get_by_text("Fence 1", exact=True).first.click()
+                settle()
+                if "Ground along this fence" not in visible_text():
+                    problems.append("a fence line's page has no 'Ground along this fence' part")
+                else:
+                    print("  fence line page: ground part shown")
+            for e in errors:
+                problems.append("ground check: %s" % e)
+            try:
+                http(base, "/api/ground/soil", "POST", b'{"pts": [[43.6, -116.6]]}', {"Content-Type": "application/json"})
+                problems.append("api/ground/soil took a line with one point")
+            except urllib.error.HTTPError as e:
+                if e.code != 400:
+                    problems.append("api/ground/soil answered %s to a bad line, not 400" % e.code)
             if problems and args.shot:
                 page.screenshot(path=args.shot, full_page=True)
             browser.close()

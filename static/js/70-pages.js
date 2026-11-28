@@ -107,13 +107,13 @@ function estView(){
 `
     :`<p class="mut">Once there is some fence, the list of what to buy shows up here.</p>`;
   return `<div class="phead"><div><h1>Final bill: ${esc(p.name)}</h1><p>${p.customer?esc(p.customer)+'. ':''}What to buy and what to charge for this job. A price you change here is for this job only.</p></div><div class="row noprint"><button class="btn big" data-act="jobPage" data-id="${p.id}">Job details</button><button class="btn big" data-act="showMap">Fence map</button><button class="btn big" data-act="copyBill">Copy list</button><button class="btn big" data-act="print">Print my copy</button><button class="btn big" data-act="saveEst">Save estimate</button><button class="btn pri big" data-act="quote">Customer quote</button></div></div>
-  ${estNote(p)}<div class="est"><div class="sum"><div><span>Fence length</span><b>${fmtFt(A.totalFt)}</b></div><div><span>Braces</span><b>${braces}</b></div><div><span>Gates</span><b>${A.gates}</b></div>
+  ${estNote(p)}<div class="est"><div class="sum"><div><span>Fence length</span><b>${fmtFt(A.totalFt)}</b>${A.area?`<span class="areanote">${fmtAcres(A.area)} fenced in (${fmtSqFt(A.area)})</span>`:''}</div><div><span>Braces</span><b>${braces}</b></div><div><span>Gates</span><b>${A.gates}</b></div>
     <div><span>Materials</span><b>${money(A.sub)}</b></div><div><span>Labor</span><b>${money(A.lab.cost)}</b></div><div><span>Headache and fees</span><b>${money(A.lab.matHead+A.lab.feeTotal)}</b></div><div class="tot"><span>Total</span><b>${money(A.total)}</b></div></div>
   <div class="wide"><h2>Materials to buy</h2>${bill}</div>
   <div class="wide"><h2>The fence</h2>${runs}
   <div class="row noprint" style="margin-top:8px"><button class="btn" data-act="addRun">+ Add a fence run by length</button>
     <span class="small mut">For fence you measured yourself. Ends, corners and both sides of each gate get braces, as set on its fence type.</span></div>
-  </div><div class="wide">${laborView()}</div></div>`;
+  </div><div class="wide">${groundBill()}${laborView()}</div></div>`;
 }
 function lineView(){
   const l=getLine(selLine),r=A.lines.find(x=>x.l===l);if(!r)return estView();
@@ -128,11 +128,13 @@ function lineView(){
   <label class="f">Line name</label><input type="text" value="${esc(l.name)}" data-f="line.name" data-id="${l.id}">
   <label class="f">Fence type</label><select data-f="line.type" data-id="${l.id}">${S.fenceTypes.map(t=>opt(t.id,t.name,l.type)).join('')}</select>
   <p class="big" style="margin:14px 0 2px">${fmtFt(r.len)}</p><p class="small mut" style="margin:0">of wire run${r.gateW?`, after ${fmtFt(r.gateW)} of gate openings`:''}. ${postText(r)}${r.pulls?`, ${r.pulls} pull braces`:''}.</p>
+  ${r.area?`<div class="areabox"><span>Fenced in</span><b>${fmtAcres(r.area)}</b><span>${fmtSqFt(r.area)}</span></div>`:''}
   <p class="small" style="margin:4px 0 0">${gapText(r)}</p>
   ${(()=>{const ps=stretchParts(r);return ps.length?`<div class="box" style="margin-top:10px"><table class="strs"><thead><tr><th>Section</th><th class="num">Length</th><th>Which roll</th><th>Wire pulled</th></tr></thead><tbody>${ps.map((q,i)=>`<tr><td>${i+1}</td><td class="num">${fmtFt(q.len)}</td><td>${q.on?(q.on.q1>q.on.q0?`Rolls ${q.on.q0+1}–${q.on.q1+1}`:`Roll ${q.on.q0+1}`)+` <span class="mut">(${q.on.sizes.map(fmtQ).join(' + ')} ft)</span>`:'–'}</td><td>${q.split?'Into the pull brace':'From the end brace'}</td></tr>`).join('')}</tbody></table></div>`:''})()}
   <p class="small mut" style="margin:4px 0 0">Zoom in on the map to drag any post or pull brace along the fence, or click one to change it, delete it or add another.</p>
   ${r.stretches.some(x=>x.custom)?`<button class="btn sm" data-act="resetCust" data-id="${l.id}" style="margin-top:6px">Put all posts back to automatic</button>`:''}
   ${evh}
+  ${groundView(l)}
   <h3>Points, braces and gates</h3>
   <div class="box"><table class="nodes"><thead><tr><th>#</th><th>Spot</th><th>What goes here</th><th></th></tr></thead><tbody>${nodes}</tbody></table></div>
   <div class="row" style="margin-top:12px"><button class="btn" data-act="cont" data-id="${l.id}">Keep drawing from the end</button><button class="btn" data-act="rev" data-id="${l.id}">Flip direction</button><button class="btn" data-act="cross" data-id="${l.id}" title="Put a gate where it crosses a road and braces on both banks of a river or creek">Find roads and rivers</button><button class="btn del" data-act="delLine" data-id="${l.id}">Delete line</button></div>
@@ -509,7 +511,7 @@ function bracesView(){
 }
 // Settings: a list of sections down the left, one open at a time
 let setSec='look';
-const SET_ALL=[['account','Your account','Password and signing out'],['look','Text size and help','Bigger words, how-to cards'],['biz','Your business','Name, logo and quote terms'],['crew','Crew','Who works on your jobs'],['money','Sales tax','Tax on materials'],['map','Drawing on the map','Slope, roads and rivers'],['offline','Offline maps','Maps saved for no internet'],['prices','Store prices','Keep prices up to date'],['backup','Backup','Save or load a copy of everything'],['server','Fence Builder server','Use a shared server instead'],['updates','Updates','Your version and new ones']];
+const SET_ALL=[['account','Your account','Password and signing out'],['look','Text size and help','Bigger words, how-to cards'],['biz','Your business','Name, logo and quote terms'],['crew','Crew','Who works on your jobs'],['money','Sales tax','Tax on materials'],['map','Drawing on the map','Slope, roads and rivers'],['ground','Ground and clearing','Soil, water, trees, clearing $'],['offline','Offline maps','Maps saved for no internet'],['prices','Store prices','Keep prices up to date'],['backup','Backup','Save or load a copy of everything'],['server','Fence Builder server','Use a shared server instead'],['updates','Updates','Your version and new ones']];
 // Your account only on a shared server; the server choice only in the Windows app
 const setSecs=()=>SET_ALL.filter(([k])=>k==='account'?isMulti():k==='server'?ME.desktop:true);
 function settingsView(){
@@ -571,6 +573,7 @@ function settingsView(){
       <h3>Braces added for you</h3>${autoSwitches('')}
       <div class="note">The rule for hill braces is on each fence type, under Braces. The same four switches are at the top of the Builder.</div>
       <div class="note">Every spot you click gets a brace: a bend gets the corner brace, a spot on a straight run gets the pull brace. You can change any single spot on the map afterwards.</div>`,
+    ground:groundSettings(),
     offline:`<h2>Offline maps</h2><p class="lead">${isMulti()?'Areas saved on the server, for when its internet is slow or down':'Areas saved on this computer to use with no internet'}: the aerial photo, the LiDAR bare-earth map and ground heights, and the property lines. With no internet the map switches to them on its own.</p>
       ${isMulti()&&ME.offline!=='all'&&!(ME.offline==='admin'&&isAdmin())?'<p class="mut">Saving new areas is turned off on this server. Ask the person who runs it.</p>':''}
       ${serverOK?(offList.length?`<div class="box">${offList.map(a=>{const pct=a.total?Math.floor(a.done/a.total*100):0,st=a.status==='downloading'?`Downloading, ${pct}%`:a.status==='done'?'Ready':a.status==='partly'?`Ready, ${a.failed} pieces missing`:a.status==='stopped'?`Stopped at ${pct}%`:'Did not finish';

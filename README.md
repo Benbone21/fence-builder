@@ -237,6 +237,33 @@ install); `fence-estimator.service` is a systemd example, `nginx-fence.conf` an 
 - 3D view shows the terrain with the satellite photo, every post, wire, brace and gate at
   real size, and nearby buildings. Move with W A S D or the arrow keys.
 
+## The ground along a fence
+
+When you draw or change a fence line, Fence Builder looks up the ground under it on public US government maps
+(it needs the internet and the Fence Builder app or server; drawing never waits for it):
+
+- **Soil and rock** (USDA soil survey): which soils the line crosses and for how many feet, rocks bigger than 3 inches,
+  and how deep bedrock or hardpan is. For example: "Rocky ground on 620 ft. Bedrock as shallow as 20 in."
+- **Water**: streams, rivers, canals and ditches it crosses (USGS), feet in a flood zone (FEMA), and feet through
+  wetlands (US Fish and Wildlife). Wetlands and flood zones may need a permit: check before you build.
+- **Trees and brush** (LANDFIRE): feet through trees and through thick brush.
+
+You see it under **Ground along this fence** on each line's page, and for the whole job under **The ground** on the
+Final bill, with two buttons:
+
+- **Use 10%** (or whatever it suggests) sets the site difficulty: up to 15% for rocky ground and up to 15% for bedrock or
+  hardpan within 40 inches, by how much of the fence is on it.
+- **Add a clearing fee** adds "Clearing trees and brush" to the other fees, at $ per foot for trees and for brush set in
+  **Settings → Ground and clearing** (starting guesses: $4 and $1.50 a foot).
+
+Nothing on the bill changes until you press a button. The braces on each bank of a river or creek ("Gates at roads, braces
+at rivers") come from the same USGS stream map, which has many ditches the street map misses; the street map is the backup
+when USGS doesn't answer.
+
+The Builder map's layer list has **Soils**, **Streams and ditches**, **Flood zones**, **Wetlands** and **Trees and brush**
+(off to start; zoom in to see them). These maps are a guide for planning, not a survey. They are not saved with offline
+areas yet.
+
 ## Offline maps
 
 On the Builder map, press **Save area for offline**, click two corners of the area, name it and
@@ -256,6 +283,8 @@ for the app, `data/offline` for the web server. About 4 MB per 50 acres at full 
   saved offline areas and `auth.py` for the accounts of a shared server (`FENCE_MODE=multi`).
 - `static/login.html`/`login.js` is the sign-in page and `static/admin.html`/`admin.js` the Accounts page
   of a shared server. `static/js/05-account.js` is the app's side of accounts.
+- `ground.py` looks up the ground along a fence line (soil, water, trees) on public federal maps for the
+  app; `static/js/68-ground.js` shows it.
 - `static/index.html` is the page, `static/app.css` its look, and `static/view3d.js` the 3D view.
 - The app's script is kept in pieces in `static/js/`, numbered in the order they run
   (`00-basics.js` … `95-start.js`). The server joins them into one script, `app.js`, so the

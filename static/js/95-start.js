@@ -13,7 +13,7 @@ $('#importFile').onchange=async e=>{
 $('#proj').onchange=e=>{if(!e.target.value)return;if(e.target.value==='__newjob'){e.target.value=S.cur||'';$('#newProj').click();return}S.cur=e.target.value;selLine=null;selNode=null;cancelDraw();changed();fitProject()};
 $('#newProj').onclick=async()=>{const n=await askText('Name for the new job','Job '+(S.projects.length+1));if(n===null)return;const p={id:uid('p'),name:n.trim()||'New job',stage:'bid',lines:[]};logJob(p,'Job started');S.projects.push(p);S.cur=p.id;selLine=null;selNode=null;if(mode!=='idle')cancelDraw();map.closePopup();S.tab='build';changed();toast('New job "'+p.name+'". Set up the fence, then draw it.')};
 function fitProject(){const pts=P().lines.flatMap(l=>l.pts);if(pts.length)map.fitBounds(L.latLngBounds(pts.map(ll)),{padding:[40,40],maxZoom:19})}
-function changed(){keepBlankJob();save();renderAll();record();scheduleElev()}
+function changed(){keepBlankJob();save();renderAll();record();scheduleElev();scheduleGround()}
 
 /* ---------- start ---------- */
 // take loaded data and fill in anything an older save is missing
@@ -36,7 +36,7 @@ load().then(s=>{
   adopt(s);
   setStatus(serverOK?'Saved':'Saving in this browser');
   accountBar();if(ME.note)setTimeout(()=>toast(ME.note),1200);
-  renderAll();record();fitProject();scheduleElev();checkLatest();
+  renderAll();record();fitProject();scheduleElev();scheduleGround();checkLatest();
   takeGrab();setTimeout(()=>autoPrices(false),5000);loadOffAreas();
   setTimeout(()=>checkUpdate(false),2500);setInterval(()=>checkUpdate(false),6*3600e3);setInterval(()=>autoPrices(false),3600e3);
 });
