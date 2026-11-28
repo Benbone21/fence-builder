@@ -8,12 +8,12 @@
      property lines                               IndexedDB "fence-maps", store "parcels": only each parcel's number,
                                                   acres and outline. Never an owner's name.
      the list of saved areas                      IndexedDB "fence-maps", store "areas"
-   Esri's satellite photo is never kept (its terms); the state parcel layer is not kept either. One downloader for the
+   Esri's satellite photo is never kept (its terms). One downloader for the
    desktop's "Save area for offline" and the phone's "Keep this area's map on this phone": 5 downloads at a time, each
    tried 3 times, the size shown first, and an upper limit so a download stays a sensible size. */
 const OFF_CAP={desk:{tiles:12000,mb:400,heights:4e6},phone:{tiles:3000,mb:150,heights:2e6}};
 const OFF_KB={naip:16,hill:8},OFF_Z0=12,OFF_BLOCK=500,OFF_PAR=5;
-const OFF_PARCELS=()=>PARCEL_SOURCES.filter(s=>!/^State of /.test(s.name));
+const OFF_PARCELS=()=>PARCEL_SOURCES;   // the county maps and the State of Idaho layer (not IDWR's, which is never used)
 let mapDbP=null,offEst=null;
 const offRun=new Map();   // area id -> the area, while it downloads in this window
 function mapDb(){
