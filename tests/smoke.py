@@ -297,6 +297,8 @@ def run(args, multi=False):
             page.set_default_timeout(15000)
             errors = []
             page.on("pageerror", lambda e: errors.append("JS exception: %s" % e))
+            asked = []   # every request the page makes (the ground lookups must go from the browser, not via api/ground)
+            page.on("request", lambda r: asked.append(r.url))
 
             def on_console(m):
                 if m.type != "error" or NET_NOISE.search(m.text or ""):
@@ -399,7 +401,8 @@ def run(args, multi=False):
             errors.clear()
 
             # 3. the ground along a fence line (soil, water, trees): the line's page shows it, and it stays calm
-            # when the outside map services can't be reached (they are blocked here unless --online)
+            # when the outside map services can't be reached (they are blocked here unless --online). The browser
+            # asks those maps itself: the page never asks the server's api/ground.
             b = tab("Builder")
             if b:
                 b.click()
@@ -410,14 +413,15 @@ def run(args, multi=False):
                     problems.append("a fence line's page has no 'Ground along this fence' part")
                 else:
                     print("  fence line page: ground part shown")
+            page.wait_for_timeout(1500)   # the ground lookups start a moment after the page opens
             for e in errors:
                 problems.append("ground check: %s" % e)
-            try:
-                http(base, "/api/ground/soil", "POST", b'{"pts": [[43.6, -116.6]]}', {"Content-Type": "application/json"})
-                problems.append("api/ground/soil took a line with one point")
-            except urllib.error.HTTPError as e:
-                if e.code != 400:
-                    problems.append("api/ground/soil answered %s to a bad line, not 400" % e.code)
+            if any("/api/ground" in u for u in asked):
+                problems.append("the page asked the server's api/ground: the ground lookups should go from the browser")
+            elif not any(re.search(r"sdmdataaccess|hydro\.nationalmap|hazards\.fema|fwspublicservices|lfps\.usgs", u) for u in asked):
+                problems.append("the page did not ask the public ground maps for the fence line")
+            else:
+                print("  ground: asked from the browser (no api/ground)")
             if problems and args.shot:
                 page.screenshot(path=args.shot, full_page=True)
             # 4. on a phone: the page bar, the Builder's slide-up panel, and walking a fence line with fake GPS,
