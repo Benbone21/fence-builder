@@ -48,9 +48,9 @@ async function usgsSamples(pts){
       geometryType:'esriGeometryMultipoint',returnFirstValueOnly:'true',interpolation:'RSP_BilinearInterpolation',outFields:'Name,AcquisitionDate',f:'json'});
     let j=null;
     for(let t=0;t<(navigator.onLine===false?0:2)&&!j;t++){try{const r=await fetchT(USGS+'/getSamples',{method:'POST',body:body()});const x=await r.json();if(Array.isArray(x.samples))j=x}catch(e){}}
-    if(!j){   // USGS not answering (no internet?): the LiDAR saved for offline, if this spot is in a saved area
-      try{const r=await fetchT('api/off/elev',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pts:ch.map(p=>[p.lat,p.lng])})},20000);const x=await r.json();
-        if(Array.isArray(x.z)&&x.z.some(v=>v!=null)){ok++;x.z.forEach((v,k)=>{if(okZ(v)){z[i+k]=v;res[i+k]=DEM_SAVED_RES}});srcs['saved for offline']=srcs['saved for offline']||{res:DEM_SAVED_RES,year:null}}}catch(e){}
+    if(!j){   // USGS not answering (no internet?): the LiDAR saved on this device for offline, if this spot is in a saved area
+      try{const x=await offHeights(ch);
+        if(x.some(v=>v!=null)){ok++;x.forEach((v,k)=>{if(okZ(v)){z[i+k]=v;res[i+k]=DEM_SAVED_RES}});srcs['saved for offline']=srcs['saved for offline']||{res:DEM_SAVED_RES,year:null}}}catch(e){}
       continue;   // still nothing: its points stay empty and are filled in below
     }
     ok++;
@@ -67,9 +67,9 @@ async function meteoSamples(pts){
   const out=[];
   for(let i=0;i<pts.length;i+=100){
     const ch=pts.slice(i,i+100),qs='latitude='+ch.map(s=>s.lat.toFixed(6)).join(',')+'&longitude='+ch.map(s=>s.lng.toFixed(6)).join(',');
-    let j;
-    try{const r=await fetchT('https://api.open-meteo.com/v1/elevation?'+qs,{},15000);if(!r.ok)throw 0;j=await r.json()}
-    catch(e){const r=await fetchT('api/elevation?'+qs,{},20000);j=await r.json()}
+    // the last resort (outside the US, or where USGS has no heights), asked by this browser
+    const r=await fetchT('https://api.open-meteo.com/v1/elevation?'+qs,{},15000);if(!r.ok)throw Error('no elevation');
+    const j=await r.json();
     if(!j||!Array.isArray(j.elevation)||j.elevation.length!==ch.length)throw Error('no elevation');
     out.push(...j.elevation);
   }
@@ -221,7 +221,8 @@ async function open3D(lineId){
     a={bounds:view};
   }
   if(msg)toast(msg);
-  try{const m=await import('./view3d.js');m.open3D({layoutOf:id=>A.lines.find(r=>r.l.id===id)?.stretches,postRule,bounds:a.bounds,lines:P().lines,types:S.fenceTypes,nodes:A.nodes,key,focus:lineId,braces:S.braces.map(b=>({...b,shape:braceShape(b)})),materials:S.materials,edit:edit3D()})}
+  try{const m=await import('./view3d.js');m.open3D({layoutOf:id=>A.lines.find(r=>r.l.id===id)?.stretches,postRule,bounds:a.bounds,lines:P().lines,types:S.fenceTypes,nodes:A.nodes,key,focus:lineId,braces:S.braces.map(b=>({...b,shape:braceShape(b)})),materials:S.materials,edit:edit3D(),
+    saved:{dem:offDemGrid,photo:offPhotoTile}})}   // the heights and aerial photo saved on this device, for no internet
   catch(e){console.error(e);toast('3D view could not load')}
 }
 // building fence from inside the 3D view (Draw fence, Add brace, Add gate there). Each one changes the job the same way

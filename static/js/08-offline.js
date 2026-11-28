@@ -25,7 +25,8 @@ async function offDel(k){try{const db=await offDb();await new Promise((res,rej)=
 function offForget(){
   try{if(offDbP)offDbP.then(db=>db.close(),()=>{})}catch(e){}offDbP=null;
   try{indexedDB.deleteDatabase('fence-offline')}catch(e){}
-  try{caches.delete('fb-tiles')}catch(e){}
+  try{caches.delete('fb-tiles')}catch(e){}   // the maps saved for offline go too (60-offline-area.js)
+  try{if(mapDbP)mapDbP.then(db=>db.close(),()=>{});mapDbP=null;indexedDB.deleteDatabase('fence-maps')}catch(e){}
 }
 // who signed in (kept when there is a connection; used when there isn't)
 function offMeSeen(j){
