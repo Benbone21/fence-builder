@@ -257,7 +257,8 @@ address works for everything else, but the Walk screen will say so: turn on http
 ## The ground along a fence
 
 When you draw or change a fence line, Fence Builder looks up the ground under it on public US government maps
-(it needs the internet and the Fence Builder app or server; drawing never waits for it):
+(it needs the internet; drawing never waits for it). These lookups now run in your own browser or phone, not on the
+Fence Builder server, and the answers are kept in your browser so opening a job again doesn't ask again:
 
 - **Soil and rock** (USDA soil survey), in plain words: first **What this means for posts**, for example "Mostly rocky
   ground: hard digging. About 5,550 ft is rocky, and 3,400 ft of it has solid rock 1–2 ft down. Plan on a rock bar or
@@ -306,8 +307,9 @@ for the app, `data/offline` for the web server. About 4 MB per 50 acres at full 
   saved offline areas and `auth.py` for the accounts of a shared server (`FENCE_MODE=multi`).
 - `static/login.html`/`login.js` is the sign-in page and `static/admin.html`/`admin.js` the Accounts page
   of a shared server. `static/js/05-account.js` is the app's side of accounts.
-- `ground.py` looks up the ground along a fence line (soil, water, trees) on public federal maps for the
-  app; `static/js/68-ground.js` shows it.
+- `static/js/67-ground-fetch.js` looks up the ground along a fence line (soil, water, trees) on public federal maps,
+  straight from the browser; `static/js/68-ground.js` shows it. (`ground.py` is the old server route for the same
+  lookups; the page no longer uses it.)
 - `static/index.html` is the page, `static/app.css` its look, and `static/view3d.js` the 3D view. `static/js/92-phone.js` is the phone's
   layout and Walk the fence, `static/js/08-offline.js` and `static/sw.js` let a phone work with no signal; pictures are in
   `docs/phone/`. The colours of

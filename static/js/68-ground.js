@@ -1,9 +1,11 @@
 /* ---------- the ground along each fence line: soil and rock, water, trees and brush ----------
-   Fence Builder's server asks public federal maps about each line (ground.py): the USDA soil survey, USGS streams and
-   ditches, FEMA flood zones, US Fish and Wildlife wetlands, and LANDFIRE tree and shrub cover. Answers are kept per line
-   shape (here and in this browser), asked for in the background after a line is drawn or changed, and never hold up
-   drawing. If a map doesn't answer, the line just says so. Nothing here changes the bill until a button is pressed. */
+   This browser asks public federal maps about each line itself (67-ground-fetch.js), so the server does none of it:
+   the USDA soil survey, USGS streams and ditches, FEMA flood zones, US Fish and Wildlife wetlands, and LANDFIRE tree and
+   shrub cover. Answers are kept per line shape in this browser, asked for in the background after a line is drawn or
+   changed, a few at a time, and never hold up drawing. With no signal they wait until it is back. If a map doesn't
+   answer, the line just says so. Nothing here changes the bill until a button is pressed. */
 const GTOPICS=['soil','streams','flood','wetlands','cover'];
+const GASK=['streams','soil','flood','wetlands','cover'];   // the order they are asked in: streams first, river braces wait on them
 const GROUND_FEE='Clearing trees and brush';
 const gRate=()=>({trees:Math.max(0,+(S.settings.clearTrees??4)||0),brush:Math.max(0,+(S.settings.clearBrush??1.5)||0)});
 // the line's shape: its corners, leaving out points on a straight run (gates and braces added later), so adding
@@ -23,30 +25,28 @@ const gStore=(()=>{let o={};try{o=JSON.parse(localStorage.getItem('fence-ground'
 const gBusy=new Map(),gFail=new Map();   // shape#topic -> the request on its way / {at, msg} when it didn't answer
 let gSaveT,gT,gDrawT;
 function gKeep(){clearTimeout(gSaveT);gSaveT=setTimeout(()=>{const ks=Object.keys(gStore).sort((a,b)=>(gStore[b].at||0)-(gStore[a].at||0));for(const k of ks.slice(150))delete gStore[k];
-  try{localStorage.setItem('fence-ground',JSON.stringify(gStore))}catch(e){}},800)}
+  // when this browser's room is full, the oldest shapes make way (they are asked for again if their job is opened)
+  for(let n=Math.min(ks.length,150);n>0;n=Math.floor(n/2)){try{localStorage.setItem('fence-ground',JSON.stringify(gStore));return}catch(e){}for(const k of ks.slice(Math.floor(n/2)))delete gStore[k]}},800)}
+const gNoSignal=()=>navigator.onLine===false||netDown;   // no signal: asked for when it is back (offBack in 08-offline.js)
 function groundGet(sh,topic){
   const id=sh.key+'#'+topic,have=gStore[sh.key]?.[topic];
   if(have&&!gOld(topic,have))return Promise.resolve(have);
   if(gBusy.has(id))return gBusy.get(id);
   const p=(async()=>{
-    if(!serverOK)throw Error('server');
-    if(navigator.onLine===false)throw Error('offline');
-    let r,j=null;
-    try{r=await fetchT('api/ground/'+topic,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pts:sh.pts})},60000)}catch(e){throw Error('')}
-    try{j=await r.json()}catch(e){}
-    if(!r.ok||!j||j.error)throw Error(j?.error||'');
+    if(gNoSignal())throw Error('offline');
+    const j=await groundLookup(topic,sh.pts);   // straight from this browser to the public maps
     const o=gStore[sh.key]||(gStore[sh.key]={});o[topic]=j;o.at=Date.now();gFail.delete(id);gKeep();return j})();
   gBusy.set(id,p);
   p.catch(e=>gFail.set(id,{at:Date.now(),msg:e.message})).finally(()=>{gBusy.delete(id);gRedraw();scheduleGround()});
   return p}
 function scheduleGround(){clearTimeout(gT);gT=setTimeout(ensureGround,1200)}
 function ensureGround(){
-  if(!S||!serverOK||navigator.onLine===false)return;
+  if(!S||gNoSignal())return;
   const now=Date.now();
   for(const l of P().lines){const sh=groundShape(l);if(!sh)continue;
-    for(const t of GTOPICS){const id=sh.key+'#'+t,f=gFail.get(id);
+    for(const t of GASK){const id=sh.key+'#'+t,f=gFail.get(id);
       if((gStore[sh.key]?.[t]&&!gOld(t,gStore[sh.key][t]))||gBusy.has(id)||(f&&now-f.at<180000))continue;
-      if(gBusy.size>=6)return;   // a few at a time: the rest start as these finish
+      if(gBusy.size>=3)return;   // a few at a time: the rest start as these finish
       groundGet(sh,t).catch(()=>{})}}}
 addEventListener('online',()=>{gFail.clear();scheduleGround()});
 // show new answers, but not while someone is typing in a box on the page (it waits until they're done)
@@ -58,10 +58,10 @@ function groundOf(l){
   const sh=groundShape(l);if(!sh)return null;const o={sh,res:{...gStore[sh.key]},busy:[],fail:{}};if(gOld('soil',o.res.soil))delete o.res.soil;
   for(const t of GTOPICS){const id=sh.key+'#'+t;if(o.res[t])continue;if(gFail.has(id)&&!gBusy.has(id))o.fail[t]=gFail.get(id).msg;else o.busy.push(t)}
   return o}
-const gCalm=m=>m==='offline'?'No internet right now. It is checked again when you are back online.':m==='server'?'Checking the ground needs the Fence Builder app or server.':m||'That map did not answer. Try again later.';
+const gCalm=m=>m==='offline'?'No internet right now. It is checked again when you are back online.':m||'That map did not answer. Try again later.';
 const gCap=s=>s?s[0].toUpperCase()+s.slice(1):s;
 /* ---------- soil in plain words: what the ground is like to build fence in ----------
-   The soil survey's answer (ground.py) is turned into a few plain words per soil and a short "what this means for
+   The soil survey's answer (67-ground-fetch.js) is turned into a few plain words per soil and a short "what this means for
    posts". The survey's own soil names and map labels are kept, small, under each one. */
 const SOIL_V=2;   // soil answers from before the plain words (kept in this browser) are asked for again
 const gOld=(t,r)=>t==='soil'&&!!r&&!(r.v>=SOIL_V);
@@ -183,7 +183,6 @@ const GROW=[['soil','Soil and rock',soilText],['streams','Streams and ditches',s
 function groundView(l){
   const g=groundOf(l);if(!g)return '';
   const box=(sum,body)=>`<details class="sbox ground" data-keep="lnGround"${openKeep.lnGround?' open':''}><summary><b>Ground along this fence</b><span class="sboxsum">${sum}</span></summary><div class="sboxbody">${body}</div></details>`;
-  if(!serverOK)return box('soil, water, trees',`<p class="small mut" style="margin:0">${gCalm('server')}</p>`);
   if(g.busy.length)scheduleGround();
   const line=(t,name,fn)=>{const r=g.res[t];
     return `<div class="gline"><b>${name}</b><span>${r?fn(r):t in g.fail?`<span class="mut">${esc(gCalm(g.fail[t]))}</span>`:'<span class="mut">Checking the ground…</span>'}</span></div>`};
@@ -209,7 +208,6 @@ function groundJob(){
     if(r.flood)t.f100+=r.flood.f100_ft;if(r.wetlands)t.wet+=r.wetlands.wet_ft;if(r.streams)t.cross+=(r.streams.crossings||[]).length}
   return t}
 function groundBill(){
-  if(!serverOK)return '';
   const p=P(),t=groundJob();if(!t.n)return '';
   scheduleGround();
   const r=gRate(),sug=siteSuggest(t.rocky,t.shallow,t.soilFt),site=+p.site||0,clear=Math.round(t.trees*r.trees+t.brush*r.brush),fee=(p.fees||[]).find(f=>f.name===GROUND_FEE);
@@ -239,21 +237,14 @@ for(const el of [$('#panel'),$('#side')])el.addEventListener('click',e=>{
   else if(a==='groundRetry'){const ls=b.dataset.id==='all'?p.lines:[getLine(b.dataset.id)].filter(Boolean);
     for(const l of ls){const sh=groundShape(l);if(sh)for(const t of GTOPICS)gFail.delete(sh.key+'#'+t)}ensureGround();renderPanel()}});
 /* ---------- braces at rivers: USGS streams and ditches (NHD) are the main source ----------
-   findCrossings asks for these along with the street map. When the USGS map answers, its streams, rivers, canals and
+   findCrossings asks for these along with the street map (the same answer as the line's "Streams and ditches"). When the USGS map answers, its streams, rivers, canals and
    ditches are used and the street map's waterways are set aside (they are mostly the same creeks drawn a few yards apart,
    which would put two pairs of braces at one creek); the street map's waterways are the backup when USGS doesn't answer. */
 const NHD_LAYER='https://hydro.nationalmap.gov/arcgis/rest/services/nhd/MapServer/6';
-async function nhdDirect(sh){   // no Fence Builder server: ask USGS straight from the browser
-  let s=90,w=180,n=-90,e=-180;for(const [la,ln] of sh.pts){s=Math.min(s,la);n=Math.max(n,la);w=Math.min(w,ln);e=Math.max(e,ln)}
-  const r=await fetchT(NHD_LAYER+'/query?where=ftype%20IN%20(460,336,558)&geometry='+[w,s,e,n].map(v=>v.toFixed(6)).join(',')+'&geometryType=esriGeometryEnvelope&inSR=4326&outSR=4326&spatialRel=esriSpatialRelIntersects&outFields=gnis_name,ftype&returnGeometry=true&f=json',{},20000);
-  const j=await r.json();if(!Array.isArray(j.features))throw Error('bad');
-  return j.features.flatMap(f=>{const nm=String(f.attributes?.gnis_name||'').trim(),low=nm.toLowerCase(),kind=f.attributes?.ftype===336?(low.includes('canal')?'canal':'ditch'):(low.includes('river')?'river':'stream');
-    return (f.geometry?.paths||[]).map(p=>({name:nm,kind,path:p.map(([x,y])=>[y,x])}))})}
 // USGS waterways along a line, shaped like the street map's answer; null if USGS didn't answer
 async function riverWays(l){
   const sh=groundShape(l);if(!sh)return null;let ways=null;
-  if(serverOK)try{ways=(await Promise.race([groundGet(sh,'streams'),new Promise((_,no)=>setTimeout(()=>no(Error('slow')),25000))])).ways}catch(e){}
-  if(!ways&&!serverOK&&navigator.onLine!==false)ways=await nhdDirect(sh).catch(()=>null);
+  try{ways=(await Promise.race([groundGet(sh,'streams'),new Promise((_,no)=>setTimeout(()=>no(Error('slow')),25000))])).ways}catch(e){}
   return Array.isArray(ways)?ways.map(w=>({tags:{waterway:w.kind,...(w.name?{name:w.name}:{})},geometry:w.path.map(([lat,lon])=>({lat,lon})),nhd:true})):null}
 function useRivers(ways,nhd,quiet){
   if(quiet&&(S.settings.autoRivers??S.settings.autoCross)===false)return ways&&ways.filter(w=>!w.tags?.waterway);   // braces at rivers are off
