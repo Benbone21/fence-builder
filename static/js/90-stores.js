@@ -146,9 +146,12 @@ function kindGuess(name,d){const t=String(name||'').toLowerCase();
 function shopAdd(pi,vi){
   const p=shop.items[pi],v=p?.variants[vi];if(!v)return;
   const st=curStore(),host=st.host,d=shopParse(p.title,v.title),now=new Date().toISOString(),t=p.title.toLowerCase();
-  const kind=kindGuess(p.title,d);
-  S.materials.unshift({id:uid('m'),image:v.image||p.image||'',name:p.title+(v.title?', '+v.title:''),unit:d.roll?'roll':'each',price:v.price,url:p.url||('https://'+host+'/products/'+p.handle+'?variant='+v.id),checked:now,updated:now,src:host.replace(/^www\./,'')+(v.sku?' · '+v.sku:''),kind,...d,rollSure:undefined});
-  shop.added[host+v.id]=1;changed();toast('Added '+p.title+(v.title?', '+v.title:'')+' at '+money(v.price));shopRender();
+  const kind=kindGuess(p.title,d),unit=d.roll?'roll':'each',id=uid('m');
+  // counted each: a pack's price is split by the number in it; if that can't be told, no price yet (see the message)
+  let price=v.price,pk=null,packErr='';try{pk=perPiece({unit,name:''},{price:v.price,pack:v.title+' '+p.title});if(pk)price=pk.price}catch(e){price=0;packErr=e.message}
+  S.materials.unshift({id,image:v.image||p.image||'',name:p.title+(v.title?', '+v.title:''),unit,price,url:p.url||('https://'+host+'/products/'+p.handle+'?variant='+v.id),checked:now,updated:now,src:host.replace(/^www\./,'')+(v.sku?' · '+v.sku:'')+(pk?' · '+money(v.price)+' for '+pk.per:''),kind,...d,rollSure:undefined});
+  if(packErr)errs[id]=packErr;
+  shop.added[host+v.id]=1;changed();toast(packErr?'Added '+p.title+(v.title?', '+v.title:'')+'. '+packErr:'Added '+p.title+(v.title?', '+v.title:'')+' at '+money(price)+(pk?' each ('+pk.per+' in a pack)':''));shopRender();
 }
 function shopPick(i){if(i===shop.sel&&shop.cols)return;Object.assign(shop,{sel:i,cols:null,cat:null,all:null,items:[],title:'',msg:'',q:''});const q=$('#shopDlg').querySelector('#shopQ');if(q)q.value='';shopRender();shopLoadCats()}
 async function openShopDlg(){
@@ -187,6 +190,12 @@ function takeGrab(){
   const specTxt=Object.entries(g.specs||{}).map(([k,v])=>k+': '+v).join('\n');
   const same=S.materials.find(x=>x.url&&g.url&&x.url.split('#')[0]===g.url);
   const info={price:+g.price||0,checked:now,src:(g.host||'')+(g.sku?' · '+g.sku:'')};
+  // counted each but sold by the pack: split the price (or, if the number in a pack can't be told, leave the price alone)
+  let packErr='';
+  try{const pk=perPiece(same||{unit:det.roll?'roll':'each',name:''},{price:info.price,pack:[g.option,g.name,specTxt].join(' ')});
+    if(pk){info.price=pk.price;info.src+=' · '+money(+g.price)+' for '+pk.per}}
+  catch(e){packErr=e.message;if(same)delete info.price;else info.price=0}
+  if(packErr){gotoTab('prices');openMatDlg(same?.id||null,same?info:{image:g.image||'',name:(g.name||'').trim(),url:g.url,unit:det.roll?'roll':'each',kind:kindGuess(g.name,det),...det,...info,specs:g.specs,notes:specTxt?'From the store page:\n'+specTxt:''});return toast(packErr)}
   if(same){
     // a material you already have from this page: open it with the new price, for you to save
     if(Math.abs((+same.price||0)-info.price)>0.004&&+same.price>0)Object.assign(info,{prevPrice:+same.price,priceMoved:now,updated:now});
@@ -216,7 +225,7 @@ async function shopLookup(url,known){
   let d=null;try{d=await r.json()}catch(e){}
   if(!d||!Array.isArray(d.variants)||!d.variants.length){if(known)throw Error('No price found for that product at '+name+'.'+BOOKMARK_TIP);return null}
   const vid=u.searchParams.get('variant'),v=d.variants.find(x=>String(x.id)===vid)||d.variants[0],vt=v.title&&v.title!=='Default Title'?v.title:'';
-  return {price:v.price/100,name:d.title+(vt?', '+vt:''),sku:v.sku||'',source:u.hostname.replace(/^www\./,''),options:d.variants.length,image:imgOf(v.featured_image)||imgOf(d.featured_image)||imgOf((d.images||[])[0]),...shopParse(d.title,vt)};
+  return {price:v.price/100,name:d.title+(vt?', '+vt:''),pack:vt+' '+d.title,sku:v.sku||'',source:u.hostname.replace(/^www\./,''),options:d.variants.length,image:imgOf(v.featured_image)||imgOf(d.featured_image)||imgOf((d.images||[])[0]),...shopParse(d.title,vt)};
 }
 // The price (and details) for a store link. D&B Supply and Kencove (and your own Shopify shop) are asked
 // straight from this browser. Only links to other stores are read through the Fence Builder server (api/price).
@@ -239,11 +248,41 @@ async function lookupLink(url){
   if(!r.ok||!j.price)throw Error((j.error||'No price found on that page.').replace(/([^.])$/,'$1.')+BOOKMARK_TIP);
   return {price:j.price,name:(j.title||'').split(/\s[|–-]\s/)[0].trim(),source:j.source};
 }
+/* ---------- packs: a material counted "each" that the store sells by the pack, box, bag or pound ---------- */
+// "100 pk", "25 pcs.", "250 ct", "Box of 100", "Bucket of 1,500", "Package quantity: 50", and the weight ("8 lb", "1LB")
+const PER_PIECE=/^\s*(each|ea|piece|pieces|pc|pcs)?\s*$/i;
+const FASTENER=/staple|nail|screw|fence tie|\bties?\b|clip|insulator|bolt|washer|rivet|crimp|sleeve/i;
+const packNorm=t=>String(t||'').replace(/(\d),(\d{3})\b/g,'$1$2').replace(/½/g,'.5').replace(/¼/g,'.25').replace(/¾/g,'.75').replace(/(\d+)-(\d+)\/(\d+)/g,(a,b,c,d)=>String(+b+c/d));
+function packOf(text){
+  const t=packNorm(text);let x,count=0,lb=0;
+  if((x=t.match(/\b(\d+)\s*-?\s*(?:pk|pack|ct|count|pcs?|pieces)\b/i))||(x=t.match(/\b(?:pack|box|bag|bucket|tub|pail|case|carton|jar)\s+of\s+(\d+)\b/i))||
+     (x=t.match(/\b(?:package|pack|box|case|bag)\s*(?:quantity|qty|count|size)\s*:?\s*(\d+)\b/i))||(x=t.match(/\b(?:pieces|count|quantity) per (?:pack|box|bag|case)\s*:?\s*(\d+)\b/i))||
+     (x=t.match(/\babout\s+(\d+)\b(?!\s*(?:ft|feet|in\b|inch|lbs?|pounds?|'|"|%|\.\d))/i)))count=+x[1];
+  if((x=t.match(/\b(\d+(?:\.\d+)?)\s*-?\s*(?:lbs?|pounds?)\b/i)))lb=+x[1];
+  return {count:count>1?count:0,lb};
+}
+// pieces in one pound, only where it is known: OK Brand 1-1/2" fence staples, about 575 in an 8 lb tub (D&B Supply)
+function perLb(text){const t=packNorm(text);return /staple/i.test(t)&&/\b1\.5\s*(?:"|in\b|-in)/i.test(t)?72:0}
+const packMsg=price=>'The store sells this by the pack, box or bag ('+money(price)+'), and the app could not tell how many pieces are in one, so the price was not changed. Press Edit and fill in "Pieces per pack".';
+// The price of one piece when the material is counted each but the store sells a pack. null: the store price is the price.
+// Throws when it is a pack but the number in it can't be told. "Pieces per pack" on the material wins over guessing.
+function perPiece(m,j){
+  if(!PER_PIECE.test(m.unit??'each'))return null;   // bought by the roll, bag, box, foot…: the store price is the price
+  const own=+m.perPack||0;let per=own;
+  if(!own){
+    const text=j.pack||j.name||'',st=packOf(text),nm=packOf(m.name),byLb=st.lb>0&&FASTENER.test(text+' '+(m.name||''));
+    if(!st.count&&!byLb&&!nm.count)return null;   // nothing says it comes in a pack
+    per=st.count||(byLb?(nm.count?(nm.lb&&nm.lb!==st.lb?nm.count/nm.lb*st.lb:nm.count):perLb(text+' '+(m.name||''))*st.lb):nm.count);
+    if(!per)throw Error(packMsg(+j.price||0));
+  }
+  if(per<=1)return null;
+  return {price:Math.round((+j.price||0)/per*1e4)/1e4,per:Math.round(per)};
+}
 // fill in details the store gave us, without overwriting anything you typed
 function applyLookup(m,j){
-  const now=new Date().toISOString();
-  if(Math.abs((+m.price||0)-(+j.price||0))>0.004&&+m.price>0){m.prevPrice=+m.price;m.priceMoved=now;m.updated=now}
-  m.price=j.price;m.checked=now;m.src=j.source+(j.sku?' · '+j.sku:'');
+  const now=new Date().toISOString(),pk=perPiece(m,j),price=pk?pk.price:j.price;   // throws if a pack can't be split
+  if(Math.abs((+m.price||0)-(+price||0))>0.004&&+m.price>0){m.prevPrice=+m.price;m.priceMoved=now;m.updated=now}
+  m.price=price;m.checked=now;m.src=j.source+(j.sku?' · '+j.sku:'')+(pk?' · '+money(j.price)+' for '+pk.per:'');
   for(const k of ['roll','gauge','height','len','image'])if(j[k]!=null&&j[k]!==''&&(m[k]==null||m[k]===''))m[k]=j[k];
   // the roll length in the store's product option (like "660-ft") is what you buy, so it wins over a wrong saved one
   if(+j.roll>0&&j.rollSure&&+m.roll!==+j.roll){m.rollWas=+m.roll||null;m.roll=+j.roll;m.updated=now}
@@ -284,7 +323,7 @@ async function fetchPrice(id,quiet){
   const m=S.materials.find(x=>x.id===id);if(!m)return;
   if(!m.url){errs[id]='Paste a product link first';return renderPanel()}
   busy[id]=1;delete errs[id];renderPanel();
-  try{const j=await lookupLink(m.url);applyLookup(m,j);if(!quiet)toast(m.name+' is now '+money(j.price))}
+  try{const j=await lookupLink(m.url);applyLookup(m,j);if(!quiet)toast(m.name+' is now '+money(m.price))}
   catch(e){errs[id]=e.message||String(e)}
   delete busy[id];changed();
 }
@@ -293,7 +332,9 @@ async function addFromLink(){
   toast('Reading that page…');
   try{
     const j=await lookupLink(url);
-    const m={name:j.name||'',unit:j.roll?'roll':'each',price:0,url};applyLookup(m,j);if(!m.kind)m.kind=kindGuess(m.name,j);
+    const m={name:j.name||'',unit:j.roll?'roll':'each',price:0,url};
+    try{applyLookup(m,j)}catch(e){m.src=j.source;setTimeout(()=>toast(e.message),300)}   // a pack of unknown size: no price yet
+    if(!m.kind)m.kind=kindGuess(m.name,j);
     openMatDlg(null,m);   // check it over, then Save adds it
   }catch(e){toast(e.message||'Could not read that page')}
 }

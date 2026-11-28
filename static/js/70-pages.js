@@ -209,6 +209,7 @@ function openMatDlg(id,preset){return new Promise(res=>{
         ${num('price','Price $','0.01')}${txt('unit','Sold by','each, roll, ft')}</div>
       ${by[kind]||''}
       <label class="f">Store link (optional)</label><div class="pick"><input type="url" value="${esc(m.url)}" data-k="url" placeholder="https://kencove.com/products/…"><button class="btn" data-x="price"${busyNow?' disabled':''}>${busyNow?'Reading…':'Get price and details'}</button></div>
+      <div class="g2" style="align-items:end">${num('perPack','Pieces per pack (optional)','1')}<p class="small mut" style="margin:0 0 8px">If you count it each but the store sells a pack, box or bag, the store price is split by this number. Blank: read from the store's product name.</p></div>
       ${err?`<div class="err">${esc(err)}</div>`:m.checked?`<div class="small okc">Price read ${new Date(m.checked).toLocaleDateString()} from ${esc(m.src)}</div>`:''}
       <label class="f">Notes</label><textarea rows="2" data-k="notes">${esc(m.notes)}</textarea>
       <div class="row" style="justify-content:flex-end;margin-top:14px"><span class="small mut grow">${isNew?'It is added when you press Save.':'Changes apply everywhere this material is used, when you press Save.'}</span><button class="btn big" data-x="cancel">Cancel</button><button class="btn pri big" data-x="save">Save</button></div>`;
