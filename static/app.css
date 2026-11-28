@@ -1004,3 +1004,12 @@ body.walk #mapbox{flex:1;height:auto}
   #jobDlg,#matDlg,#billDlg,#shopDlg,#askDlg{padding:14px 16px}
   .leaflet-control-layers-expanded{max-height:60vh;overflow:auto}
 }
+/* phones: each material is a card (name and details on top; price, store link and remove underneath) */
+@media (max-width:640px),(max-width:950px) and (max-height:500px){
+table.mats thead{display:none}table.mats,table.mats tbody{display:block;width:100%}
+table.mats tr:not(.grp):not([hidden]){display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:8px 10px;padding:10px 6px;border-bottom:1px solid var(--line)}
+table.mats tr.grp,table.mats tr.grp td{display:block}table.mats tr.grp td{padding:10px 6px 4px}
+table.mats td{border:0;padding:0;width:auto!important}
+table.mats td.c-mat{grid-column:1/-1;min-width:0}table.mats td.c-pr{text-align:left}
+table.mats .c-use,table.mats .c-chk{display:none}table.mats .mmore{display:block}
+}
