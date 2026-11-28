@@ -26,7 +26,7 @@ function gKeep(){clearTimeout(gSaveT);gSaveT=setTimeout(()=>{const ks=Object.key
   try{localStorage.setItem('fence-ground',JSON.stringify(gStore))}catch(e){}},800)}
 function groundGet(sh,topic){
   const id=sh.key+'#'+topic,have=gStore[sh.key]?.[topic];
-  if(have)return Promise.resolve(have);
+  if(have&&!gOld(topic,have))return Promise.resolve(have);
   if(gBusy.has(id))return gBusy.get(id);
   const p=(async()=>{
     if(!serverOK)throw Error('server');
@@ -45,28 +45,120 @@ function ensureGround(){
   const now=Date.now();
   for(const l of P().lines){const sh=groundShape(l);if(!sh)continue;
     for(const t of GTOPICS){const id=sh.key+'#'+t,f=gFail.get(id);
-      if(gStore[sh.key]?.[t]||gBusy.has(id)||(f&&now-f.at<180000))continue;
+      if((gStore[sh.key]?.[t]&&!gOld(t,gStore[sh.key][t]))||gBusy.has(id)||(f&&now-f.at<180000))continue;
       if(gBusy.size>=6)return;   // a few at a time: the rest start as these finish
       groundGet(sh,t).catch(()=>{})}}}
 addEventListener('online',()=>{gFail.clear();scheduleGround()});
 // show new answers, but not while someone is typing in a box on the page (it waits until they're done)
-function gRedraw(){clearTimeout(gDrawT);gDrawT=setTimeout(()=>{if(!S||!(S.tab==='est'||(S.tab==='build'&&selLine)))return;
+function gRedraw(){clearTimeout(gDrawT);gDrawT=setTimeout(()=>{try{gLegend()}catch(e){}if(!S||!(S.tab==='est'||(S.tab==='build'&&selLine)))return;
   const a=document.activeElement;if(a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)&&a.type!=='checkbox'&&($('#panel').contains(a)||$('#side').contains(a)))return gRedraw();
   renderPanel()},400)}
 // what is known about one line: answers, what's still being checked, what didn't answer
 function groundOf(l){
-  const sh=groundShape(l);if(!sh)return null;const o={sh,res:gStore[sh.key]||{},busy:[],fail:{}};
+  const sh=groundShape(l);if(!sh)return null;const o={sh,res:{...gStore[sh.key]},busy:[],fail:{}};if(gOld('soil',o.res.soil))delete o.res.soil;
   for(const t of GTOPICS){const id=sh.key+'#'+t;if(o.res[t])continue;if(gFail.has(id)&&!gBusy.has(id))o.fail[t]=gFail.get(id).msg;else o.busy.push(t)}
   return o}
 const gCalm=m=>m==='offline'?'No internet right now. It is checked again when you are back online.':m==='server'?'Checking the ground needs the Fence Builder app or server.':m||'That map did not answer. Try again later.';
 const gCap=s=>s?s[0].toUpperCase()+s.slice(1):s;
+/* ---------- soil in plain words: what the ground is like to build fence in ----------
+   The soil survey's answer (ground.py) is turned into a few plain words per soil and a short "what this means for
+   posts". The survey's own soil names and map labels are kept, small, under each one. */
+const SOIL_V=2;   // soil answers from before the plain words (kept in this browser) are asked for again
+const gOld=(t,r)=>t==='soil'&&!!r&&!(r.v>=SOIL_V);
+const TEXW={sand:'sand',sandy:'sandy soil',sandyloam:'sandy loam',loam:'loam',silty:'silty soil',clayloam:'clay loam',clay:'clay',muck:'soft muck'};
+const MISCW=[[/riverwash/i,'River sand and gravel'],[/rock outcrop|rock land/i,'Bare rock'],[/rubble/i,'Piles of loose rock'],[/\bpits?\b|quarr/i,'Gravel pit'],
+  [/urban|made land/i,'Built-over ground'],[/badland/i,'Bare, washed-out hills'],[/dune/i,'Sand dunes'],[/dump|mine|tailing/i,'Dug-up or dumped ground'],
+  [/lava/i,'Lava rock'],[/marsh|swamp/i,'Marsh'],[/water/i,'Open water']];
+const DRAINW={'Excessively drained':'dry, drains fast','Somewhat excessively drained':'dry, drains fast','Well drained':'drains well',
+  'Moderately well drained':'damp for a while in spring','Somewhat poorly drained':'wet in spring','Poorly drained':'stays wet much of the year',
+  'Very poorly drained':'soggy most of the year','Subaqueous':'under water'};
+const WET_D=['Somewhat poorly drained','Poorly drained','Very poorly drained','Subaqueous'];
+const FLOODW={'Rare':'floods once in a long while','Occasional':'floods now and then','Frequent':'floods often','Very frequent':'floods very often'};
+const GRADE={1:['Easy digging','okt'],2:['Some extra work',''],3:['Hard digging','warnt'],4:['Very hard digging','warnt'],9:['No posts','warnt']};
+// one soil: {title, facts, posts, grade, k: what it counts toward in the summary}
+function soilPlain(u){
+  const o={title:'',facts:[],posts:[],grade:1,k:{}},k=o.k,post=(t,g)=>{o.posts.push(t);o.grade=Math.max(o.grade,g)};
+  if(u.water){o.title='Open water';post('No posts here: plan a water gap, or go around.',9);k.water=1;return o}
+  const misc=u.misc?(MISCW.find(([re])=>re.test(u.misc))?.[1]||gCap(String(u.misc).toLowerCase())):'',bare=misc==='Bare rock'||u.outcrop>=50;
+  const rk=Math.max(u.stony||0,u.cobbly||0,u.rock>=50?3:u.rock>=35?2:u.rock>=15?1:0),big=(u.stony||0)>0||(u.stone||0)>=10;
+  const gr=rk?0:Math.max(u.gravelly||0,u.gravel>=35?2:u.gravel>=15?1:0);
+  const sl=Array.isArray(u.slope)?(u.slope[0]+u.slope[1])/2:null;
+  o.title=misc||gCap((rk?'rocky ':gr>=2?'gravelly ':'')+(TEXW[u.tex]||'soil'))+(u.bottom&&(sl==null||sl<3)?' on river-bottom ground':sl==null?'':
+    sl<3?' on flat ground':sl<8?' on gentle slopes':sl<15?' on rolling ground':sl<30?' on hillsides':sl<60?' on steep hillsides':' on very steep slopes');
+  // what it is like
+  if(!bare){const n=big?'big rocks (head-size and up)':'rocks bigger than a fist';
+    if(rk>=3)o.facts.push(`${big?'big rocks':'rocks bigger than a fist'} all over, on top and in the ground`);else if(rk===2)o.facts.push('lots of '+n);
+    else if(rk===1)o.facts.push('some '+n);else if(u.rock>=5)o.facts.push('a few rocks bigger than a fist');
+    if(gr>=2)o.facts.push('lots of gravel');else if(gr)o.facts.push('some gravel')}
+  const bed=u.bedrock_in,pan=u.hardpan_in,bw=u.bedrock==='soft'?'soft rock':'solid rock';
+  if(bed!=null&&bed<=60&&!bare)o.facts.push(bed<=2?bw+' at the top':`${bw} ${bed} in down`);
+  if(pan!=null&&pan<=60&&!(bed!=null&&bed<=pan))o.facts.push(`${u.hardpan||'hardpan'} ${pan} in down`);
+  const wetD=WET_D.includes(u.drain),dw=DRAINW[u.drain];
+  if(dw&&!(u.drain==='Well drained'&&o.facts.length>=2))o.facts.push(dw);
+  if(u.wt_in!=null&&u.wt_in<=40)o.facts.push(u.wt_in<=2?'ground water at the top part of the year':`ground water ${u.wt_in} in down part of the year`);
+  if(FLOODW[u.flood])o.facts.push(FLOODW[u.flood]);
+  if(u.pond>=15)o.facts.push('water stands on it at times');
+  if(u.swell>=6)o.facts.push(u.tex==='clay'?'clay that swells when wet and cracks when dry':'clay below the top that swells when wet and cracks when dry');
+  // what it means for posts, worst first
+  const sh=Math.min(bed??999,pan??999),sw=sh===bed?(u.bedrock==='soft'?'soft rock':'rock'):'hardpan';
+  if(bare||sh<=2){post('Bare rock: drill and pin posts, or go around.',4);k.shallow={d:0,w:'rock'}}
+  else if(sh<=24){post(`Expect to hit ${sw}: plan on a rock bar or rock drill, or set shorter posts in concrete. Driven T-posts will stop short.`,4);k.shallow={d:sh,w:sw}}
+  else if(sh<=40){post(`Holes deeper than about ${gFeet(sh)} ft will hit ${sw}, and driven T-posts may stop short.`,3);k.shallow={d:sh,w:sw}}
+  if(rk>=2)post('Expect to dig around rocks: augers bounce, and T-posts can stop short or bend.',3);
+  else if(rk===1)post('Some rocks to dig around.',2);
+  else if(gr>=2)post('Gravel: slow digging, and holes can cave in.',2);
+  if(u.flood==='Frequent'||u.flood==='Very frequent'){post('High water and drift can take fence out: plan a water gap or let-down fence.',2);k.floodOften=1}
+  else if(u.flood==='Occasional')k.floodSome=1;
+  if(wetD||(u.wt_in!=null&&u.wt_in<=12)){post('Wet ground: hard to get a truck in, holes fill with water, posts heave. Build when it is dry.',2);k.wet=1}
+  if(u.tex==='muck'){post('Soft ground: posts sink and lean. Go deeper or use concrete.',2);k.sandy=1}
+  else if(u.tex==='sand'||u.tex==='sandy'){post('Easy digging, but sand is loose: set posts deeper or in concrete. Holes can cave in.',1);k.sandy=1}
+  if(u.swell>=6){post('Clay moves as it wets and dries, so posts can lean: set them deeper.',2);k.swell=1}
+  if(u.frost==='High'&&!k.wet)post('Frost can lift posts: set them deep.',2);
+  if(sl!=null&&sl>=30){post('Steep: hard to get a truck or auger on it.',2);k.steep=1}
+  if(!o.posts.length)post('Easy digging.',1);
+  k.rocky=rk>=1||!!u.rocky||!!k.shallow;k.easy=o.grade===1&&!k.sandy;
+  return o}
+const gFt=n=>fmtFt(n>=1000?Math.round(n/50)*50:Math.round(n/10)*10);
+const gFeet=i=>{const h=Math.round(i/6)/2;return h<1?'less than 1':(h%1?(h>1?Math.floor(h):'')+'½':String(h))};
+// "What this means for posts": two to four short sentences for a line, or for the whole job
+function soilSum(units){
+  units=(units||[]).filter(u=>u.ft>0);const tot=units.reduce((a,u)=>a+u.ft,0);if(!tot)return '';
+  const by={easy:0,rocky:0,shallow:0,water:0,floodOften:0,floodSome:0,wet:0,sandy:0,swell:0,steep:0},dep=[],kinds=new Set();
+  for(const u of units){const k=soilPlain(u).k;for(const x in by)if(k[x])by[x]+=u.ft;if(k.shallow){dep.push(k.shallow.d);kinds.add(k.shallow.w)}}
+  const land=tot-by.water,most=n=>land>0&&n>=land*.5,worth=n=>n>=Math.max(50,tot*.03);
+  const traits=[most(by.rocky)?'rocky':'',most(by.wet)?'wet':'',most(by.sandy)?'sandy':''].filter(Boolean);
+  const a=[!land?'All open water.':traits.length?`Mostly ${traits.join(', ')} ground${traits[0]==='rocky'?': hard digging':''}.`:by.easy===land?'Easy digging all along.':most(by.easy)?'Mostly easy digging.':'Mixed ground.'];
+  if(worth(by.rocky)||worth(by.shallow)){
+    const lo=Math.min(...dep),hi=Math.max(...dep),rng=!dep.length?'':lo<=2?'at the top':gFeet(lo)===gFeet(hi)?`about ${gFeet(hi)} ft down`:`${gFeet(lo)}–${gFeet(hi)} ft down`;
+    const kw=kinds.size>1?'rock or hardpan':kinds.has('hardpan')?'hardpan':kinds.has('soft rock')?'soft rock':'solid rock';
+    a.push(!worth(by.shallow)?`About ${gFt(by.rocky)} is rocky: expect slow digging, and driven T-posts may stop short.`:
+      (by.rocky>by.shallow+20?`About ${gFt(by.rocky)} is rocky, and ${gFt(by.shallow)} of it has ${kw} ${rng}.`:`About ${gFt(by.shallow)} has ${kw} ${rng}.`)+' Plan on a rock bar or auger, or set those posts in concrete.')}
+  const wa=[by.water?`${gFt(by.water)} is open water`:'',worth(by.floodOften)?`${gFt(by.floodOften)} floods often`:'',worth(by.floodSome)?`${gFt(by.floodSome)} floods now and then`:''].filter(Boolean);
+  if(wa.length)a.push(`About ${wa.length>2?wa.slice(0,-1).join(', ')+' and '+wa[wa.length-1]:wa.join(' and ')}: plan water gaps or let-down fence there.`);
+  if(worth(by.wet))a.push(`About ${gFt(by.wet)} is wet much of the year: build when it is dry, and expect posts to heave.`);
+  if(worth(by.sandy))a.push(`About ${gFt(by.sandy)} is soft, sandy ground: set posts deeper or in concrete.`);
+  if(worth(by.steep))a.push(`About ${gFt(by.steep)} is steep hillside: hard to get a truck or auger on it.`);
+  if(worth(by.swell))a.push(`About ${gFt(by.swell)} is clay that swells and shrinks: set posts deeper.`);
+  return a.slice(0,4).join(' ')}
+// each soil along a line as a short card; soils that read the same are put together
+function soilCards(units){
+  const g=new Map();
+  for(const u of units){const p=soilPlain(u),key=p.title+'|'+p.facts.join()+'|'+p.posts.join();
+    const c=g.get(key)||(g.set(key,{p,ft:0,names:[]}),g.get(key));c.ft+=u.ft;if(u.name||u.sym)c.names.push(u)}
+  const cards=[...g.values()].sort((a,b)=>b.ft-a.ft),all=cards.map(c=>[c.p.facts,c.p.posts].flat().join(' ')).join(' ');
+  const words=[[/hardpan/,'hardpan: a cemented layer, hard like rock'],[/soft rock/,'soft rock: breaks up with a bar or a big auger, with work'],
+    [/solid rock|hit rock/,'solid rock: bedrock, you need a rock drill or have to go around'],[/ground water/,'ground water: how deep a hole fills with water'],
+    [/water gap/,'water gap: a hanging or swinging section where fence crosses water']].filter(([re])=>re.test(all)).map(w=>w[1]);
+  return cards.map(({p,ft,names})=>{const [gw,gc]=GRADE[p.grade]||GRADE[1];
+    const nm=names.map(u=>esc(u.name||'')+(u.sym?` <span class="gsym">(map label ${esc(u.sym)})</span>`:'')).join('; ');
+    return `<div class="gcard"><div class="gtop"><b>${esc(p.title)}</b> <span class="tag ${gc}">${gw}</span><span class="num">${fmtFt(ft)}</span></div>
+      ${p.facts.length?`<div>${esc(gCap(p.facts.join('; ')))}.</div>`:''}<div><b>Posts:</b> ${esc(p.posts.slice(0,2).join(' '))}</div>
+      ${nm?`<div class="small mut">Soil survey name${names.length>1?'s':''}: ${nm}</div>`:''}</div>`}).join('')+
+    `<p class="small mut" style="margin:6px 0 0">Rocks are for the top 40 inches and rock or hardpan for the top 5 ft, where posts and brace holes go.${words.length?' Words: '+esc(words.join(' · '))+'.':''}</p>`}
 // short plain words for each answer
 function soilText(s){
   if(!s.covered||!s.units?.length)return 'No soil survey along this line.';
-  const a=[s.rocky_ft?`Rocky ground on ${fmtFt(s.rocky_ft)}.`:'No rocky ground on the soil map.'];
-  if(s.bedrock_in!=null&&s.bedrock_in<=48)a.push(`Bedrock as shallow as ${s.bedrock_in} in.`);
-  if(s.hardpan_in!=null&&s.hardpan_in<=48)a.push(`${esc(gCap(s.hardpan||'hardpan'))} as shallow as ${s.hardpan_in} in.`);
-  return a.join(' ')}
+  return `<b>What this means for posts:</b> ${soilSum(s.units)}`}
 function streamText(w){const c=w.crossings||[];if(!c.length)return 'No streams or ditches cross it on the USGS map.';
   return `Crosses ${c.length===1?'1 stream or ditch':c.length+' streams or ditches'}: `+c.slice(0,6).map(x=>`${x.name?esc(x.name):'a '+esc(x.kind)}${x.flow?' ('+esc(x.flow)+')':''} at ${fmtFt(x.at)}`).join(', ')+(c.length>6?' and more':'')+'.'}
 function floodText(f){
@@ -93,11 +185,7 @@ function groundView(l){
   const rows=GROW.map(([t,name,fn])=>{const r=g.res[t];
     return `<div class="gline"><b>${name}</b><span>${r?fn(r):t in g.fail?`<span class="mut">${esc(gCalm(g.fail[t]))}</span>`:'<span class="mut">Checking the ground…</span>'}</span></div>`}).join('');
   const s=g.res.soil,units=s?.units?.filter(u=>u.ft>0)||[];
-  const soils=units.length?`<details class="help" data-keep="groundSoils"${openKeep.groundSoils?' open':''}><summary>The soils along it</summary><table class="gsoil"><tbody>${units.map(u=>{const bits=[];
-      if(u.water)bits.push('water');else{if(u.rock!=null)bits.push(u.rock>=1?`${u.rock}% rocks over 3 in`:'few rocks');if(u.gravel>=15)bits.push('gravelly');if(u.outcrop>=10)bits.push(`${u.outcrop}% rock outcrop`);
-        if(u.bedrock_in!=null)bits.push(`bedrock at ${u.bedrock_in} in`);if(u.hardpan_in!=null)bits.push(`${esc(u.hardpan||'hardpan')} at ${u.hardpan_in} in`)}
-      return `<tr><td>${esc(u.name)}${u.rocky?' <span class="tag warnt">rocky</span>':''}${u.shallow?' <span class="tag warnt">shallow</span>':''}<div class="small mut">${bits.join(' · ')}</div></td><td class="num">${fmtFt(u.ft)}</td></tr>`}).join('')}</tbody></table>
-      <p class="small mut" style="margin:4px 0 0">Rocks and depths are for the top 40 inches, where posts and brace holes go.</p></details>`:'';
+  const soils=units.length?`<details class="help" data-keep="groundSoilCards"${openKeep.groundSoilCards!==false?' open':''}><summary>What the ground is like, soil by soil</summary><div class="gsoils">${soilCards(units)}</div></details>`:'';
   const failed=Object.keys(g.fail).length;
   return `<h3>Ground along this fence</h3><div class="box ground">${rows}${soils}
     ${failed?`<button class="btn noprint" data-act="groundRetry" data-id="${l.id}" style="margin-top:6px">Try again</button>`:''}
@@ -105,11 +193,11 @@ function groundView(l){
 // the job as a whole, on the Final bill, with the two suggestions
 const siteSuggest=(rocky,shallow,ft)=>ft?Math.min(30,Math.round((15*rocky/ft+15*shallow/ft)/5)*5):null;
 function groundJob(){
-  const p=P(),seen=new Set(),t={n:0,soilFt:0,rocky:0,shallow:0,bed:null,pan:null,panK:'',trees:0,brush:0,cover:0,f100:0,wet:0,cross:0,busy:0,fail:0};
+  const p=P(),seen=new Set(),t={n:0,units:[],soilFt:0,rocky:0,shallow:0,bed:null,pan:null,panK:'',trees:0,brush:0,cover:0,f100:0,wet:0,cross:0,busy:0,fail:0};
   for(const l of p.lines){const g=groundOf(l);if(!g||seen.has(g.sh.key))continue;seen.add(g.sh.key);t.n++;
     if(g.busy.length)t.busy++;else if(Object.keys(g.fail).length)t.fail++;
     const r=g.res;
-    if(r.soil?.covered){t.soilFt+=r.soil.ft;t.rocky+=r.soil.rocky_ft||0;t.shallow+=r.soil.shallow_ft||0;
+    if(r.soil?.covered){t.soilFt+=r.soil.ft;t.units.push(...(r.soil.units||[]));t.rocky+=r.soil.rocky_ft||0;t.shallow+=r.soil.shallow_ft||0;
       if(r.soil.bedrock_in!=null&&(t.bed==null||r.soil.bedrock_in<t.bed))t.bed=r.soil.bedrock_in;
       if(r.soil.hardpan_in!=null&&(t.pan==null||r.soil.hardpan_in<t.pan)){t.pan=r.soil.hardpan_in;t.panK=r.soil.hardpan}}
     if(r.cover?.covered){t.cover++;t.trees+=r.cover.trees_ft;t.brush+=r.cover.brush_ft}
@@ -120,9 +208,9 @@ function groundBill(){
   const p=P(),t=groundJob();if(!t.n)return '';
   scheduleGround();
   const r=gRate(),sug=siteSuggest(t.rocky,t.shallow,t.soilFt),site=+p.site||0,clear=Math.round(t.trees*r.trees+t.brush*r.brush),fee=(p.fees||[]).find(f=>f.name===GROUND_FEE);
-  const soil=t.soilFt?`${t.rocky?`Rocky ground on ${fmtFt(t.rocky)} of ${fmtFt(t.soilFt)}.`:'No rocky ground on the soil map.'}${t.bed!=null&&t.bed<=48?` Bedrock as shallow as ${t.bed} in.`:''}${t.pan!=null&&t.pan<=48?` ${esc(gCap(t.panK||'hardpan'))} as shallow as ${t.pan} in.`:''}`:'';
+  const soil=t.soilFt?`<b>What this means for posts:</b> ${soilSum(t.units)} <span class="small mut">Each line's page has the soils one by one.</span>`:'';
   const water=[t.cross?`${t.cross} stream or ditch crossing${t.cross>1?'s':''}`:'',t.f100?`${fmtFt(t.f100)} in the 100-year flood zone`:'',t.wet?`${fmtFt(t.wet)} through wetlands (may need a permit)`:''].filter(Boolean).join(', ');
-  const siteRow=sug==null?'':`<div class="gline"><b>Site difficulty</b><span>Suggested: <b>${sug}%</b>. Up to 15% for rocky ground and up to 15% for bedrock or hardpan within 40 in, by how much of the fence is on it.
+  const siteRow=sug==null?'':`<div class="gline"><b>Site difficulty</b><span>Suggested: <b>${sug}%</b>. Up to 15% for rocky ground and up to 15% for solid rock or hardpan within 40 in, by how much of the fence is on it.
     ${sug===site?'<span class="okc">That is what this job uses.</span>':`<button class="btn noprint" data-act="groundSite" data-k="${sug}">Use ${sug}%</button>${site?` <span class="small mut">(now ${site}%)</span>`:''}`}</span></div>`;
   const clearRow=t.cover?`<div class="gline"><b>Clearing</b><span>Trees on ${fmtFt(t.trees)}, brush on ${fmtFt(t.brush)}${clear?`: about <b>${money(clear)}</b> to clear, with trees at ${money(r.trees)} and brush at ${money(r.brush)} a foot (<button class="lnk noprint" data-act="groundRates">change</button>)`:''}.
     ${clear?(fee&&+fee.amount===clear?'<span class="okc">That is the clearing fee on this job.</span>':`<button class="btn noprint" data-act="groundFee" data-k="${clear}">${fee?'Update the clearing fee to '+money(clear):'Add a '+money(clear)+' clearing fee'}</button>`):''}</span></div>`:'';
@@ -176,7 +264,7 @@ const gExport=(base,q,o)=>new GTile('',{src:base+'?bboxSR=3857&imageSR=3857&size
 const EVC_RULE={rasterFunction:'Colormap',rasterFunctionArguments:{Colormap:[[1,30,120,40],[2,205,160,60]],
   Raster:{rasterFunction:'Remap',rasterFunctionArguments:{InputRanges:[100,200,225,300],OutputValues:[1,2],AllowUnmatched:false}}}};
 const GROUND_LAYERS={
-  'Soils (USDA soil map, zoom in close)':{z:15,short:'Soils',note:'Soils: each orange outline is one soil, with its map symbol. A fence line\'s page lists the soils it crosses.',
+  'Soils (USDA soil map, zoom in close)':{z:15,short:'Soils',note:gSoilLegend,
     layer:new GWms('https://SDMDataAccess.sc.egov.usda.gov/Spatial/SDM.wms',{layers:'mapunitpoly',format:'image/png',transparent:true,gMin:15,maxZoom:22,attribution:'Soils: USDA NRCS'})},
   'Streams and ditches (USGS)':{z:13,short:'Streams',note:'Streams: blue lines are creeks and rivers, orange lines are canals and ditches.',
     layer:gExport(NHD_LAYER.replace(/\/6$/,'')+'/export','layers=show:6&layerDefs='+encodeURIComponent(JSON.stringify({6:'ftype IN (460,336,558)'})),{gMin:13,attribution:'Streams: USGS NHD'})},
@@ -186,9 +274,19 @@ const GROUND_LAYERS={
     layer:gExport('https://fwspublicservices.wim.usgs.gov/wetlandsmapservice/rest/services/Wetlands/MapServer/export','layers=show:0',{gMin:13,opacity:.6,attribution:'Wetlands: USFWS NWI'})},
   'Trees and brush (LANDFIRE)':{z:12,short:'Trees and brush',note:'Green: trees. Tan: thick brush. In squares about 100 ft across.',
     layer:gExport('https://lfps.usgs.gov/arcgis/rest/services/Landfire_LF2024/LF2024_EVC_CONUS/ImageServer/exportImage','interpolation=RSP_NearestNeighbor&renderingRule='+encodeURIComponent(JSON.stringify(EVC_RULE)),{gMin:12,opacity:.6,attribution:'Trees and brush: LANDFIRE'})}};
+// the soils legend: the map's soil labels on this job's fence lines, in plain words
+function gSoilLegend(){
+  const m=new Map();let ls=[];try{ls=P().lines||[]}catch(e){}
+  for(const l of ls){const sh=groundShape(l),s=sh&&gStore[sh.key]?.soil;if(!s||gOld('soil',s))continue;
+    for(const u of s.units||[])if(u.sym&&u.ft>0){const o=m.get(u.sym)||(m.set(u.sym,{u,ft:0}),m.get(u.sym));o.ft+=u.ft}}
+  const list=[...m.values()].sort((a,b)=>b.ft-a.ft);
+  const head='<b>Soils:</b> orange lines show where the soil changes. The letters are only the soil survey\'s labels';
+  if(!list.length)return head+'. Each fence line\'s page says what its ground is like to build on.';
+  return head+'. On this job\'s fence lines:'+list.slice(0,6).map(({u})=>{const p=soilPlain(u);return `<div class="gsl"><b>${esc(u.sym)}</b> ${esc(p.title)} (${esc((GRADE[p.grade]||GRADE[1])[0].toLowerCase())})</div>`}).join('')+
+    (list.length>6?`<div class="gsl mut">and ${list.length-6} more: see each line's page</div>`:'')}
 const gLeg=L.control({position:'bottomleft'});
 gLeg.onAdd=()=>{const d=L.DomUtil.create('div','gleg');L.DomEvent.disableClickPropagation(d);return d};gLeg.addTo(map);
 function gLegend(){const d=gLeg.getContainer(),z=map.getZoom(),on=Object.values(GROUND_LAYERS).filter(o=>map.hasLayer(o.layer));
-  d.innerHTML=on.map(o=>`<div>${z<o.z?`<b>${esc(o.short)}:</b> zoom in closer to see them.`:esc(o.note)}</div>`).join('');d.hidden=!on.length}
+  d.innerHTML=on.map(o=>`<div>${z<o.z?`<b>${esc(o.short)}:</b> zoom in closer to see them.`:typeof o.note==='function'?o.note():esc(o.note)}</div>`).join('');d.hidden=!on.length}
 for(const [n,o] of Object.entries(GROUND_LAYERS)){OVL[n]=o.layer;layCtl.addOverlay(o.layer,n);if(lay.on.includes(n))o.layer.addTo(map)}
-map.on('overlayadd overlayremove zoomend',gLegend);gLegend();
+map.on('overlayadd overlayremove zoomend moveend',gLegend);gLegend();

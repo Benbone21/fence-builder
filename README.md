@@ -254,8 +254,12 @@ install); `fence-estimator.service` is a systemd example, `nginx-fence.conf` an 
 When you draw or change a fence line, Fence Builder looks up the ground under it on public US government maps
 (it needs the internet and the Fence Builder app or server; drawing never waits for it):
 
-- **Soil and rock** (USDA soil survey): which soils the line crosses and for how many feet, rocks bigger than 3 inches,
-  and how deep bedrock or hardpan is. For example: "Rocky ground on 620 ft. Bedrock as shallow as 20 in."
+- **Soil and rock** (USDA soil survey), in plain words: first **What this means for posts**, for example "Mostly rocky
+  ground: hard digging. About 5,550 ft is rocky, and 3,400 ft of it has solid rock 1–2 ft down. Plan on a rock bar or
+  auger, or set those posts in concrete." Then each soil along the line as a short card: what the ground is like
+  ("Rocky clay loam on hillsides — big rocks all over; solid rock 25 in down"), how hard the digging is, and what to
+  expect for posts. It covers rocks, solid rock and hardpan, wet ground and ground water, flooding, loose sand,
+  clay that swells, and steep slopes. The soil survey's own name and map label are kept in small print under each card.
 - **Water**: streams, rivers, canals and ditches it crosses (USGS), feet in a flood zone (FEMA), and feet through
   wetlands (US Fish and Wildlife). Wetlands and flood zones may need a permit: check before you build.
 - **Trees and brush** (LANDFIRE): feet through trees and through thick brush.
@@ -263,7 +267,7 @@ When you draw or change a fence line, Fence Builder looks up the ground under it
 You see it under **Ground along this fence** on each line's page, and for the whole job under **The ground** on the
 Final bill, with two buttons:
 
-- **Use 10%** (or whatever it suggests) sets the site difficulty: up to 15% for rocky ground and up to 15% for bedrock or
+- **Use 10%** (or whatever it suggests) sets the site difficulty: up to 15% for rocky ground and up to 15% for solid rock or
   hardpan within 40 inches, by how much of the fence is on it.
 - **Add a clearing fee** adds "Clearing trees and brush" to the other fees, at $ per foot for trees and for brush set in
   **Settings → Ground and clearing** (starting guesses: $4 and $1.50 a foot).
@@ -273,7 +277,9 @@ at rivers") come from the same USGS stream map, which has many ditches the stree
 when USGS doesn't answer.
 
 The Builder map's layer list has **Soils**, **Streams and ditches**, **Flood zones**, **Wetlands** and **Trees and brush**
-(off to start; zoom in to see them). These maps are a guide for planning, not a survey. They are not saved with offline
+(off to start; zoom in to see them). With **Soils** on, the legend says what the letters on the soil map mean for the
+soils on this job's fence lines, in plain words ("VsF Rocky loam on steep hillsides (hard digging)"). These maps are a
+guide for planning, not a survey. They are not saved with offline
 areas yet.
 
 ## Offline maps
